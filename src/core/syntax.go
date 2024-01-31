@@ -1,5 +1,8 @@
+//
 // Helena syntax checking and AST
-package syntax
+//
+
+package core
 
 // import { Value } from "./values";
 
@@ -82,16 +85,16 @@ type Word struct {
 type MorphemeType int8
 
 const (
-	LITERAL MorphemeType = iota
-	TUPLE
-	BLOCK
-	EXPRESSION
-	STRING
-	HERE_STRING
-	TAGGED_STRING
-	LINE_COMMENT
-	BLOCK_COMMENT
-	SUBSTITUTE_NEXT
+	MorphemeType_LITERAL MorphemeType = iota
+	MorphemeType_TUPLE
+	MorphemeType_BLOCK
+	MorphemeType_EXPRESSION
+	MorphemeType_STRING
+	MorphemeType_HERE_STRING
+	MorphemeType_TAGGED_STRING
+	MorphemeType_LINE_COMMENT
+	MorphemeType_BLOCK_COMMENT
+	MorphemeType_SUBSTITUTE_NEXT
 )
 
 // Helena morpheme

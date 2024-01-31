@@ -1,18 +1,11 @@
-package tokenizer_test
+package core_test
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "helena/core/tokenizer"
+	. "helena/core"
 )
-
-func TestTokenizer(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Tokenizer Suite")
-}
 
 func toType(token Token) TokenType  { return token.Type }
 func toIndex(token Token) uint      { return token.Position.Index }
@@ -77,273 +70,273 @@ var _ = Describe("Tokenizer", func() {
 	Describe("types", func() {
 		Specify("whitespace", func() {
 			Expect(mapToType(tokenizer.Tokenize(" "))).To(Equal([]TokenType{
-				WHITESPACE,
+				TokenType_WHITESPACE,
 			}))
 			Expect(mapToType(tokenizer.Tokenize("\t"))).To(Equal([]TokenType{
-				WHITESPACE,
+				TokenType_WHITESPACE,
 			}))
 			Expect(mapToType(tokenizer.Tokenize("\r"))).To(Equal([]TokenType{
-				WHITESPACE,
+				TokenType_WHITESPACE,
 			}))
 			Expect(mapToType(tokenizer.Tokenize("\f"))).To(Equal([]TokenType{
-				WHITESPACE,
+				TokenType_WHITESPACE,
 			}))
 			Expect(mapToType(tokenizer.Tokenize("  "))).To(Equal([]TokenType{
-				WHITESPACE,
+				TokenType_WHITESPACE,
 			}))
 			Expect(mapToType(tokenizer.Tokenize("   \t\f  \r\r "))).To(Equal([]TokenType{
-				WHITESPACE,
+				TokenType_WHITESPACE,
 			}))
 
-			Expect(mapToType(tokenizer.Tokenize("\\ "))).To(Equal([]TokenType{ESCAPE}))
-			Expect(mapToType(tokenizer.Tokenize("\\\t"))).To(Equal([]TokenType{ESCAPE}))
-			Expect(mapToType(tokenizer.Tokenize("\\\r"))).To(Equal([]TokenType{ESCAPE}))
-			Expect(mapToType(tokenizer.Tokenize("\\\f"))).To(Equal([]TokenType{ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\ "))).To(Equal([]TokenType{TokenType_ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\\t"))).To(Equal([]TokenType{TokenType_ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\\r"))).To(Equal([]TokenType{TokenType_ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\\f"))).To(Equal([]TokenType{TokenType_ESCAPE}))
 		})
 
 		Specify("newline", func() {
-			Expect(mapToType(tokenizer.Tokenize("\n"))).To(Equal([]TokenType{NEWLINE}))
+			Expect(mapToType(tokenizer.Tokenize("\n"))).To(Equal([]TokenType{TokenType_NEWLINE}))
 			Expect(mapToType(tokenizer.Tokenize("\n\n"))).To(Equal([]TokenType{
-				NEWLINE,
-				NEWLINE,
+				TokenType_NEWLINE,
+				TokenType_NEWLINE,
 			}))
 		})
 
 		Describe("escape sequences", func() {
 			Specify("backslash", func() {
-				Expect(mapToType(tokenizer.Tokenize("\\"))).To(Equal([]TokenType{TEXT}))
+				Expect(mapToType(tokenizer.Tokenize("\\"))).To(Equal([]TokenType{TokenType_TEXT}))
 			})
 			Specify("continuation", func() {
 				Expect(mapToType(tokenizer.Tokenize("\\\n"))).To(Equal([]TokenType{
-					CONTINUATION,
+					TokenType_CONTINUATION,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\\n   "))).To(Equal([]TokenType{
-					CONTINUATION,
+					TokenType_CONTINUATION,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\\n \t\r\f "))).To(Equal([]TokenType{
-					CONTINUATION,
+					TokenType_CONTINUATION,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\\n \t \\\n  "))).To(Equal([]TokenType{
-					CONTINUATION,
-					CONTINUATION,
+					TokenType_CONTINUATION,
+					TokenType_CONTINUATION,
 				}))
 			})
 			Specify("control characters", func() {
 				Expect(mapToType(tokenizer.Tokenize("\\a"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\b"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\f"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\n"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\r"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\t"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\v"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\\\"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 			})
 			Specify("octal sequence", func() {
 				Expect(mapToType(tokenizer.Tokenize("\\1"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\123"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\1234"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\0x"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 			})
 			Specify("hexadecimal sequence", func() {
 				Expect(mapToType(tokenizer.Tokenize("\\x1"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\x12"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\x123"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\x1f"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\x1F"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\x1g"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 			})
 			Specify("unicode sequence", func() {
 				Expect(mapToType(tokenizer.Tokenize("\\u1"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\U1"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\u12"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\U12"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\u123456"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\U12345"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\U0123456789"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\u1f"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\u1F"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\U1f"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\U1F"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\u1g"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\U1g"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 			})
 			Specify("unrecognized sequences", func() {
 				Expect(mapToType(tokenizer.Tokenize("\\8"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\9"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\c"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\d"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\e"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\x"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\xg"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\u"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\ug"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\U"))).To(Equal([]TokenType{
-					ESCAPE,
+					TokenType_ESCAPE,
 				}))
 				Expect(mapToType(tokenizer.Tokenize("\\Ug"))).To(Equal([]TokenType{
-					ESCAPE,
-					TEXT,
+					TokenType_ESCAPE,
+					TokenType_TEXT,
 				}))
 			})
 		})
 
 		Specify("comments", func() {
-			Expect(mapToType(tokenizer.Tokenize("#"))).To(Equal([]TokenType{COMMENT}))
-			Expect(mapToType(tokenizer.Tokenize("###"))).To(Equal([]TokenType{COMMENT}))
+			Expect(mapToType(tokenizer.Tokenize("#"))).To(Equal([]TokenType{TokenType_COMMENT}))
+			Expect(mapToType(tokenizer.Tokenize("###"))).To(Equal([]TokenType{TokenType_COMMENT}))
 
-			Expect(mapToType(tokenizer.Tokenize("\\#"))).To(Equal([]TokenType{ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\#"))).To(Equal([]TokenType{TokenType_ESCAPE}))
 		})
 
 		Specify("tuples", func() {
 			Expect(mapToType(tokenizer.Tokenize("("))).To(Equal([]TokenType{
-				OPEN_TUPLE,
+				TokenType_OPEN_TUPLE,
 			}))
 			Expect(mapToType(tokenizer.Tokenize(")"))).To(Equal([]TokenType{
-				CLOSE_TUPLE,
+				TokenType_CLOSE_TUPLE,
 			}))
 
-			Expect(mapToType(tokenizer.Tokenize("\\("))).To(Equal([]TokenType{ESCAPE}))
-			Expect(mapToType(tokenizer.Tokenize("\\)"))).To(Equal([]TokenType{ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\("))).To(Equal([]TokenType{TokenType_ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\)"))).To(Equal([]TokenType{TokenType_ESCAPE}))
 		})
 
 		Specify("blocks", func() {
 			Expect(mapToType(tokenizer.Tokenize("{"))).To(Equal([]TokenType{
-				OPEN_BLOCK,
+				TokenType_OPEN_BLOCK,
 			}))
 			Expect(mapToType(tokenizer.Tokenize("}"))).To(Equal([]TokenType{
-				CLOSE_BLOCK,
+				TokenType_CLOSE_BLOCK,
 			}))
 
-			Expect(mapToType(tokenizer.Tokenize("\\{"))).To(Equal([]TokenType{ESCAPE}))
-			Expect(mapToType(tokenizer.Tokenize("\\}"))).To(Equal([]TokenType{ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\{"))).To(Equal([]TokenType{TokenType_ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\}"))).To(Equal([]TokenType{TokenType_ESCAPE}))
 		})
 
 		Specify("expressions", func() {
 			Expect(mapToType(tokenizer.Tokenize("["))).To(Equal([]TokenType{
-				OPEN_EXPRESSION,
+				TokenType_OPEN_EXPRESSION,
 			}))
 			Expect(mapToType(tokenizer.Tokenize("]"))).To(Equal([]TokenType{
-				CLOSE_EXPRESSION,
+				TokenType_CLOSE_EXPRESSION,
 			}))
 
-			Expect(mapToType(tokenizer.Tokenize("\\["))).To(Equal([]TokenType{ESCAPE}))
-			Expect(mapToType(tokenizer.Tokenize("\\]"))).To(Equal([]TokenType{ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\["))).To(Equal([]TokenType{TokenType_ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\]"))).To(Equal([]TokenType{TokenType_ESCAPE}))
 		})
 
 		Specify("strings", func() {
 			Expect(mapToType(tokenizer.Tokenize(`"`))).To(Equal([]TokenType{
-				STRING_DELIMITER,
+				TokenType_STRING_DELIMITER,
 			}))
 
-			Expect(mapToType(tokenizer.Tokenize(`\"`))).To(Equal([]TokenType{ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize(`\"`))).To(Equal([]TokenType{TokenType_ESCAPE}))
 		})
 
 		Specify("dollar", func() {
-			Expect(mapToType(tokenizer.Tokenize("$"))).To(Equal([]TokenType{DOLLAR}))
+			Expect(mapToType(tokenizer.Tokenize("$"))).To(Equal([]TokenType{TokenType_DOLLAR}))
 
-			Expect(mapToType(tokenizer.Tokenize("\\$"))).To(Equal([]TokenType{ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\$"))).To(Equal([]TokenType{TokenType_ESCAPE}))
 		})
 
 		Specify("semicolon", func() {
-			Expect(mapToType(tokenizer.Tokenize(";"))).To(Equal([]TokenType{SEMICOLON}))
+			Expect(mapToType(tokenizer.Tokenize(";"))).To(Equal([]TokenType{TokenType_SEMICOLON}))
 
-			Expect(mapToType(tokenizer.Tokenize("\\;"))).To(Equal([]TokenType{ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\;"))).To(Equal([]TokenType{TokenType_ESCAPE}))
 		})
 
 		Specify("asterisk", func() {
-			Expect(mapToType(tokenizer.Tokenize("*"))).To(Equal([]TokenType{ASTERISK}))
+			Expect(mapToType(tokenizer.Tokenize("*"))).To(Equal([]TokenType{TokenType_ASTERISK}))
 
-			Expect(mapToType(tokenizer.Tokenize("\\*"))).To(Equal([]TokenType{ESCAPE}))
+			Expect(mapToType(tokenizer.Tokenize("\\*"))).To(Equal([]TokenType{TokenType_ESCAPE}))
 		})
 	})
 

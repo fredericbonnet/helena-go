@@ -1,18 +1,11 @@
-package display_test
+package core_test
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "helena/core/display"
+	. "helena/core"
 )
-
-func TestDisplay(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Display Suite")
-}
 
 // import { Script } from "./syntax";
 // import { FALSE, INT, REAL, ScriptValue, STR, TRUE } from "./values";

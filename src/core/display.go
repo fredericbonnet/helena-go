@@ -1,8 +1,10 @@
+//
 // Helena value display
-package display
+//
+
+package core
 
 import (
-	t "helena/core/tokenizer"
 	"regexp"
 )
 
@@ -56,12 +58,12 @@ type Displayable interface {
 // Return a displayable string as a single literal or as a quoted string if the
 // string contains special characters
 func DisplayLiteralOrString(str string) string {
-	tokenizer := t.Tokenizer{}
+	tokenizer := Tokenizer{}
 	tokens := tokenizer.Tokenize(str)
 	if len(tokens) == 0 {
 		return `""`
 	}
-	if len(tokens) == 1 && tokens[0].Type == t.TEXT {
+	if len(tokens) == 1 && tokens[0].Type == TokenType_TEXT {
 		return tokens[0].Literal
 	}
 	re := regexp.MustCompile(`[\\$"({[]`)
@@ -73,12 +75,12 @@ func DisplayLiteralOrString(str string) string {
 //
 // Mostly used to display qualified value sources
 func DisplayLiteralOrBlock(str string) string {
-	tokenizer := t.Tokenizer{}
+	tokenizer := Tokenizer{}
 	tokens := tokenizer.Tokenize(str)
 	if len(tokens) == 0 {
 		return `{}`
 	}
-	if len(tokens) == 1 && tokens[0].Type == t.TEXT {
+	if len(tokens) == 1 && tokens[0].Type == TokenType_TEXT {
 		return tokens[0].Literal
 	}
 	re := regexp.MustCompile(`[\\$"#(){}[\]]`)

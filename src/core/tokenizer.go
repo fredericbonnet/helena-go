@@ -1,5 +1,8 @@
+//
 // Helena tokenization
-package tokenizer
+//
+
+package core
 
 //
 // Helena token type for each special character or sequence
@@ -7,22 +10,22 @@ package tokenizer
 type TokenType int8
 
 const (
-	WHITESPACE TokenType = iota
-	NEWLINE
-	CONTINUATION
-	TEXT
-	ESCAPE
-	COMMENT
-	OPEN_TUPLE
-	CLOSE_TUPLE
-	OPEN_BLOCK
-	CLOSE_BLOCK
-	OPEN_EXPRESSION
-	CLOSE_EXPRESSION
-	STRING_DELIMITER
-	DOLLAR
-	SEMICOLON
-	ASTERISK
+	TokenType_WHITESPACE TokenType = iota
+	TokenType_NEWLINE
+	TokenType_CONTINUATION
+	TokenType_TEXT
+	TokenType_ESCAPE
+	TokenType_COMMENT
+	TokenType_OPEN_TUPLE
+	TokenType_CLOSE_TUPLE
+	TokenType_OPEN_BLOCK
+	TokenType_CLOSE_BLOCK
+	TokenType_OPEN_EXPRESSION
+	TokenType_CLOSE_EXPRESSION
+	TokenType_STRING_DELIMITER
+	TokenType_DOLLAR
+	TokenType_SEMICOLON
+	TokenType_ASTERISK
 )
 
 //
@@ -128,17 +131,17 @@ func (tokenizer *Tokenizer) Next() *Token {
 			for !tokenizer.input.end() && isWhitespace(tokenizer.input.current()) {
 				tokenizer.input.next()
 			}
-			emittedToken = tokenizer.addToken(WHITESPACE, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_WHITESPACE, position, nil)
 
 		// Newline
 		case '\n':
-			emittedToken = tokenizer.addToken(NEWLINE, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_NEWLINE, position, nil)
 
 		// Escape sequence
 		case '\\':
 			{
 				if tokenizer.input.end() {
-					emittedToken = tokenizer.addToken(TEXT, position, nil)
+					emittedToken = tokenizer.addToken(TokenType_TEXT, position, nil)
 					break
 				}
 				e := tokenizer.input.next()
@@ -148,7 +151,7 @@ func (tokenizer *Tokenizer) Next() *Token {
 						tokenizer.input.next()
 					}
 					literal := " "
-					emittedToken = tokenizer.addToken(CONTINUATION, position, &literal)
+					emittedToken = tokenizer.addToken(TokenType_CONTINUATION, position, &literal)
 					break
 				}
 				escape := string(e) // Default value for unrecognized sequences
@@ -204,7 +207,7 @@ func (tokenizer *Tokenizer) Next() *Token {
 						escape = string(rune(codepoint))
 					}
 				}
-				emittedToken = tokenizer.addToken(ESCAPE, position, &escape)
+				emittedToken = tokenizer.addToken(TokenType_ESCAPE, position, &escape)
 			}
 
 		// Comment
@@ -212,47 +215,47 @@ func (tokenizer *Tokenizer) Next() *Token {
 			for !tokenizer.input.end() && tokenizer.input.current() == '#' {
 				tokenizer.input.next()
 			}
-			emittedToken = tokenizer.addToken(COMMENT, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_COMMENT, position, nil)
 
 		// Tuple delimiters
 		case '(':
-			emittedToken = tokenizer.addToken(OPEN_TUPLE, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_OPEN_TUPLE, position, nil)
 
 		case ')':
-			emittedToken = tokenizer.addToken(CLOSE_TUPLE, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_CLOSE_TUPLE, position, nil)
 
 		// Block delimiters
 		case '{':
-			emittedToken = tokenizer.addToken(OPEN_BLOCK, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_OPEN_BLOCK, position, nil)
 
 		case '}':
-			emittedToken = tokenizer.addToken(CLOSE_BLOCK, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_CLOSE_BLOCK, position, nil)
 
 		// Expression delimiters
 		case '[':
-			emittedToken = tokenizer.addToken(OPEN_EXPRESSION, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_OPEN_EXPRESSION, position, nil)
 
 		case ']':
-			emittedToken = tokenizer.addToken(CLOSE_EXPRESSION, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_CLOSE_EXPRESSION, position, nil)
 
 		// String delimiter
 		case '"':
 			for !tokenizer.input.end() && tokenizer.input.current() == '"' {
 				tokenizer.input.next()
 			}
-			emittedToken = tokenizer.addToken(STRING_DELIMITER, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_STRING_DELIMITER, position, nil)
 
 		// Dollar
 		case '$':
-			emittedToken = tokenizer.addToken(DOLLAR, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_DOLLAR, position, nil)
 
 		// Semicolon
 		case ';':
-			emittedToken = tokenizer.addToken(SEMICOLON, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_SEMICOLON, position, nil)
 
 		// Asterisk
 		case '*':
-			emittedToken = tokenizer.addToken(ASTERISK, position, nil)
+			emittedToken = tokenizer.addToken(TokenType_ASTERISK, position, nil)
 
 		default:
 			emittedToken = tokenizer.addText(position)
@@ -305,8 +308,8 @@ func (tokenizer *Tokenizer) addToken(
 // position
 func (tokenizer *Tokenizer) addText(position SourcePosition) *Token {
 	literal := tokenizer.input.range_(position.Index, tokenizer.input.currentIndex())
-	if tokenizer.currentToken == nil || tokenizer.currentToken.Type != TEXT {
-		return tokenizer.addToken(TEXT, position, &literal)
+	if tokenizer.currentToken == nil || tokenizer.currentToken.Type != TokenType_TEXT {
+		return tokenizer.addToken(TokenType_TEXT, position, &literal)
 	} else {
 		tokenizer.currentToken.Literal += literal
 		tokenizer.currentToken.Sequence = tokenizer.input.range_(

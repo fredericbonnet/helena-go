@@ -1,18 +1,11 @@
-package syntax_test
+package core_test
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	s "helena/core/syntax"
+	. "helena/core"
 )
-
-func TestSyntax(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Syntax Suite")
-}
 
 // import { MorphemeType, Script, SyntaxChecker, Word, WordType } from "./syntax";
 // import { Parser } from "./parser";
@@ -57,7 +50,7 @@ var ignored = []TestMorpheme{
 var _ = Describe("SyntaxChecker", func() {
 	//   let tokenizer: Tokenizer;
 	//   let parser: Parser;
-	var checker s.SyntaxChecker
+	var checker SyntaxChecker
 
 	//   const parse = (script: string) =>
 	//     parser.parse(tokenizer.tokenize(script)).script;
@@ -66,7 +59,7 @@ var _ = Describe("SyntaxChecker", func() {
 	BeforeEach(func() {
 		//     tokenizer = new Tokenizer();
 		//     parser = new Parser();
-		checker = s.SyntaxChecker{}
+		checker = SyntaxChecker{}
 	})
 
 	Describe("roots", func() {
@@ -257,13 +250,13 @@ var _ = Describe("SyntaxChecker", func() {
 
 	Describe("impossible cases", func() {
 		Specify("empty word", func() {
-			word := s.Word{}
-			Expect(checker.CheckWord(word)).To(Equal(s.INVALID))
+			word := Word{}
+			Expect(checker.CheckWord(word)).To(Equal(INVALID))
 		})
 		Specify("empty substitution", func() {
-			word := s.Word{}
-			word.Morphemes = append(word.Morphemes, s.Morpheme{Type: s.SUBSTITUTE_NEXT})
-			Expect(checker.CheckWord(word)).To(Equal(s.INVALID))
+			word := Word{}
+			word.Morphemes = append(word.Morphemes, Morpheme{Type: MorphemeType_SUBSTITUTE_NEXT})
+			Expect(checker.CheckWord(word)).To(Equal(INVALID))
 		})
 		Describe("incompatible morphemes", func() {
 			for _, v1 := range append(monomorphemes, ignored...) {
@@ -285,11 +278,11 @@ var _ = Describe("SyntaxChecker", func() {
 				}
 			}
 			Specify("substitution", func() {
-				word := s.Word{}
+				word := Word{}
 				word.Morphemes = append(word.Morphemes,
-					s.Morpheme{Type: s.SUBSTITUTE_NEXT},
-					s.Morpheme{Type: s.BLOCK_COMMENT})
-				Expect(checker.CheckWord(word)).To(Equal(s.INVALID))
+					Morpheme{Type: MorphemeType_SUBSTITUTE_NEXT},
+					Morpheme{Type: MorphemeType_BLOCK_COMMENT})
+				Expect(checker.CheckWord(word)).To(Equal(INVALID))
 			})
 		})
 	})
