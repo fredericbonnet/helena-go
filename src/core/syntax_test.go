@@ -11,40 +11,40 @@ import (
 // import { Parser } from "./parser";
 // import { Tokenizer } from "./tokenizer";
 
-const LITERAL = "literal"
-const TUPLE = "(word1 word2)"
-const BLOCK = "{word1 word2}"
-const EXPRESSION = "[word1 word2]"
-const STRING = `"$some [string]"`
-const HERE_STRING = `"""some here "" string"""`
-const TAGGED_STRING = "\"\"TAG\nsome tagged \" string\nTAG\"\""
-const LINE_COMMENT = "# some [{comment"
-const BLOCK_COMMENT = "#{ some [block {comment }#"
+const _LITERAL = "literal"
+const _TUPLE = "(word1 word2)"
+const _BLOCK = "{word1 word2}"
+const _EXPRESSION = "[word1 word2]"
+const _STRING = `"$some [string]"`
+const _HERE_STRING = `"""some here "" string"""`
+const _TAGGED_STRING = "\"\"TAG\nsome tagged \" string\nTAG\"\""
+const _LINE_COMMENT = "# some [{comment"
+const _BLOCK_COMMENT = "#{ some [block {comment }#"
 
-type TestMorpheme struct {
+type testMorpheme struct {
 	type_ string
 	value string
 }
 
-var roots = []TestMorpheme{
-	{"literal", LITERAL},
-	{"tuple", TUPLE},
-	{"block", BLOCK},
-	{"expression", EXPRESSION},
+var roots = []testMorpheme{
+	{"literal", _LITERAL},
+	{"tuple", _TUPLE},
+	{"block", _BLOCK},
+	{"expression", _EXPRESSION},
 }
-var qualifiedSources = []TestMorpheme{
-	{"literal", LITERAL},
-	{"tuple", TUPLE},
-	{"block", BLOCK},
+var qualifiedSources = []testMorpheme{
+	{"literal", _LITERAL},
+	{"tuple", _TUPLE},
+	{"block", _BLOCK},
 }
-var monomorphemes = []TestMorpheme{
-	{"string", STRING},
-	{"here-string", HERE_STRING},
-	{"tagged string", TAGGED_STRING},
+var monomorphemes = []testMorpheme{
+	{"string", _STRING},
+	{"here-string", _HERE_STRING},
+	{"tagged string", _TAGGED_STRING},
 }
-var ignored = []TestMorpheme{
-	{"line comment", LINE_COMMENT},
-	{"block comment", BLOCK_COMMENT},
+var ignored = []testMorpheme{
+	{"line comment", _LINE_COMMENT},
+	{"block comment", _BLOCK_COMMENT},
 }
 
 var _ = Describe("SyntaxChecker", func() {
@@ -75,73 +75,73 @@ var _ = Describe("SyntaxChecker", func() {
 	//
 	Describe("compounds", func() {
 		Specify("literal prefix", func() {
-			//	    const script = parse(LITERAL + "$" + BLOCK);
+			//	    const script = parse(_LITERAL + "$" + _BLOCK);
 			//	    const word = firstWord(script);
 			//	    Expect(word.morphemes).to.have.length(3);
 			//	    Expect(checker.checkWord(word)).to.eq(WordType.COMPOUND);
 		})
 		Specify("expression prefix", func() {
-			//	    const script = parse(EXPRESSION + LITERAL);
+			//	    const script = parse(_EXPRESSION + _LITERAL);
 			//	    const word = firstWord(script);
 			//	    Expect(word.morphemes).to.have.length(2);
 			//	    Expect(checker.checkWord(word)).to.eq(WordType.COMPOUND);
 		})
 		Specify("substitution prefix", func() {
-			//	    const script = parse("$" + BLOCK + TUPLE + LITERAL);
+			//	    const script = parse("$" + _BLOCK + _TUPLE + _LITERAL);
 			//	    const word = firstWord(script);
 			//	    Expect(word.morphemes).to.have.length(4);
 			//	    Expect(checker.checkWord(word)).to.eq(WordType.COMPOUND);
 		})
 		Specify("complex case", func() {
-			//	    const script = parse(LITERAL + "$" + BLOCK + EXPRESSION + "$" + LITERAL);
+			//	    const script = parse(_LITERAL + "$" + _BLOCK + _EXPRESSION + "$" + _LITERAL);
 			//	    const word = firstWord(script);
 			//	    Expect(word.morphemes).to.have.length(6);
 			//	    Expect(checker.checkWord(word)).to.eq(WordType.COMPOUND);
 		})
 		Describe("exceptions", func() {
-			for _, v := range []TestMorpheme{
-				{"tuple", TUPLE},
-				{"block", BLOCK},
+			for _, v := range []testMorpheme{
+				{"tuple", _TUPLE},
+				{"block", _BLOCK},
 			} {
 				Specify(v.type_+"/literal", func() {
-					//	        const script = parse(value + LITERAL);
+					//	        const script = parse(value + _LITERAL);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(2);
 					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
 				})
 				Specify(v.type_+"/substitution", func() {
-					//	        const script = parse(value + "$" + LITERAL);
+					//	        const script = parse(value + "$" + _LITERAL);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(3);
 					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
 				})
 				Specify("expression/"+v.type_, func() {
-					//	        const script = parse(EXPRESSION + value);
+					//	        const script = parse(_EXPRESSION + value);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(2);
 					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
 				})
 				Specify("literal/"+v.type_+"/literal", func() {
-					//	        const script = parse(LITERAL + value + LITERAL);
+					//	        const script = parse(_LITERAL + value + _LITERAL);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(3);
 					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
 				})
 				Specify("literal/"+v.type_+"/substitution", func() {
-					//	        const script = parse(LITERAL + value + "$" + LITERAL);
+					//	        const script = parse(_LITERAL + value + "$" + _LITERAL);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(4);
 					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
 				})
 			}
 			Specify("literal/tuple substitution", func() {
-				//	      const script = parse(LITERAL + "$" + TUPLE);
+				//	      const script = parse(_LITERAL + "$" + _TUPLE);
 				//	      const word = firstWord(script);
 				//	      Expect(word.morphemes).to.have.length(3);
 				//	      Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
 			})
 			Specify("tuple substitution/literal", func() {
-				//	      const script = parse("$" + TUPLE + LITERAL);
+				//	      const script = parse("$" + _TUPLE + _LITERAL);
 				//	      const word = firstWord(script);
 				//	      Expect(word.morphemes).to.have.length(3);
 				//	      Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
@@ -165,26 +165,26 @@ var _ = Describe("SyntaxChecker", func() {
 					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
 				})
 				Specify("indexed selector", func() {
-					//	        const script = parse("$" + value + EXPRESSION);
+					//	        const script = parse("$" + value + _EXPRESSION);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(3);
 					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
 				})
 				Specify("keyed selector", func() {
-					//	        const script = parse("$" + value + TUPLE);
+					//	        const script = parse("$" + value + _TUPLE);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(3);
 					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
 				})
 				Specify("generic selector", func() {
-					//	        const script = parse("$" + value + BLOCK);
+					//	        const script = parse("$" + value + _BLOCK);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(3);
 					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
 				})
 				Specify("multiple selectors", func() {
 					//	        const script = parse(
-					//	          "$" + value + TUPLE + BLOCK + EXPRESSION + TUPLE + EXPRESSION
+					//	          "$" + value + _TUPLE + _BLOCK + _EXPRESSION + _TUPLE + _EXPRESSION
 					//	        );
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(7);
@@ -198,26 +198,26 @@ var _ = Describe("SyntaxChecker", func() {
 		for _, v := range qualifiedSources {
 			Describe(v.type_+" source", func() {
 				Specify("indexed selector", func() {
-					//	        const script = parse(value + EXPRESSION);
+					//	        const script = parse(value + _EXPRESSION);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(2);
 					//	        Expect(checker.checkWord(word)).to.eq(WordType.QUALIFIED);
 				})
 				Specify("keyed selector", func() {
-					//	        const script = parse(value + TUPLE);
+					//	        const script = parse(value + _TUPLE);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(2);
 					//	        Expect(checker.checkWord(word)).to.eq(WordType.QUALIFIED);
 				})
 				Specify("generic selector", func() {
-					//	        const script = parse(value + BLOCK);
+					//	        const script = parse(value + _BLOCK);
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(2);
 					//	        Expect(checker.checkWord(word)).to.eq(WordType.QUALIFIED);
 				})
 				Specify("multiple selectors", func() {
 					//	        const script = parse(
-					//	          value + TUPLE + BLOCK + EXPRESSION + TUPLE + EXPRESSION
+					//	          value + _TUPLE + _BLOCK + _EXPRESSION + _TUPLE + _EXPRESSION
 					//	        );
 					//	        const word = firstWord(script);
 					//	        Expect(word.morphemes).to.have.length(6);
@@ -228,7 +228,7 @@ var _ = Describe("SyntaxChecker", func() {
 		Describe("exceptions", func() {
 			Specify("trailing morphemes", func() {
 				//	      const script = parse(
-				//	        LITERAL + TUPLE + TUPLE + EXPRESSION + TUPLE + EXPRESSION + LITERAL
+				//	        _LITERAL + _TUPLE + _TUPLE + _EXPRESSION + _TUPLE + _EXPRESSION + _LITERAL
 				//	      );
 				//	      const word = firstWord(script);
 				//	      Expect(word.morphemes).to.have.length(7);

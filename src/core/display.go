@@ -9,10 +9,11 @@ import (
 )
 
 // Value display function
-type DisplayFunction func(displayable Displayable) string
+// type DisplayFunction func(displayable Displayable) string
+type DisplayFunction func(displayable any) string
 
 // Default display function
-func DefaultDisplayFunction(displayable Displayable) string {
+func DefaultDisplayFunction(displayable any) string {
 	return UndisplayableValue()
 }
 
@@ -35,28 +36,30 @@ func UndisplayableValueWithLabel(label string) string {
 type Displayable interface {
 	// Return displayable string value
 	//
-	// UnUndisplayable objects will optionally use display function fn
-	display(fn DisplayFunction) string
+	// Undisplayable objects will optionally use display function fn
+	Display(fn DisplayFunction) string
 }
 
-// /**
-//  * Display an object by dispatching to its `display()` function if it exists,
-//  * else use the provided function.
-//  *
-//  * @param displayable - Object to display
-//  * @param fn          - Display function for undisplayable objects
-//  *
-//  * @returns             Displayable string
-//  */
-// export function display(
-//   displayable: Displayable,
-//   fn: DisplayFunction = defaultDisplayFunction
-// ): string {
-//   return displayable.display?.(fn) ?? fn(displayable);
-// }
+// Return the display string of an object by dispatching to its `Display()`
+// method if it implements `Displayable`, else use fn (defaults to
+// `DefaultDisplayFunction`)
+func Display(
+	displayable any,
+	fn DisplayFunction,
+) string {
+	if fn == nil {
+		fn = DefaultDisplayFunction
+	}
+	switch o := displayable.(type) {
+	case Displayable:
+		return o.Display(fn)
+	default:
+		return fn(displayable)
+	}
+}
 
-// Return a displayable string as a single literal or as a quoted string if the
-// string contains special characters
+// Return the display string of str as a single literal or as a quoted string if
+// the string contains special characters
 func DisplayLiteralOrString(str string) string {
 	tokenizer := Tokenizer{}
 	tokens := tokenizer.Tokenize(str)
@@ -70,8 +73,8 @@ func DisplayLiteralOrString(str string) string {
 	return `"` + re.ReplaceAllStringFunc(str, func(c string) string { return `\` + c }) + `"`
 }
 
-// Return a displayable string as a single literal or as a block if the string
-// contains special characters
+// Return the display string of str as a single literal or as a block if the
+// string contains special characters
 //
 // Mostly used to display qualified value sources
 func DisplayLiteralOrBlock(str string) string {
@@ -87,21 +90,16 @@ func DisplayLiteralOrBlock(str string) string {
 	return `{` + re.ReplaceAllStringFunc(str, func(c string) string { return `\` + c }) + `}`
 }
 
-// /**
-//  * Display a list of objects
-//  *
-//  * Useful for sentences, tuples expressions, lists...
-//  *
-//  * @param displayables - Objects to display
-//  * @param fn           - Display function for undisplayable objects
-//  *
-//  * @returns              Displayable string
-//  */
-// export function displayList(
-//   displayables: Displayable[],
-//   fn: DisplayFunction = defaultDisplayFunction
-// ): string {
-//   return `${displayables
-//     .map((displayable) => display(displayable, fn))
-//     .join(" ")}`;
-// }
+// Return a displayable list of objects
+//
+// Useful for sentences, tuples expressions, lists...
+func DisplayList[T any](displayables []T, fn DisplayFunction) string {
+	output := ""
+	for i, displayable := range displayables {
+		if i != 0 {
+			output += " "
+		}
+		output += Display(displayable, fn)
+	}
+	return output
+}

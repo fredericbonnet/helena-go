@@ -254,19 +254,19 @@ type WordType int8
 
 const (
 	// Roots are monomorphemic words
-	ROOT WordType = iota
+	WordType_ROOT WordType = iota
 
 	// Compounds are words made of several stems, that don't fit in the other categories
-	COMPOUND
+	WordType_COMPOUND
 
 	// Substitions are root or qualified words prefixed by a substitute morpheme
-	SUBSTITUTION
+	WordType_SUBSTITUTION
 
 	// Qualified words are root words followed by selectors
-	QUALIFIED
+	WordType_QUALIFIED
 
 	// Ignored words are line and block comments
-	IGNORED
+	WordType_IGNORED
 
 	// Invalid word structure
 	INVALID
