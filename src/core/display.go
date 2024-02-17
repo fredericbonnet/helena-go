@@ -9,7 +9,6 @@ import (
 )
 
 // Value display function
-// type DisplayFunction func(displayable Displayable) string
 type DisplayFunction func(displayable any) string
 
 // Default display function
