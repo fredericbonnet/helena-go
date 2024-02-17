@@ -75,9 +75,11 @@ type Token struct {
 	Literal string
 }
 
+//
 // Helena tokenizer
 //
 // This class transforms a stream of characters into a stream of tokens
+//
 type Tokenizer struct {
 	// Input stream
 	input SourceStream
@@ -90,7 +92,7 @@ type Tokenizer struct {
 func (tokenizer Tokenizer) Tokenize(source string) []Token {
 	input := NewStringStream(source)
 	output := NewArrayTokenStream([]Token{})
-	tokenizer.TokenizeStream(&input, &output)
+	tokenizer.TokenizeStream(input, output)
 	return output.tokens
 }
 
@@ -425,8 +427,8 @@ type StringStream struct {
 }
 
 // Create a new stream from the source string
-func NewStringStream(source string) StringStream {
-	return StringStream{source, SourcePosition{}}
+func NewStringStream(source string) *StringStream {
+	return &StringStream{source, SourcePosition{}}
 }
 
 // Report whether stream is at end
@@ -495,8 +497,8 @@ type ArrayTokenStream struct {
 }
 
 // Create a new stream from from the tokens array
-func NewArrayTokenStream(tokens []Token) ArrayTokenStream {
-	return ArrayTokenStream{tokens, 0}
+func NewArrayTokenStream(tokens []Token) *ArrayTokenStream {
+	return &ArrayTokenStream{tokens, 0}
 }
 
 // Emit (add) token to end of stream
@@ -505,7 +507,7 @@ func (stream *ArrayTokenStream) emit(token Token) {
 }
 
 // Reports whether stream is at end
-func (stream *ArrayTokenStream) end() bool {
+func (stream ArrayTokenStream) end() bool {
 	return stream.index >= uint(len(stream.tokens))
 }
 
@@ -516,16 +518,16 @@ func (stream *ArrayTokenStream) next() Token {
 }
 
 // Get current token
-func (stream *ArrayTokenStream) current() Token {
+func (stream ArrayTokenStream) current() Token {
 	return stream.tokens[stream.index]
 }
 
 // Get range of tokens between start (inclusive) and end (exclusive)
-func (stream *ArrayTokenStream) range_(start uint, end uint) []Token {
+func (stream ArrayTokenStream) range_(start uint, end uint) []Token {
 	return stream.tokens[start:end]
 }
 
 // Get current token index
-func (stream *ArrayTokenStream) currentIndex() uint {
+func (stream ArrayTokenStream) currentIndex() uint {
 	return stream.index
 }

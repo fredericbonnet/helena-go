@@ -439,7 +439,7 @@ var _ = Describe("Tokenizer", func() {
 		tokens := tokenizer.Tokenize(source)
 		incrementalTokens := []Token{}
 		input := NewStringStream(source)
-		tokenizer.Begin(&input)
+		tokenizer.Begin(input)
 		for !tokenizer.End() {
 			incrementalTokens = append(incrementalTokens, *tokenizer.Next())
 		}

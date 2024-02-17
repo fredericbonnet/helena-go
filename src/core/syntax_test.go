@@ -255,7 +255,7 @@ var _ = Describe("SyntaxChecker", func() {
 		})
 		Specify("empty substitution", func() {
 			word := Word{}
-			word.Morphemes = append(word.Morphemes, Morpheme{Type: MorphemeType_SUBSTITUTE_NEXT})
+			word.Morphemes = append(word.Morphemes, SubstituteNextMorpheme{})
 			Expect(checker.CheckWord(word)).To(Equal(INVALID))
 		})
 		Describe("incompatible morphemes", func() {
@@ -280,8 +280,9 @@ var _ = Describe("SyntaxChecker", func() {
 			Specify("substitution", func() {
 				word := Word{}
 				word.Morphemes = append(word.Morphemes,
-					Morpheme{Type: MorphemeType_SUBSTITUTE_NEXT},
-					Morpheme{Type: MorphemeType_BLOCK_COMMENT})
+					SubstituteNextMorpheme{},
+					BlockCommentMorpheme{},
+				)
 				Expect(checker.CheckWord(word)).To(Equal(INVALID))
 			})
 		})

@@ -100,9 +100,9 @@ const (
 // Helena morpheme
 //
 // Morphemes are the basic constituents of words
-type Morpheme struct {
+type Morpheme interface {
 	// Type identifier
-	Type MorphemeType
+	Type() MorphemeType
 }
 
 //
@@ -111,10 +111,12 @@ type Morpheme struct {
 // Literals are plain strings
 //
 type LiteralMorpheme struct {
-	Morpheme
-
 	// Literal string value
 	Value string
+}
+
+func (morpheme LiteralMorpheme) Type() MorphemeType {
+	return MorphemeType_LITERAL
 }
 
 //
@@ -123,10 +125,12 @@ type LiteralMorpheme struct {
 // Tuples are scripts between tuple delimiters
 //
 type TupleMorpheme struct {
-	Morpheme
-
 	// Tuple script content
 	Subscript Script
+}
+
+func (morpheme TupleMorpheme) Type() MorphemeType {
+	return MorphemeType_TUPLE
 }
 
 //
@@ -135,13 +139,15 @@ type TupleMorpheme struct {
 // Blocks are scripts or strings between block delimiters
 //
 type BlockMorpheme struct {
-	Morpheme
-
 	// Block script content
 	Subscript Script
 
 	// Block string value
 	Value string
+}
+
+func (morpheme BlockMorpheme) Type() MorphemeType {
+	return MorphemeType_BLOCK
 }
 
 //
@@ -150,10 +156,12 @@ type BlockMorpheme struct {
 // Expressions are scripts between expression delimiters
 //
 type ExpressionMorpheme struct {
-	Morpheme
-
 	// Expression script content
 	Subscript Script
+}
+
+func (morpheme ExpressionMorpheme) Type() MorphemeType {
+	return MorphemeType_EXPRESSION
 }
 
 //
@@ -162,10 +170,12 @@ type ExpressionMorpheme struct {
 // Strings are made of morphemes between single string delimiters
 //
 type StringMorpheme struct {
-	Morpheme
-
 	// String content
 	Morphemes []Morpheme
+}
+
+func (morpheme StringMorpheme) Type() MorphemeType {
+	return MorphemeType_STRING
 }
 
 //
@@ -174,13 +184,15 @@ type StringMorpheme struct {
 // Here-strings are plain strings between three or more string delimiters
 //
 type HereStringMorpheme struct {
-	Morpheme
-
 	// Here-string value
 	Value string
 
 	// Number of string delimiters around content
 	DelimiterLength uint
+}
+
+func (morpheme HereStringMorpheme) Type() MorphemeType {
+	return MorphemeType_HERE_STRING
 }
 
 //
@@ -190,8 +202,6 @@ type HereStringMorpheme struct {
 // arbitrary tag
 //
 type TaggedStringMorpheme struct {
-	Morpheme
-
 	// Tagged string value
 	Value string
 
@@ -199,12 +209,14 @@ type TaggedStringMorpheme struct {
 	Tag string
 }
 
+func (morpheme TaggedStringMorpheme) Type() MorphemeType {
+	return MorphemeType_TAGGED_STRING
+}
+
 //
 // Line comment morpheme
 //
 type LineCommentMorpheme struct {
-	Morpheme
-
 	// Line comment content
 	Value string
 
@@ -212,17 +224,23 @@ type LineCommentMorpheme struct {
 	DelimiterLength uint
 }
 
+func (morpheme LineCommentMorpheme) Type() MorphemeType {
+	return MorphemeType_LINE_COMMENT
+}
+
 //
 // Block comment morpheme
 //
 type BlockCommentMorpheme struct {
-	Morpheme
-
 	// Block comment content
 	Value string
 
 	// Number of comment characters around content
 	DelimiterLength uint
+}
+
+func (morpheme BlockCommentMorpheme) Type() MorphemeType {
+	return MorphemeType_BLOCK_COMMENT
 }
 
 //
@@ -233,8 +251,6 @@ type BlockCommentMorpheme struct {
 // `LiteralMorpheme`}` and should not appear in a well-formed AST
 //
 type SubstituteNextMorpheme struct {
-	Morpheme
-
 	// Simple or expanded substitution flag
 	Expansion bool
 
@@ -243,6 +259,10 @@ type SubstituteNextMorpheme struct {
 
 	// Literal value; can be safely ignored
 	Value string
+}
+
+func (morpheme SubstituteNextMorpheme) Type() MorphemeType {
+	return MorphemeType_SUBSTITUTE_NEXT
 }
 
 //
