@@ -16,7 +16,7 @@ package core
 //    */
 //   constructor(message) {
 //     super(message);
-//     this.name = "CompilationError";
+//     checker.name = "CompilationError";
 //   }
 // }
 
@@ -30,7 +30,7 @@ package core
 //    */
 //   constructor(message) {
 //     super(message);
-//     this.name = "InvalidWordStructureError";
+//     checker.name = "InvalidWordStructureError";
 //   }
 // }
 
@@ -44,7 +44,7 @@ package core
 //    */
 //   constructor(message) {
 //     super(message);
-//     this.name = "UnexpectedMorphemeError";
+//     checker.name = "UnexpectedMorphemeError";
 //   }
 // }
 
@@ -289,7 +289,7 @@ const (
 	WordType_IGNORED
 
 	// Invalid word structure
-	INVALID
+	WordType_INVALID
 )
 
 //
@@ -301,144 +301,155 @@ type SyntaxChecker struct{}
 
 // Check word syntax and return its type
 func (checker SyntaxChecker) CheckWord(word Word) WordType {
-	//     if (word.morphemes.length == 0) return WordType.INVALID;
-	//     switch (word.morphemes[0].type) {
-	//       case MorphemeType.LITERAL: {
-	//         const type = this.checkQualifiedWord(word);
-	//         return type == WordType.INVALID ? this.checkCompoundWord(word) : type;
-	//       }
-	//       case MorphemeType.EXPRESSION:
-	//         return this.checkCompoundWord(word);
-	//       case MorphemeType.TUPLE:
-	//       case MorphemeType.BLOCK:
-	//         return this.checkQualifiedWord(word);
-	//       case MorphemeType.STRING:
-	//       case MorphemeType.HERE_STRING:
-	//       case MorphemeType.TAGGED_STRING:
-	//         return this.checkRootWord(word);
-	//       case MorphemeType.LINE_COMMENT:
-	//       case MorphemeType.BLOCK_COMMENT:
-	//         return this.checkIgnoredWord(word);
-	//       case MorphemeType.SUBSTITUTE_NEXT:
-	//         return this.checkSubstitutionWord(word);
-	//     }
-	// TODO
-	return INVALID
+	if len(word.Morphemes) == 0 {
+		return WordType_INVALID
+	}
+	switch word.Morphemes[0].Type() {
+	case MorphemeType_LITERAL:
+		{
+			type_ := checker.checkQualifiedWord(word)
+			if type_ == WordType_INVALID {
+				return checker.checkCompoundWord(word)
+			}
+			return type_
+		}
+	case MorphemeType_EXPRESSION:
+		return checker.checkCompoundWord(word)
+	case MorphemeType_TUPLE,
+		MorphemeType_BLOCK:
+		return checker.checkQualifiedWord(word)
+	case MorphemeType_STRING,
+		MorphemeType_HERE_STRING,
+		MorphemeType_TAGGED_STRING:
+		return checker.checkRootWord(word)
+	case MorphemeType_LINE_COMMENT,
+		MorphemeType_BLOCK_COMMENT:
+		return checker.checkIgnoredWord(word)
+	case MorphemeType_SUBSTITUTE_NEXT:
+		return checker.checkSubstitutionWord(word)
+	}
+	panic("CANTHAPPEN")
 }
 
-//   private checkRootWord(word: Word): WordType {
-//     if (word.morphemes.length != 1) return WordType.INVALID;
-//     return WordType.ROOT;
-//   }
+func (checker SyntaxChecker) checkRootWord(word Word) WordType {
+	if len(word.Morphemes) != 1 {
+		return WordType_INVALID
+	}
+	return WordType_ROOT
+}
 
-//   private checkCompoundWord(word: Word): WordType {
-//     /* Lone morphemes are roots */
-//     if (word.morphemes.length == 1) return WordType.ROOT;
+func (checker SyntaxChecker) checkCompoundWord(word Word) WordType {
+	/* Lone morphemes are roots */
+	if len(word.Morphemes) == 1 {
+		return WordType_ROOT
+	}
 
-//     if (this.checkStems(word.morphemes) < 0) return WordType.INVALID;
-//     return WordType.COMPOUND;
-//   }
+	if checker.checkStems(word.Morphemes) < 0 {
+		return WordType_INVALID
+	}
+	return WordType_COMPOUND
+}
 
-//   private checkQualifiedWord(word: Word): WordType {
-//     /* Lone morphemes are roots */
-//     if (word.morphemes.length == 1) return WordType.ROOT;
+func (checker SyntaxChecker) checkQualifiedWord(word Word) WordType {
+	/* Lone morphemes are roots */
+	if len(word.Morphemes) == 1 {
+		return WordType_ROOT
+	}
 
-//     const selectors = this.skipSelectors(word.morphemes, 1);
-//     if (selectors != word.morphemes.length) return WordType.INVALID;
-//     return WordType.QUALIFIED;
-//   }
+	selectors := checker.skipSelectors(word.Morphemes, 1)
+	if selectors != len(word.Morphemes) {
+		return WordType_INVALID
+	}
+	return WordType_QUALIFIED
+}
 
-//   private checkSubstitutionWord(word: Word): WordType {
-//     if (word.morphemes.length < 2) return WordType.INVALID;
-//     const nbStems = this.checkStems(word.morphemes);
-//     return nbStems < 0
-//       ? WordType.INVALID
-//       : nbStems > 1
-//       ? WordType.COMPOUND
-//       : WordType.SUBSTITUTION;
-//   }
+func (checker SyntaxChecker) checkSubstitutionWord(word Word) WordType {
+	if len(word.Morphemes) < 2 {
+		return WordType_INVALID
+	}
+	nbStems := checker.checkStems(word.Morphemes)
+	if nbStems < 0 {
+		return WordType_INVALID
+	}
+	if nbStems > 1 {
+		return WordType_COMPOUND
+	}
+	return WordType_SUBSTITUTION
+}
 
-//   private checkIgnoredWord(word: Word): WordType {
-//     if (word.morphemes.length != 1) return WordType.INVALID;
-//     return WordType.IGNORED;
-//   }
+func (checker SyntaxChecker) checkIgnoredWord(word Word) WordType {
+	if len(word.Morphemes) != 1 {
+		return WordType_INVALID
+	}
+	return WordType_IGNORED
+}
 
-//   /**
-//    * Check stem sequence in a compound or substitution word
-//    *
-//    * @param morphemes - Morphemes to check
-//    *
-//    * @returns           Number of stems, or < 0 if error
-//    */
-//   private checkStems(morphemes: Morpheme[]): number {
-//     let nbStems = 0;
-//     let substitute = false;
-//     let hasTuples = false;
-//     for (let i = 0; i < morphemes.length; i++) {
-//       const morpheme = morphemes[i];
-//       if (substitute) {
-//         /* Expect valid root followed by selectors */
-//         switch (morpheme.type) {
-//           case MorphemeType.TUPLE:
-//             hasTuples = true;
-//           /* continued */
-//           // eslint-disable-next-line no-fallthrough
-//           case MorphemeType.LITERAL:
-//           case MorphemeType.BLOCK:
-//           case MorphemeType.EXPRESSION:
-//             i = this.skipSelectors(morphemes, i + 1) - 1;
-//             substitute = false;
-//             break;
+// Check stem sequence in a compound or substitution word
+//
+// Returns number of stems, or < 0 if error
+func (checker SyntaxChecker) checkStems(morphemes []Morpheme) int {
+	nbStems := 0
+	substitute := false
+	hasTuples := false
+	for i := 0; i < len(morphemes); i++ {
+		morpheme := morphemes[i]
+		if substitute {
+			/* Expect valid root followed by selectors */
+			switch morpheme.Type() {
+			case MorphemeType_TUPLE:
+				hasTuples = true
+				i = checker.skipSelectors(morphemes, i+1) - 1
+				substitute = false
 
-//           default:
-//             return -1;
-//         }
-//       } else {
-//         switch (morpheme.type) {
-//           case MorphemeType.SUBSTITUTE_NEXT:
-//             nbStems++;
-//             substitute = true;
-//             break;
+			case MorphemeType_LITERAL,
+				MorphemeType_BLOCK,
+				MorphemeType_EXPRESSION:
+				i = checker.skipSelectors(morphemes, i+1) - 1
+				substitute = false
 
-//           case MorphemeType.LITERAL:
-//           case MorphemeType.EXPRESSION:
-//             nbStems++;
-//             substitute = false;
-//             break;
+			default:
+				return -1
+			}
+		} else {
+			switch morpheme.Type() {
+			case MorphemeType_SUBSTITUTE_NEXT:
+				nbStems++
+				substitute = true
 
-//           default:
-//             return -1;
-//         }
-//       }
-//     }
-//     /* Tuples are invalid in compound words */
-//     if (hasTuples && nbStems > 1) return -1;
+			case MorphemeType_LITERAL,
+				MorphemeType_EXPRESSION:
+				nbStems++
+				substitute = false
 
-//     return nbStems;
-//   }
+			default:
+				return -1
+			}
+		}
+	}
+	/* Tuples are invalid in compound words */
+	if hasTuples && nbStems > 1 {
+		return -1
+	}
 
-//   /**
-//    * Skip all the selectors following a stem root
-//    *
-//    * @param morphemes - Morphemes to check
-//    * @param first     - Index of first expected selector
-//    *
-//    * @returns           Index after selector sequence
-//    */
-//   private skipSelectors(morphemes: Morpheme[], first: number): number {
-//     for (let i = first; i < morphemes.length; i++) {
-//       const morpheme = morphemes[i];
-//       switch (morpheme.type) {
-//         case MorphemeType.TUPLE:
-//         case MorphemeType.BLOCK:
-//         case MorphemeType.EXPRESSION:
-//           /* Eat up valid selector */
-//           break;
+	return nbStems
+}
 
-//         default:
-//           /* Stop there */
-//           return i;
-//       }
-//     }
-//     return morphemes.length;
-//   }
+// Skip all the selectors following a stem root starting at first
+//
+// Returns index after selector sequence
+func (checker SyntaxChecker) skipSelectors(morphemes []Morpheme, first int) int {
+	for i := first; i < len(morphemes); i++ {
+		morpheme := morphemes[i]
+		switch morpheme.Type() {
+		case MorphemeType_TUPLE,
+			MorphemeType_BLOCK,
+			MorphemeType_EXPRESSION:
+			/* Eat up valid selector */
+
+		default:
+			/* Stop there */
+			return i
+		}
+	}
+	return len(morphemes)
+}

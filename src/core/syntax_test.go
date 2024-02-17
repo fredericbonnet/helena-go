@@ -7,10 +7,6 @@ import (
 	. "helena/core"
 )
 
-// import { MorphemeType, Script, SyntaxChecker, Word, WordType } from "./syntax";
-// import { Parser } from "./parser";
-// import { Tokenizer } from "./tokenizer";
-
 const _LITERAL = "literal"
 const _TUPLE = "(word1 word2)"
 const _BLOCK = "{word1 word2}"
@@ -48,202 +44,211 @@ var ignored = []testMorpheme{
 }
 
 var _ = Describe("SyntaxChecker", func() {
-	//   let tokenizer: Tokenizer;
-	//   let parser: Parser;
+	var tokenizer Tokenizer
+	var parser *Parser
 	var checker SyntaxChecker
 
-	//   const parse = (script: string) =>
-	//     parser.parse(tokenizer.tokenize(script)).script;
-	//   const firstWord = (script: Script) => script.sentences[0].words[0] as Word;
+	parse := func(script string) *Script {
+		return parser.Parse(tokenizer.Tokenize(script)).Script
+	}
+	firstWord := func(script *Script) Word {
+		// return script.sentences[0].words[0] as Word;
+		return script.Sentences[0].Words[0]
+	}
 
 	BeforeEach(func() {
-		//     tokenizer = new Tokenizer();
-		//     parser = new Parser();
+		tokenizer = Tokenizer{}
+		parser = &Parser{}
 		checker = SyntaxChecker{}
 	})
 
 	Describe("roots", func() {
-		for _, v := range append(roots, monomorphemes...) {
-			Specify(v.type_+" root", func() {
-				//	      const script = parse(value);
-				//	      const word = firstWord(script);
-				//	      Expect(word.morphemes).to.have.length(1);
-				//	      Expect(checker.checkWord(word)).to.eq(WordType.ROOT);
+		for _, tm := range append(append([]testMorpheme{}, roots...), monomorphemes...) {
+			type_ := tm.type_
+			value := tm.value
+			Specify(type_+" root", func() {
+				script := parse(value)
+				word := firstWord(script)
+				Expect(word.Morphemes).To(HaveLen(1))
+				Expect(checker.CheckWord(word)).To(Equal(WordType_ROOT))
 			})
 		}
 	})
-	//
 	Describe("compounds", func() {
 		Specify("literal prefix", func() {
-			//	    const script = parse(_LITERAL + "$" + _BLOCK);
-			//	    const word = firstWord(script);
-			//	    Expect(word.morphemes).to.have.length(3);
-			//	    Expect(checker.checkWord(word)).to.eq(WordType.COMPOUND);
+			script := parse(_LITERAL + "$" + _BLOCK)
+			word := firstWord(script)
+			Expect(word.Morphemes).To(HaveLen(3))
+			Expect(checker.CheckWord(word)).To(Equal(WordType_COMPOUND))
 		})
 		Specify("expression prefix", func() {
-			//	    const script = parse(_EXPRESSION + _LITERAL);
-			//	    const word = firstWord(script);
-			//	    Expect(word.morphemes).to.have.length(2);
-			//	    Expect(checker.checkWord(word)).to.eq(WordType.COMPOUND);
+			script := parse(_EXPRESSION + _LITERAL)
+			word := firstWord(script)
+			Expect(word.Morphemes).To(HaveLen(2))
+			Expect(checker.CheckWord(word)).To(Equal(WordType_COMPOUND))
 		})
 		Specify("substitution prefix", func() {
-			//	    const script = parse("$" + _BLOCK + _TUPLE + _LITERAL);
-			//	    const word = firstWord(script);
-			//	    Expect(word.morphemes).to.have.length(4);
-			//	    Expect(checker.checkWord(word)).to.eq(WordType.COMPOUND);
+			script := parse("$" + _BLOCK + _TUPLE + _LITERAL)
+			word := firstWord(script)
+			Expect(word.Morphemes).To(HaveLen(4))
+			Expect(checker.CheckWord(word)).To(Equal(WordType_COMPOUND))
 		})
 		Specify("complex case", func() {
-			//	    const script = parse(_LITERAL + "$" + _BLOCK + _EXPRESSION + "$" + _LITERAL);
-			//	    const word = firstWord(script);
-			//	    Expect(word.morphemes).to.have.length(6);
-			//	    Expect(checker.checkWord(word)).to.eq(WordType.COMPOUND);
+			script := parse(_LITERAL + "$" + _BLOCK + _EXPRESSION + "$" + _LITERAL)
+			word := firstWord(script)
+			Expect(word.Morphemes).To(HaveLen(6))
+			Expect(checker.CheckWord(word)).To(Equal(WordType_COMPOUND))
 		})
 		Describe("exceptions", func() {
-			for _, v := range []testMorpheme{
+			for _, tm := range []testMorpheme{
 				{"tuple", _TUPLE},
 				{"block", _BLOCK},
 			} {
-				Specify(v.type_+"/literal", func() {
-					//	        const script = parse(value + _LITERAL);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(2);
-					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+				type_ := tm.type_
+				value := tm.value
+				Specify(type_+"/literal", func() {
+					script := parse(value + _LITERAL)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(2))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 				})
-				Specify(v.type_+"/substitution", func() {
-					//	        const script = parse(value + "$" + _LITERAL);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(3);
-					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+				Specify(type_+"/substitution", func() {
+					script := parse(value + "$" + _LITERAL)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(3))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 				})
-				Specify("expression/"+v.type_, func() {
-					//	        const script = parse(_EXPRESSION + value);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(2);
-					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+				Specify("expression/"+type_, func() {
+					script := parse(_EXPRESSION + value)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(2))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 				})
-				Specify("literal/"+v.type_+"/literal", func() {
-					//	        const script = parse(_LITERAL + value + _LITERAL);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(3);
-					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+				Specify("literal/"+type_+"/literal", func() {
+					script := parse(_LITERAL + value + _LITERAL)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(3))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 				})
-				Specify("literal/"+v.type_+"/substitution", func() {
-					//	        const script = parse(_LITERAL + value + "$" + _LITERAL);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(4);
-					//	        Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+				Specify("literal/"+type_+"/substitution", func() {
+					script := parse(_LITERAL + value + "$" + _LITERAL)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(4))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 				})
 			}
 			Specify("literal/tuple substitution", func() {
-				//	      const script = parse(_LITERAL + "$" + _TUPLE);
-				//	      const word = firstWord(script);
-				//	      Expect(word.morphemes).to.have.length(3);
-				//	      Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+				script := parse(_LITERAL + "$" + _TUPLE)
+				word := firstWord(script)
+				Expect(word.Morphemes).To(HaveLen(3))
+				Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 			})
 			Specify("tuple substitution/literal", func() {
-				//	      const script = parse("$" + _TUPLE + _LITERAL);
-				//	      const word = firstWord(script);
-				//	      Expect(word.morphemes).to.have.length(3);
-				//	      Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+				script := parse("$" + _TUPLE + _LITERAL)
+				word := firstWord(script)
+				Expect(word.Morphemes).To(HaveLen(3))
+				Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 			})
 		})
 	})
-	//
 	Describe("substitutions", func() {
-		for _, v := range roots {
-			Describe(v.type_+" source", func() {
+		for _, tm := range roots {
+			type_ := tm.type_
+			value := tm.value
+			Describe(type_+" source", func() {
 				Specify("simple", func() {
-					//	        const script = parse("$" + value);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(2);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
+					script := parse("$" + value)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(2))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_SUBSTITUTION))
 				})
 				Specify("double", func() {
-					//	        const script = parse("$$" + value);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(2);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
+					script := parse("$$" + value)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(2))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_SUBSTITUTION))
 				})
 				Specify("indexed selector", func() {
-					//	        const script = parse("$" + value + _EXPRESSION);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(3);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
+					script := parse("$" + value + _EXPRESSION)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(3))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_SUBSTITUTION))
 				})
 				Specify("keyed selector", func() {
-					//	        const script = parse("$" + value + _TUPLE);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(3);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
+					script := parse("$" + value + _TUPLE)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(3))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_SUBSTITUTION))
 				})
 				Specify("generic selector", func() {
-					//	        const script = parse("$" + value + _BLOCK);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(3);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
+					script := parse("$" + value + _BLOCK)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(3))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_SUBSTITUTION))
 				})
 				Specify("multiple selectors", func() {
-					//	        const script = parse(
-					//	          "$" + value + _TUPLE + _BLOCK + _EXPRESSION + _TUPLE + _EXPRESSION
-					//	        );
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(7);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.SUBSTITUTION);
+					script := parse(
+						"$" + value + _TUPLE + _BLOCK + _EXPRESSION + _TUPLE + _EXPRESSION,
+					)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(7))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_SUBSTITUTION))
 				})
 			})
 		}
 	})
-	//
 	Describe("qualified words", func() {
-		for _, v := range qualifiedSources {
-			Describe(v.type_+" source", func() {
+		for _, tm := range qualifiedSources {
+			value := tm.value
+			Describe(tm.type_+" source", func() {
 				Specify("indexed selector", func() {
-					//	        const script = parse(value + _EXPRESSION);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(2);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.QUALIFIED);
+					script := parse(value + _EXPRESSION)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(2))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_QUALIFIED))
 				})
 				Specify("keyed selector", func() {
-					//	        const script = parse(value + _TUPLE);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(2);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.QUALIFIED);
+					script := parse(value + _TUPLE)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(2))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_QUALIFIED))
 				})
 				Specify("generic selector", func() {
-					//	        const script = parse(value + _BLOCK);
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(2);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.QUALIFIED);
+					script := parse(value + _BLOCK)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(2))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_QUALIFIED))
 				})
 				Specify("multiple selectors", func() {
-					//	        const script = parse(
-					//	          value + _TUPLE + _BLOCK + _EXPRESSION + _TUPLE + _EXPRESSION
-					//	        );
-					//	        const word = firstWord(script);
-					//	        Expect(word.morphemes).to.have.length(6);
-					//	        Expect(checker.checkWord(word)).to.eq(WordType.QUALIFIED);
+					script := parse(
+						value + _TUPLE + _BLOCK + _EXPRESSION + _TUPLE + _EXPRESSION,
+					)
+					word := firstWord(script)
+					Expect(word.Morphemes).To(HaveLen(6))
+					Expect(checker.CheckWord(word)).To(Equal(WordType_QUALIFIED))
 				})
 			})
 		}
 		Describe("exceptions", func() {
 			Specify("trailing morphemes", func() {
-				//	      const script = parse(
-				//	        _LITERAL + _TUPLE + _TUPLE + _EXPRESSION + _TUPLE + _EXPRESSION + _LITERAL
-				//	      );
-				//	      const word = firstWord(script);
-				//	      Expect(word.morphemes).to.have.length(7);
-				//	      Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+				script := parse(
+					_LITERAL + _TUPLE + _TUPLE + _EXPRESSION + _TUPLE + _EXPRESSION + _LITERAL,
+				)
+				word := firstWord(script)
+				Expect(word.Morphemes).To(HaveLen(7))
+				Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 			})
 		})
 	})
-	//
 	Describe("ignored words", func() {
-		for _, v := range ignored {
-			Specify(v.type_, func() {
-				//	      const script = parse(value);
-				//	      const word = firstWord(script);
-				//	      Expect(word.morphemes).to.have.length(1);
-				//	      Expect(checker.checkWord(word)).to.eq(WordType.IGNORED);
+		for _, tm := range ignored {
+			type_ := tm.type_
+			value := tm.value
+			Specify(type_, func() {
+				script := parse(value)
+				word := firstWord(script)
+				Expect(word.Morphemes).To(HaveLen(1))
+				Expect(checker.CheckWord(word)).To(Equal(WordType_IGNORED))
 			})
 		}
 	})
@@ -251,29 +256,34 @@ var _ = Describe("SyntaxChecker", func() {
 	Describe("impossible cases", func() {
 		Specify("empty word", func() {
 			word := Word{}
-			Expect(checker.CheckWord(word)).To(Equal(INVALID))
+			Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 		})
 		Specify("empty substitution", func() {
 			word := Word{}
 			word.Morphemes = append(word.Morphemes, SubstituteNextMorpheme{})
-			Expect(checker.CheckWord(word)).To(Equal(INVALID))
+			Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 		})
 		Describe("incompatible morphemes", func() {
-			for _, v1 := range append(monomorphemes, ignored...) {
-				for _, v2 := range append(roots, monomorphemes...) {
-					Specify(v1.type_+"/"+v2.type_, func() {
-						//   const word = Word{};
-						//   word.morphemes = append(word.morphemes,
-						// 	firstWord(parse(value1)).morphemes[0]),
-						// 	firstWord(parse(value2)).morphemes[0]),
-						//   )
-						//   Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+			for _, tm1 := range append(append([]testMorpheme{}, monomorphemes...), ignored...) {
+				type1 := tm1.type_
+				value1 := tm1.value
+				for _, tm2 := range append(append([]testMorpheme{}, roots...), monomorphemes...) {
+					type2 := tm2.type_
+					value2 := tm2.value
+					Specify(type1+"/"+type2, func() {
+						word := Word{}
+						word.Morphemes = append(word.Morphemes,
+							firstWord(parse(value1)).Morphemes[0],
+							firstWord(parse(value2)).Morphemes[0],
+						)
+						Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 					})
-					Specify(v2.type_+"/"+v1.type_, func() {
-						//	          const word = new Word();
-						//	          word.morphemes.push(firstWord(parse(value2)).morphemes[0]);
-						//	          word.morphemes.push(firstWord(parse(value1)).morphemes[0]);
-						//	          Expect(checker.checkWord(word)).To(Equal(WordType.INVALID);)
+					Specify(type2+"/"+type1, func() {
+						word := Word{}
+						word.Morphemes = append(word.Morphemes,
+							firstWord(parse(value2)).Morphemes[0],
+							firstWord(parse(value1)).Morphemes[0],
+						)
 					})
 				}
 			}
@@ -283,7 +293,7 @@ var _ = Describe("SyntaxChecker", func() {
 					SubstituteNextMorpheme{},
 					BlockCommentMorpheme{},
 				)
-				Expect(checker.CheckWord(word)).To(Equal(INVALID))
+				Expect(checker.CheckWord(word)).To(Equal(WordType_INVALID))
 			})
 		})
 	})
