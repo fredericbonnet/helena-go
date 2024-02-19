@@ -9,16 +9,22 @@ import (
 
 // const asString = (value) => StringValue.toString(value).data;
 
-// class MockVariableResolver implements VariableResolver {
-//   resolve(name: string): Value {
-//     return this.variables.get(name);
-//   }
+type mockVariableResolver struct {
+	variables map[string]Value
+}
 
-//   variables: Map<string, Value> = new Map();
-//   register(name: string, value: Value) {
-//     this.variables.set(name, value);
-//   }
-// }
+func newMockVariableResolver() *mockVariableResolver {
+	return &mockVariableResolver{
+		variables: map[string]Value{},
+	}
+}
+func (resolver *mockVariableResolver) Resolve(name string) (value Value, ok bool) {
+	v, ok := resolver.variables[name]
+	return v, ok
+}
+func (resolver *mockVariableResolver) register(name string, value Value) {
+	resolver.variables[name] = value
+}
 
 // class IntCommand implements Command {
 //   execute(args: Value[]): Result {
@@ -62,11 +68,11 @@ import (
 var _ = Describe("Compilation and execution", func() {
 	var tokenizer Tokenizer
 	var parser *Parser
-	//   let variableResolver: MockVariableResolver;
-	//   let commandResolver: MockCommandResolver;
-	//   let selectorResolver: MockSelectorResolver;
+	var variableResolver *mockVariableResolver
+	// var commandResolver MockCommandResolver
+	// var selectorResolver MockSelectorResolver
 	var compiler Compiler
-	//   let executor: Executor;
+	var executor *Executor
 
 	parse := func(script string) *Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
@@ -90,24 +96,30 @@ var _ = Describe("Compilation and execution", func() {
 	//       execute: (program: Program) => executor.functionify(program)(),
 	//     },
 	//   ];
+	execute := func(program *Program) Result {
+		return executor.Execute(program, nil)
+	}
 
 	BeforeEach(func() {
 		tokenizer = Tokenizer{}
 		parser = &Parser{}
 		compiler = Compiler{}
-		//     variableResolver = new MockVariableResolver();
+		variableResolver = newMockVariableResolver()
 		//     commandResolver = new MockCommandResolver();
 		//     selectorResolver = new MockSelectorResolver();
-		//     executor = new Executor(
-		//       variableResolver,
-		//       commandResolver,
-		//       selectorResolver
-		//     );
+		executor = &Executor{
+			variableResolver,
+			//       commandResolver,
+			//       selectorResolver
+		}
 	})
 
 	//   for (const { label, execute } of executionModes) {
 	//     const evaluate = (program: Program) => execute(program).value;
 	//     describe(label, func() {
+	evaluate := func(program *Program) Value {
+		return execute(program).Value
+	}
 	Describe("Compiler", func() {
 		Describe("words", func() {
 			Describe("roots", func() {
@@ -117,7 +129,7 @@ var _ = Describe("Compilation and execution", func() {
 					Expect(program.OpCodes).To(Equal([]OpCode{OpCode_PUSH_CONSTANT}))
 					Expect(program.Constants).To(Equal([]Value{STR("word")}))
 
-					// Expect(evaluate(program)).To(Equal(STR("word")))
+					Expect(evaluate(program)).To(Equal(STR("word")))
 				})
 
 				Describe("tuples", func() {
@@ -129,7 +141,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_CLOSE_FRAME,
 						}))
 
-						// Expect(evaluate(program)).To(Equal(TUPLE([]));
+						Expect(evaluate(program)).To(Equal(TUPLE([]Value{})))
 					})
 					Specify("tuple with literals", func() {
 						script := parse("( lit1 lit2 )")
@@ -142,9 +154,9 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("lit1"), STR("lit2")}))
 
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([STR("lit1"), STR("lit2")])
-						// );
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("lit1"), STR("lit2")}),
+						))
 					})
 					Specify("complex case", func() {
 						script := parse(
@@ -187,7 +199,7 @@ var _ = Describe("Compilation and execution", func() {
 						//   new FunctionCommand(() => STR("is"))
 						// );
 						// variableResolver.register("var1", STR("a"));
-						// variableResolver.register("var2", DICT({ key: STR("tuple") }));
+						// variableResolver.register("var2", DICT(map[string]Value{ key: STR("tuple") }));
 						// Expect(evaluate(program)).To(Equal(
 						//   TUPLE([
 						//     STR("this"),
@@ -209,7 +221,7 @@ var _ = Describe("Compilation and execution", func() {
 						Expect(program.OpCodes).To(Equal([]OpCode{OpCode_PUSH_CONSTANT}))
 						Expect(program.Constants).To(Equal([]Value{value}))
 
-						// Expect(evaluate(program)).To(Equal(value);
+						Expect(evaluate(program)).To(Equal(value))
 					})
 					Specify("block with literals", func() {
 						const source = " lit1 lit2 "
@@ -219,7 +231,7 @@ var _ = Describe("Compilation and execution", func() {
 						Expect(program.OpCodes).To(Equal([]OpCode{OpCode_PUSH_CONSTANT}))
 						Expect(program.Constants).To(Equal([]Value{value}))
 
-						// Expect(evaluate(program)).To(Equal(value);
+						Expect(evaluate(program)).To(Equal(value))
 					})
 					Specify("complex case", func() {
 						source := ` this [cmd] $var1 "complex" ${var2}(key) `
@@ -232,7 +244,7 @@ var _ = Describe("Compilation and execution", func() {
 						Expect(program.OpCodes).To(Equal([]OpCode{OpCode_PUSH_CONSTANT}))
 						Expect(program.Constants).To(Equal([]Value{value}))
 
-						// Expect(evaluate(program)).To(Equal(value);
+						Expect(evaluate(program)).To(Equal(value))
 					})
 				})
 
@@ -242,7 +254,7 @@ var _ = Describe("Compilation and execution", func() {
 						program := compileFirstWord(script)
 						Expect(program.OpCodes).To(Equal([]OpCode{OpCode_PUSH_NIL}))
 
-						// Expect(evaluate(program)).To(Equal(NIL);
+						Expect(evaluate(program)).To(Equal(NIL))
 					})
 					Specify("expression with literals", func() {
 						script := parse("[ cmd arg ]")
@@ -310,7 +322,7 @@ var _ = Describe("Compilation and execution", func() {
 						// variableResolver.register("var1", STR("a"));
 						// variableResolver.register(
 						//   "var2",
-						//   DICT({ key: STR("expression") })
+						//   DICT(map[string]Value{ key: STR("expression") })
 						// );
 						// commandResolver.register(
 						//   "this",
@@ -357,7 +369,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_JOIN_STRINGS,
 						}))
 
-						// Expect(evaluate(program)).To(Equal(STR(""));
+						Expect(evaluate(program)).To(Equal(STR("")))
 					})
 					Specify("simple string", func() {
 						script := parse(`"this is a string"`)
@@ -370,7 +382,7 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("this is a string")}))
 
-						// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+						Expect(evaluate(program)).To(Equal(STR("this is a string")))
 					})
 
 					Describe("expressions", func() {
@@ -460,8 +472,8 @@ var _ = Describe("Compilation and execution", func() {
 									STR(" a string"),
 								}))
 
-								// variableResolver.register("var", STR("is"));
-								// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+								variableResolver.register("var", STR("is"))
+								Expect(evaluate(program)).To(Equal(STR("this is a string")))
 							})
 							Specify("double substitution", func() {
 								script := parse(`"this $$var1 a string"`)
@@ -482,9 +494,9 @@ var _ = Describe("Compilation and execution", func() {
 									STR(" a string"),
 								}))
 
-								// variableResolver.register("var1", STR("var2"));
-								// variableResolver.register("var2", STR("is"));
-								// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+								variableResolver.register("var1", STR("var2"))
+								variableResolver.register("var2", STR("is"))
+								Expect(evaluate(program)).To(Equal(STR("this is a string")))
 							})
 							Specify("triple substitution", func() {
 								script := parse(`"this $$$var1 a string"`)
@@ -506,10 +518,10 @@ var _ = Describe("Compilation and execution", func() {
 									STR(" a string"),
 								}))
 
-								// variableResolver.register("var1", STR("var2"));
-								// variableResolver.register("var2", STR("var3"));
-								// variableResolver.register("var3", STR("is"));
-								// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+								variableResolver.register("var1", STR("var2"))
+								variableResolver.register("var2", STR("var3"))
+								variableResolver.register("var3", STR("is"))
+								Expect(evaluate(program)).To(Equal(STR("this is a string")))
 							})
 						})
 
@@ -532,8 +544,8 @@ var _ = Describe("Compilation and execution", func() {
 									STR(" a string"),
 								}))
 
-								// variableResolver.register("variable name", STR("is"));
-								// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+								variableResolver.register("variable name", STR("is"))
+								Expect(evaluate(program)).To(Equal(STR("this is a string")))
 							})
 							Specify("varname with special characters", func() {
 								script := parse(
@@ -555,8 +567,8 @@ var _ = Describe("Compilation and execution", func() {
 									STR(" a string"),
 								}))
 
-								// variableResolver.register('variable " " name', STR("is"));
-								// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+								variableResolver.register(`variable " " name`, STR("is"))
+								Expect(evaluate(program)).To(Equal(STR("this is a string")))
 							})
 							Specify("double substitution", func() {
 								script := parse(`"this $${variable name} a string"`)
@@ -577,9 +589,9 @@ var _ = Describe("Compilation and execution", func() {
 									STR(" a string"),
 								}))
 
-								// variableResolver.register("variable name", STR("var2"));
-								// variableResolver.register("var2", STR("is"));
-								// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+								variableResolver.register("variable name", STR("var2"))
+								variableResolver.register("var2", STR("is"))
+								Expect(evaluate(program)).To(Equal(STR("this is a string")))
 							})
 						})
 
@@ -669,11 +681,11 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							//                   variableResolver.register(
-							//                     "varname",
-							//                     LIST([STR("value"), STR("is")])
-							//                   );
-							//                   Expect(evaluate(program)).To(Equal(STR("this is a string"));
+							// variableResolver.register(
+							// 	"varname",
+							// 	LIST([]Value{STR("value"), STR("is")}),
+							// )
+							// Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 						Specify("double substitution", func() {
 							script := parse(`"this $$var1[0] a string"`)
@@ -701,9 +713,9 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							//                   variableResolver.register("var1", LIST([STR("var2")]));
-							//                   variableResolver.register("var2", STR("is"));
-							//                   Expect(evaluate(program)).To(Equal(STR("this is a string"));
+							// variableResolver.register("var1", LIST([]Value{STR("var2")}))
+							// variableResolver.register("var2", STR("is"))
+							// Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 						Specify("successive indexes", func() {
 							script := parse(`"this $varname[1][0] a string"`)
@@ -769,13 +781,13 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							// variableResolver.register(
-							//   "varname",
-							//   DICT({
-							//     key: STR("is"),
-							//   })
-							// );
-							// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+							variableResolver.register(
+								"varname",
+								DICT(map[string]Value{
+									"key": STR("is"),
+								}),
+							)
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 						Specify("double substitution", func() {
 							script := parse(`"this $$var1(key) a string"`)
@@ -801,9 +813,9 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							// variableResolver.register("var1", DICT({ key: STR("var2") }));
-							// variableResolver.register("var2", STR("is"));
-							// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+							variableResolver.register("var1", DICT(map[string]Value{"key": STR("var2")}))
+							variableResolver.register("var2", STR("is"))
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 						Specify("successive keys", func() {
 							script := parse(`"this $varname(key1)(key2) a string"`)
@@ -833,13 +845,13 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							//                   variableResolver.register(
-							//                     "varname",
-							//                     DICT({
-							//                       key1: DICT({ key2: STR("is") }),
-							//                     })
-							//                   );
-							//                   Expect(evaluate(program)).To(Equal(STR("this is a string"));
+							variableResolver.register(
+								"varname",
+								DICT(map[string]Value{
+									"key1": DICT(map[string]Value{"key2": STR("is")}),
+								}),
+							)
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 					})
 
@@ -1080,9 +1092,9 @@ var _ = Describe("Compilation and execution", func() {
 						STR("this is a \"'\\ $ \nhere-string"),
 					}))
 
-					// Expect(evaluate(program)).To(Equal(
-					//   STR("this is a \"'\\ $ \nhere-string")
-					// );
+					Expect(evaluate(program)).To(Equal(
+						STR("this is a \"'\\ $ \nhere-string"),
+					))
 				})
 
 				Specify("tagged strings", func() {
@@ -1095,9 +1107,9 @@ var _ = Describe("Compilation and execution", func() {
 						STR("this is \n a \n \"'\\ $ tagged string\n"),
 					}))
 
-					// Expect(evaluate(program)).To(Equal(
-					//   STR("this is \n a \n \"'\\ $ tagged string\n")
-					// );
+					Expect(evaluate(program)).To(Equal(
+						STR("this is \n a \n \"'\\ $ tagged string\n"),
+					))
 				})
 			})
 
@@ -1137,7 +1149,7 @@ var _ = Describe("Compilation and execution", func() {
 						STR("_compound"),
 					}))
 
-					// variableResolver.register("var", DICT({ key: STR("is") }));
+					// variableResolver.register("var", DICT(map[string]Value{ key: STR("is") }));
 					// commandResolver.register(
 					//   "cmd",
 					//   new FunctionCommand(() => STR("literal-prefixed"))
@@ -1185,7 +1197,7 @@ var _ = Describe("Compilation and execution", func() {
 					// );
 					// variableResolver.register(
 					//   "var",
-					//   DICT({ key: STR("expression-prefixed") })
+					//   DICT(map[string]Value{ key: STR("expression-prefixed") })
 					// );
 					// Expect(evaluate(program)).To(Equal(
 					//   STR("this_is_an_expression-prefixed_compound")
@@ -1224,7 +1236,7 @@ var _ = Describe("Compilation and execution", func() {
 						STR("_compound"),
 					}))
 
-					// variableResolver.register("var", DICT({ key: STR("this") }));
+					// variableResolver.register("var", DICT(map[string]Value{ key: STR("this") }));
 					// commandResolver.register(
 					//   "cmd",
 					//   new FunctionCommand(() => STR("substitution-prefixed"))
@@ -1246,8 +1258,8 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("varname")}))
 
-						//                 variableResolver.register("varname", STR("value"));
-						//                 Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register("varname", STR("value"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("double substitution", func() {
 						script := parse("$$var1")
@@ -1259,9 +1271,9 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1")}))
 
-						// variableResolver.register("var1", STR("var2"));
-						// variableResolver.register("var2", STR("value"));
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register("var1", STR("var2"))
+						variableResolver.register("var2", STR("value"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("triple substitution", func() {
 						script := parse("$$$var1")
@@ -1274,10 +1286,10 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1")}))
 
-						// variableResolver.register("var1", STR("var2"));
-						// variableResolver.register("var2", STR("var3"));
-						// variableResolver.register("var3", STR("value"));
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register("var1", STR("var2"))
+						variableResolver.register("var2", STR("var3"))
+						variableResolver.register("var3", STR("value"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 				})
 
@@ -1293,8 +1305,8 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("varname")}))
 
-						// variableResolver.register("varname", STR("value"))
-						// Expect(evaluate(program)).To(Equal(TUPLE([]Value{STR("value")})))
+						variableResolver.register("varname", STR("value"))
+						Expect(evaluate(program)).To(Equal(TUPLE([]Value{STR("value")})))
 					})
 					Specify("multiple variables", func() {
 						script := parse("$(var1 var2)")
@@ -1308,11 +1320,11 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("var2")}))
 
-						// variableResolver.register("var1", STR("value1"));
-						// variableResolver.register("var2", STR("value2"));
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([STR("value1"), STR("value2")])
-						// );
+						variableResolver.register("var1", STR("value1"))
+						variableResolver.register("var2", STR("value2"))
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("value1"), STR("value2")}),
+						))
 					})
 					Specify("double substitution", func() {
 						script := parse("$$(var1)")
@@ -1326,9 +1338,9 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1")}))
 
-						// variableResolver.register("var1", STR("var2"));
-						// variableResolver.register("var2", STR("value"));
-						// Expect(evaluate(program)).To(Equal(TUPLE([STR("value")]));
+						variableResolver.register("var1", STR("var2"))
+						variableResolver.register("var2", STR("value"))
+						Expect(evaluate(program)).To(Equal(TUPLE([]Value{STR("value")})))
 					})
 					Specify("nested tuples", func() {
 						script := parse("$(var1 (var2))")
@@ -1344,11 +1356,11 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("var2")}))
 
-						// variableResolver.register("var1", STR("value1"));
-						// variableResolver.register("var2", STR("value2"));
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([STR("value1"), TUPLE([STR("value2")])])
-						// );
+						variableResolver.register("var1", STR("value1"))
+						variableResolver.register("var2", STR("value2"))
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("value1"), TUPLE([]Value{STR("value2")})}),
+						))
 					})
 					Specify("nested double substitution", func() {
 						script := parse("$$((var1))")
@@ -1364,11 +1376,11 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1")}))
 
-						// variableResolver.register("var1", STR("var2"));
-						// variableResolver.register("var2", STR("value"));
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([TUPLE([STR("value")])])
-						// );
+						variableResolver.register("var1", STR("var2"))
+						variableResolver.register("var2", STR("value"))
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{TUPLE([]Value{STR("value")})}),
+						))
 					})
 				})
 
@@ -1382,8 +1394,8 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("variable name")}))
 
-						// variableResolver.register("variable name", STR("value"));
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register("variable name", STR("value"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("varname with special characters", func() {
 						script := parse(`${variable " " name}`)
@@ -1394,8 +1406,8 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR(`variable " " name`)}))
 
-						// variableResolver.register('variable " " name', STR("value"));
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register(`variable " " name`, STR("value"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("varname with continuations", func() {
 						script := parse("${variable\\\n \t\r     name}")
@@ -1406,9 +1418,9 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("variable name")}))
 
-						// variableResolver.register("variable name", STR("value"));
-						// variableResolver.register('variable " " name', STR("value"));
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register("variable name", STR("value"))
+						variableResolver.register(`variable " " name`, STR("value"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 				})
 
@@ -1726,13 +1738,13 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("varname"), STR("key")}))
 
-						// variableResolver.register(
-						//   "varname",
-						//   DICT({
-						//     key: STR("value"),
-						//   })
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register(
+							"varname",
+							DICT(map[string]Value{
+								"key": STR("value"),
+							}),
+						)
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("double substitution", func() {
 						script := parse("$$var1(key)")
@@ -1748,9 +1760,9 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("key")}))
 
-						// variableResolver.register("var1", DICT({ key: STR("var2") }));
-						// variableResolver.register("var2", STR("value"));
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register("var1", DICT(map[string]Value{"key": STR("var2")}))
+						variableResolver.register("var2", STR("value"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("recursive keys", func() {
 						script := parse("$varname(key1 key2)")
@@ -1770,13 +1782,13 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key2"),
 						}))
 
-						// variableResolver.register(
-						//   "varname",
-						//   DICT({
-						//     key1: DICT({ key2: STR("value") }),
-						//   })
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register(
+							"varname",
+							DICT(map[string]Value{
+								"key1": DICT(map[string]Value{"key2": STR("value")}),
+							}),
+						)
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("successive keys", func() {
 						script := parse("$varname(key1)(key2)")
@@ -1799,13 +1811,13 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key2"),
 						}))
 
-						// variableResolver.register(
-						//   "varname",
-						//   DICT({
-						//     key1: DICT({ key2: STR("value") }),
-						//   })
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register(
+							"varname",
+							DICT(map[string]Value{
+								"key1": DICT(map[string]Value{"key2": STR("value")}),
+							}),
+						)
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("indirect key", func() {
 						script := parse("$var1($var2)")
@@ -1821,14 +1833,14 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("var2")}))
 
-						// variableResolver.register(
-						//   "var1",
-						//   DICT({
-						//     key: STR("value"),
-						//   })
-						// );
-						// variableResolver.register("var2", STR("key"));
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register(
+							"var1",
+							DICT(map[string]Value{
+								"key": STR("value"),
+							}),
+						)
+						variableResolver.register("var2", STR("key"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("string key", func() {
 						script := parse(`$varname("arbitrary key")`)
@@ -1849,13 +1861,13 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arbitrary key"),
 						}))
 
-						// variableResolver.register(
-						//   "varname",
-						//   DICT({
-						//     "arbitrary key": STR("value"),
-						//   })
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register(
+							"varname",
+							DICT(map[string]Value{
+								"arbitrary key": STR("value"),
+							}),
+						)
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("block key", func() {
 						script := parse("$varname({arbitrary key})")
@@ -1873,13 +1885,13 @@ var _ = Describe("Compilation and execution", func() {
 							NewScriptValue(*parse("arbitrary key"), "arbitrary key"),
 						}))
 
-						// variableResolver.register(
-						//   "varname",
-						//   DICT({
-						//     "arbitrary key": STR("value"),
-						//   })
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register(
+							"varname",
+							DICT(map[string]Value{
+								"arbitrary key": STR("value"),
+							}),
+						)
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("tuple", func() {
 						script := parse("$(var1 var2)(key)")
@@ -1901,11 +1913,11 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key"),
 						}))
 
-						// variableResolver.register("var1", DICT({ key: STR("value1") }));
-						// variableResolver.register("var2", DICT({ key: STR("value2") }));
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([STR("value1"), STR("value2")])
-						// );
+						variableResolver.register("var1", DICT(map[string]Value{"key": STR("value1")}))
+						variableResolver.register("var2", DICT(map[string]Value{"key": STR("value2")}))
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("value1"), STR("value2")}),
+						))
 					})
 					Specify("recursive tuple", func() {
 						script := parse("$(var1 (var2))(key)")
@@ -1929,11 +1941,11 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key"),
 						}))
 
-						// variableResolver.register("var1", DICT({ key: STR("value1") }));
-						// variableResolver.register("var2", DICT({ key: STR("value2") }));
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([STR("value1"), TUPLE([STR("value2")])])
-						// );
+						variableResolver.register("var1", DICT(map[string]Value{"key": STR("value1")}))
+						variableResolver.register("var2", DICT(map[string]Value{"key": STR("value2")}))
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("value1"), TUPLE([]Value{STR("value2")})}),
+						))
 					})
 					Specify("tuple with double substitution", func() {
 						script := parse("$$(var1 var2)(key)")
@@ -1956,13 +1968,13 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key"),
 						}))
 
-						// variableResolver.register("var1", DICT({ key: STR("var3") }));
-						// variableResolver.register("var2", DICT({ key: STR("var4") }));
-						// variableResolver.register("var3", STR("value3"));
-						// variableResolver.register("var4", STR("value4"));
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([STR("value3"), STR("value4")])
-						// );
+						variableResolver.register("var1", DICT(map[string]Value{"key": STR("var3")}))
+						variableResolver.register("var2", DICT(map[string]Value{"key": STR("var4")}))
+						variableResolver.register("var3", STR("value3"))
+						variableResolver.register("var4", STR("value4"))
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("value3"), STR("value4")}),
+						))
 					})
 					Specify("scalar expression", func() {
 						script := parse("$[cmd](key)")
@@ -1982,7 +1994,7 @@ var _ = Describe("Compilation and execution", func() {
 
 						// commandResolver.register(
 						//   "cmd",
-						//   new FunctionCommand(() => DICT({ key: STR("value") }))
+						//   new FunctionCommand(() => DICT(map[string]Value{ key: STR("value") }))
 						// );
 						// Expect(evaluate(program)).To(Equal(STR("value"));
 					})
@@ -2006,8 +2018,8 @@ var _ = Describe("Compilation and execution", func() {
 						//   "cmd",
 						//   new FunctionCommand(() =>
 						//     TUPLE([
-						//       DICT({ key: STR("value1") }),
-						//       DICT({ key: STR("value2") }),
+						//       DICT(map[string]Value{ key: STR("value1") }),
+						//       DICT(map[string]Value{ key: STR("value2") }),
 						//     ])
 						//   )
 						// );
@@ -2188,19 +2200,19 @@ var _ = Describe("Compilation and execution", func() {
 				})
 
 				Describe("exceptions", func() {
-					//               Specify("unresolved variable", func() {
-					//                  script := parse("$varname");
-					//                  program := compileFirstWord(script);
-					//                 Expect(program.OpCodes).To(Equal([]OpCode{
-					//                   OpCode_PUSH_CONSTANT,
-					//                   OpCode_RESOLVE_VALUE,
-					//                 }));
-					//                 Expect(program.Constants).To(Equal([]Value{STR("varname")}))
+					Specify("unresolved variable", func() {
+						script := parse("$varname")
+						program := compileFirstWord(script)
+						Expect(program.OpCodes).To(Equal([]OpCode{
+							OpCode_PUSH_CONSTANT,
+							OpCode_RESOLVE_VALUE,
+						}))
+						Expect(program.Constants).To(Equal([]Value{STR("varname")}))
 
-					//                 Expect(execute(program)).To(Equal(
-					//                   ERROR('cannot resolve variable "varname"')
-					//                 );
-					//               });
+						Expect(execute(program)).To(Equal(
+							ERROR(`cannot resolve variable "varname"`),
+						))
+					})
 				})
 			})
 
@@ -2249,11 +2261,11 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key2"),
 						}))
 
-						// Expect(evaluate(program)).To(Equal(
-						//   new QualifiedValue(STR("varname"), [
-						//     new KeyedSelector([STR("key1"), STR("key2")]),
-						//   ])
-						// );
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(STR("varname"), []Selector{
+								NewKeyedSelector([]Value{STR("key1"), STR("key2")}),
+							}),
+						))
 					})
 					Specify("generic selector", func() {
 						script := parse("varname{rule1 arg1; rule2 arg2}")
@@ -2439,12 +2451,12 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key2"),
 						}))
 
-						// Expect(evaluate(program)).To(Equal(
-						//   new QualifiedValue(
-						//     TUPLE([STR("varname1"), STR("varname2")]),
-						//     [new KeyedSelector([STR("key1"), STR("key2")])]
-						//   )
-						// );
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(
+								TUPLE([]Value{STR("varname1"), STR("varname2")}),
+								[]Selector{NewKeyedSelector([]Value{STR("key1"), STR("key2")})},
+							),
+						))
 					})
 					Specify("generic selector", func() {
 						script := parse(
@@ -2649,11 +2661,11 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key2"),
 						}))
 
-						//                 Expect(evaluate(program)).To(Equal(
-						//                   new QualifiedValue(STR("source name"), [
-						//                     new KeyedSelector([STR("key1"), STR("key2")]),
-						//                   ])
-						//                 );
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(STR("source name"), []Selector{
+								NewKeyedSelector([]Value{STR("key1"), STR("key2")}),
+							}),
+						))
 					})
 					Specify("generic selector", func() {
 						script := parse("{source name}{rule1 arg1; rule2 arg2}")
@@ -2805,7 +2817,7 @@ var _ = Describe("Compilation and execution", func() {
 			Expect(program.OpCodes).To(Equal([]OpCode{OpCode_PUSH_CONSTANT}))
 			Expect(program.Constants).To(Equal([]Value{STR("value")}))
 
-			// Expect(evaluate(program)).To(Equal(STR("value"));
+			Expect(evaluate(program)).To(Equal(STR("value")))
 		})
 
 		Describe("word expansion", func() {
@@ -2827,18 +2839,18 @@ var _ = Describe("Compilation and execution", func() {
 					STR("suffix"),
 				}))
 
-				// variableResolver.register(
-				//   "var",
-				//   TUPLE([STR("value1"), STR("value2")])
-				// );
-				// Expect(evaluate(program)).To(Equal(
-				//   TUPLE([
-				//     STR("prefix"),
-				//     STR("value1"),
-				//     STR("value2"),
-				//     STR("suffix"),
-				//   ])
-				// );
+				variableResolver.register(
+					"var",
+					TUPLE([]Value{STR("value1"), STR("value2")}),
+				)
+				Expect(evaluate(program)).To(Equal(
+					TUPLE([]Value{
+						STR("prefix"),
+						STR("value1"),
+						STR("value2"),
+						STR("suffix"),
+					}),
+				))
 			})
 			Specify("expressions", func() {
 				script := parse("(prefix $*[cmd] suffix)")
@@ -2974,12 +2986,12 @@ var _ = Describe("Compilation and execution", func() {
 		})
 
 		Describe("scripts", func() {
-			//           Specify("empty", func() {
-			//              script := parse("");
-			//              program := compiler.CompileScript(script);
-			//             Expect(program.OpCodes).To(Equal([]);
-			//             Expect(evaluate(program)).To(Equal(NIL);
-			//           });
+			Specify("empty", func() {
+				script := parse("")
+				program := compiler.CompileScript(*script)
+				Expect(program.OpCodes).To(HaveLen(0))
+				Expect(evaluate(program)).To(Equal(NIL))
+			})
 
 			//           Specify("conditional evaluation", func() {
 			//             const script1 = parse("if true {cmd1 a} else {cmd2 b}");
@@ -3184,38 +3196,38 @@ var _ = Describe("Compilation and execution", func() {
 		//           Expect(commandContext).to.equal(context);
 		//         });
 
-		//         Describe("exceptions", func() {
-		//           Specify("invalid command name", func() {
-		//              script := parse("[]");
-		//              program := compiler.CompileScript(script);
+		Describe("exceptions", func() {
+			//           Specify("invalid command name", func() {
+			//              script := parse("[]");
+			//              program := compiler.CompileScript(script);
 
-		//             Expect(execute(program)).To(Equal(ERROR("invalid command name"));
-		//           });
-		//           Specify("invalid variable name", func() {
-		//              script := parse("$([])");
-		//              program := compiler.CompileScript(script);
+			//             Expect(execute(program)).To(Equal(ERROR("invalid command name"));
+			//           });
+			Specify("invalid variable name", func() {
+				script := parse("$([])")
+				program := compiler.CompileScript(*script)
 
-		//             Expect(execute(program)).To(Equal(ERROR("invalid variable name"));
-		//           });
-		//           Specify("variable substitution with no string representation", func() {
-		//              script := parse('"$var"');
-		//              program := compiler.CompileScript(script);
+				Expect(execute(program)).To(Equal(ERROR("invalid variable name")))
+			})
+			Specify("variable substitution with no string representation", func() {
+				script := parse(`"$var"`)
+				program := compiler.CompileScript(*script)
 
-		//             variableResolver.register("var", NIL);
+				variableResolver.register("var", NIL)
 
-		//             Expect(execute(program)).To(Equal(
-		//               ERROR("value has no string representation")
-		//             );
-		//           });
-		//           Specify("command substitution with no string representation", func() {
-		//              script := parse('"[]"');
-		//              program := compiler.CompileScript(script);
+				Expect(execute(program)).To(Equal(
+					ERROR("value has no string representation"),
+				))
+			})
+			//           Specify("command substitution with no string representation", func() {
+			//              script := parse('"[]"');
+			//              program := compiler.CompileScript(script);
 
-		//             Expect(execute(program)).To(Equal(
-		//               ERROR("value has no string representation")
-		//             );
-		//           });
-		//         });
+			//             Expect(execute(program)).To(Equal(
+			//               ERROR("value has no string representation")
+			//             );
+			//           });
+		})
 	})
 
 	Describe("Program", func() {

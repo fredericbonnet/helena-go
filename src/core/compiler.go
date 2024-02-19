@@ -533,256 +533,249 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 	program.PushConstant(value)
 }
 
-// /**
-//  * Helena program state
-//  *
-//  * This class encapsulates the state of a program being executed, allowing
-//  * reentrancy and parallelism of executors
-//  */
-// export class ProgramState {
-//   /** Execution frames; each frame is a stack of values */
-//   private readonly frames: Value[][] = [[]];
+//
+// Helena program state
+//
+// This class encapsulates the state of a program being executed, allowing
+// reentrancy and parallelism of executors
+//
+type ProgramState struct {
+	// Execution frames; each frame is a stack of values
+	frames [][]Value
 
-//   /** Program counter */
-//   pc = 0;
+	// Program counter
+	PC uint
 
-//   /** Constant counter */
-//   cc = 0;
+	// Constant counter
+	CC uint
 
-//   /** Last executed command */
-//   command: Command;
+	//   /** Last executed command */
+	//   command: Command;
 
-//   /** Last executed result value */
-//   result: Result = OK(NIL);
+	// Last executed result value
+	Result Result
+}
 
-//   /** Open a new frame */
-//   openFrame() {
-//     this.frames.push([]);
-//   }
+func NewProgramState() *ProgramState {
+	return &ProgramState{
+		frames: [][]Value{{}},
+		PC:     0,
+		CC:     0,
+		Result: OK(NIL),
+	}
+}
 
-//   /**
-//    * Close the current frame
-//    *
-//    * @returns The closed frame
-//    */
-//   closeFrame() {
-//     return this.frames.pop();
-//   }
+// Open a new frame
+func (state *ProgramState) OpenFrame() {
+	state.frames = append(state.frames, []Value{})
+}
 
-//   /** @returns Current frame */
-//   frame() {
-//     return this.frames[this.frames.length - 1];
-//   }
+// Close and return the current frame
+func (state *ProgramState) CloseFrame() []Value {
+	f := state.frames[len(state.frames)-1]
+	state.frames = state.frames[:len(state.frames)-1]
+	return f
+}
 
-//   /**
-//    * Push value on current frame
-//    *
-//    * @param value - Value to push
-//    */
-//   push(value: Value) {
-//     this.frame().push(value);
-//   }
+// Return current frame
+func (state *ProgramState) Frame() []Value {
+	return state.frames[len(state.frames)-1]
+}
 
-//   /**
-//    * Pop last value on current frame
-//    *
-//    * @returns Popped value
-//    */
-//   pop() {
-//     return this.frame().pop();
-//   }
+// Push value on current frame
+func (state *ProgramState) Push(value Value) {
+	f := state.frames[len(state.frames)-1]
+	f = append(f, value)
+	state.frames[len(state.frames)-1] = f
+}
 
-//   /** @returns Last value on current frame */
-//   private last() {
-//     return this.frame()[this.frame().length - 1];
-//   }
+// Pop and return last value on current frame
+func (state *ProgramState) Pop() Value {
+	f := state.frames[len(state.frames)-1]
+	v := f[len(f)-1]
+	state.frames[len(state.frames)-1] = f[:len(f)-1]
+	return v
+}
 
-//   /** Expand last value in current frame */
-//   expand() {
-//     const last = this.last();
-//     if (last && last.type == ValueType.TUPLE) {
-//       this.frame().pop();
-//       this.frame().push(...(last as TupleValue).values);
-//     }
-//   }
-// }
+// Return last value on current frame
+func (state *ProgramState) last() *Value {
+	f := state.Frame()
+	if len(f) == 0 {
+		return nil
+	}
+	return &f[len(f)-1]
+}
 
-// /**
-//  * Helena program executor
-//  *
-//  * This class executes compiled programs in an isolated state
-//  */
-// export class Executor {
-//   /** Variable resolver used during execution */
-//   private readonly variableResolver: VariableResolver;
+// Expand last value in current frame
+func (state *ProgramState) Expand() {
+	last := state.last()
+	if last != nil && (*last).Type() == ValueType_TUPLE {
+		f := state.frames[len(state.frames)-1]
+		f = f[:len(f)-1]
+		f = append(f, (*last).(TupleValue).Values...)
+		state.frames[len(state.frames)-1] = f
+	}
+}
 
-//   /** Command resolver used during execution */
-//   private readonly commandResolver: CommandResolver;
+//
+// Helena program executor
+//
+// This class executes compiled programs in an isolated state
+//
+type Executor struct {
+	// Variable resolver used during execution
+	VariableResolver VariableResolver
 
-//   /** Selector resolver used during execution */
-//   private readonly selectorResolver: SelectorResolver;
+	//   /** Command resolver used during execution */
+	//   private readonly commandResolver: CommandResolver;
 
-//   /** Opaque context passed to commands */
-//   private readonly context: unknown;
+	//   /** Selector resolver used during execution */
+	//   private readonly selectorResolver: SelectorResolver;
 
-//   /**
-//    * @param variableResolver - Variable resolver
-//    * @param commandResolver  - Command resolver
-//    * @param selectorResolver - Selector resolver
-//    * @param [context]        - Opaque context
-//    */
-//   constructor(
-//     variableResolver: VariableResolver,
-//     commandResolver: CommandResolver,
-//     selectorResolver: SelectorResolver,
-//     context?: unknown
-//   ) {
-//     this.variableResolver = variableResolver;
-//     this.commandResolver = commandResolver;
-//     this.selectorResolver = selectorResolver;
-//     this.context = context;
-//   }
+	//   /** Opaque context passed to commands */
+	//   private readonly context: unknown;
+}
 
-//   /**
-//    * Execute the given program
-//    *
-//    * Runs a flat loop over the program opcodes
-//    *
-//    * By default a new state is created at each call. Passing a state object
-//    * can be used to implement resumability, context switching, trampolines,
-//    * coroutines, etc.
-//    *
-//    * @param program - Program to execute
-//    * @param [state] - Program state (defaults to new)
-//    *
-//    * @returns         Last executed result
-//    */
-//   execute(program *Program, state = new ProgramState()): Result {
-//     if (state.result.code == ResultCode.YIELD && state.command?.resume) {
-//       state.result = state.command.resume(state.result, this.context);
-//       if (state.result.code != ResultCode.OK) return state.result;
-//     }
-//     while (state.pc < program.opCodes.length) {
-//       const opcode = program.opCodes[state.pc++];
-//       switch (opcode) {
-//         case OpCode_PUSH_NIL:
-//           state.push(NIL);
-//           break;
+// Execute the given program and return last executed result
+//
+// Runs a flat loop over the program opcodes
+//
+// By default a new state is created at each call. Passing a state object
+// can be used to implement resumability, context switching, trampolines,
+// coroutines, etc.
+func (executor *Executor) Execute(program *Program, state *ProgramState) Result {
+	if state == nil {
+		state = NewProgramState()
+	}
+	//     if (state.result.code == ResultCode_YIELD && state.command?.resume) {
+	//       state.result = state.command.resume(state.result, this.context);
+	//       if (state.result.code != ResultCode_OK) return state.result;
+	//     }
+	for state.PC < uint(len(program.OpCodes)) {
+		opcode := program.OpCodes[state.PC]
+		state.PC++
+		switch opcode {
+		case OpCode_PUSH_NIL:
+			state.Push(NIL)
 
-//         case OpCode_PUSH_CONSTANT:
-//           state.push(program.constants[state.cc++]);
-//           break;
+		case OpCode_PUSH_CONSTANT:
+			{
+				state.Push(program.Constants[state.CC])
+				state.CC++
+			}
 
-//         case OpCode_OPEN_FRAME:
-//           state.openFrame();
-//           break;
+		case OpCode_OPEN_FRAME:
+			state.OpenFrame()
 
-//         case OpCode_CLOSE_FRAME:
-//           {
-//             const values = state.closeFrame();
-//             state.push(new TupleValue(values));
-//           }
-//           break;
+		case OpCode_CLOSE_FRAME:
+			{
+				values := state.CloseFrame()
+				state.Push(NewTupleValue(values))
+			}
 
-//         case OpCode_RESOLVE_VALUE:
-//           {
-//             const source = state.pop();
-//             const result = this.resolveValue(source);
-//             if (result.code != ResultCode.OK) return result;
-//             state.push(result.value);
-//           }
-//           break;
+		case OpCode_RESOLVE_VALUE:
+			{
+				source := state.Pop()
+				result := executor.resolveValue(source)
+				if result.Code != ResultCode_OK {
+					return result
+				}
+				state.Push(result.Value)
+			}
 
-//         case OpCode_EXPAND_VALUE:
-//           state.expand();
-//           break;
+		case OpCode_EXPAND_VALUE:
+			state.Expand()
 
-//         case OpCode_SET_SOURCE:
-//           {
-//             const source = state.pop();
-//             state.push(new QualifiedValue(source, []));
-//           }
-//           break;
+		case OpCode_SET_SOURCE:
+			{
+				source := state.Pop()
+				state.Push(NewQualifiedValue(source, []Selector{}))
+			}
 
-//         case OpCode_SELECT_INDEX:
-//           {
-//             const index = state.pop();
-//             const value = state.pop();
-//             const { data: selector, ...result2 } =
-//               IndexedSelector.create(index);
-//             if (result2.code != ResultCode.OK) return result2;
-//             const result = selector.apply(value);
-//             if (result.code != ResultCode.OK) return result;
-//             state.push(result.value);
-//           }
-//           break;
+			//         case OpCode_SELECT_INDEX:
+			//           {
+			//             const index = state.pop();
+			//             const value = state.pop();
+			//             const { data: selector, ...result2 } =
+			//               IndexedSelector.create(index);
+			//             if (result2.code != ResultCode_OK) return result2;
+			//             const result = selector.apply(value);
+			//             if (result.code != ResultCode_OK) return result;
+			//             state.push(result.value);
+			//           }
+			//           break;
 
-//         case OpCode_SELECT_KEYS:
-//           {
-//             const keys = state.pop() as TupleValue;
-//             const value = state.pop();
-//             const { data: selector, ...result2 } = KeyedSelector.create(
-//               keys.values
-//             );
-//             if (result2.code != ResultCode.OK) return result2;
-//             const result = selector.apply(value);
-//             if (result.code != ResultCode.OK) return result;
-//             state.push(result.value);
-//           }
-//           break;
+		case OpCode_SELECT_KEYS:
+			{
+				keys := state.Pop().(TupleValue)
+				value := state.Pop()
+				result2 := CreateKeyedSelector(keys.Values)
+				if result2.Code != ResultCode_OK {
+					return result2.Result
+				}
+				selector := result2.Data
+				result := selector.Apply(value)
+				if result.Code != ResultCode_OK {
+					return result
+				}
+				state.Push(result.Value)
+			}
 
-//         case OpCode_SELECT_RULES:
-//           {
-//             const rules = state.pop() as TupleValue;
-//             const value = state.pop();
-//             const { data: selector, ...result } = this.resolveSelector(
-//               rules.values
-//             );
-//             if (result.code != ResultCode.OK) return result;
-//             const result2 = applySelector(value, selector);
-//             if (result2.code != ResultCode.OK) return result2;
-//             state.push(result2.value);
-//           }
-//           break;
+			//         case OpCode_SELECT_RULES:
+			//           {
+			//             const rules = state.pop() as TupleValue;
+			//             const value = state.pop();
+			//             const { data: selector, ...result } = this.resolveSelector(
+			//               rules.values
+			//             );
+			//             if (result.code != ResultCode_OK) return result;
+			//             const result2 = applySelector(value, selector);
+			//             if (result2.code != ResultCode_OK) return result2;
+			//             state.push(result2.value);
+			//           }
+			//           break;
 
-//         case OpCode_EVALUATE_SENTENCE:
-//           {
-//             const args = state.pop() as TupleValue;
-//             if (args.values.length) {
-//               const cmdname = args.values[0];
-//               const { data: command, ...result } = this.resolveCommand(cmdname);
-//               if (result.code != ResultCode.OK) return result;
-//               state.command = command;
-//               state.result = state.command.execute(args.values, this.context);
-//               if (state.result.code != ResultCode.OK) return state.result;
-//             }
-//           }
-//           break;
+			//         case OpCode_EVALUATE_SENTENCE:
+			//           {
+			//             const args = state.pop() as TupleValue;
+			//             if (args.values.length) {
+			//               const cmdname = args.values[0];
+			//               const { data: command, ...result } = this.resolveCommand(cmdname);
+			//               if (result.code != ResultCode_OK) return result;
+			//               state.command = command;
+			//               state.result = state.command.execute(args.values, this.context);
+			//               if (state.result.code != ResultCode_OK) return state.result;
+			//             }
+			//           }
+			//           break;
 
-//         case OpCode_PUSH_RESULT:
-//           state.push(state.result.value);
-//           break;
+			//         case OpCode_PUSH_RESULT:
+			//           state.push(state.result.value);
+			//           break;
 
-//         case OpCode_JOIN_STRINGS:
-//           {
-//             const tuple = state.pop() as TupleValue;
-//             let s = "";
-//             for (const value of tuple.values) {
-//               const { data, ...result } = StringValue.toString(value);
-//               if (result.code != ResultCode.OK) return result;
-//               s += data;
-//             }
-//             state.push(new StringValue(s));
-//           }
-//           break;
+		case OpCode_JOIN_STRINGS:
+			{
+				tuple := state.Pop().(TupleValue)
+				s := ""
+				for _, value := range tuple.Values {
+					result := ValueToString(value)
+					if result.Code != ResultCode_OK {
+						return result.Result
+					}
+					s += result.Data
+				}
+				state.Push(NewStringValue(s))
+			}
 
-//         default:
-//           throw new Error("CANTHAPPEN");
-//       }
-//     }
-//     if (state.frame().length) state.result = OK(state.pop());
-//     return state.result;
-//   }
+		default:
+			panic("CANTHAPPEN")
+		}
+	}
+	if len(state.Frame()) > 0 {
+		state.Result = OK(state.Pop())
+	}
+	return state.Result
+}
 
 //   /**
 //    * Transform the given program into a callable function
@@ -836,80 +829,78 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 //       f(state, this, this.context, program.constants, imports);
 //   }
 
-//   /**
-//    * Resolve value
-//    *
-//    * - If source value is a tuple, resolve each of its elements recursively
-//    * - If source value is a qualified word, resolve source and apply selectors
-//    * - Else, resolve variable from the source string value
-//    *
-//    * @param source - Value(s) to resolve
-//    * @returns        Resolved value(s)
-//    */
-//   private resolveValue(source: Value): Result {
-//     switch (source.type) {
-//       case ValueType.TUPLE:
-//         return this.resolveTuple(source as TupleValue);
-//       case ValueType.QUALIFIED:
-//         return this.resolveQualified(source as QualifiedValue);
-//       default: {
-//         const { data: varname, code } = StringValue.toString(source);
-//         if (code != ResultCode.OK) return ERROR("invalid variable name");
-//         return this.resolveVariable(varname);
-//       }
-//     }
-//   }
+// Resolve value
+//
+// - If source value is a tuple, resolve each of its elements recursively
+// - If source value is a qualified word, resolve source and apply selectors
+// - Else, resolve variable from the source string value
+func (executor *Executor) resolveValue(source Value) Result {
+	switch source.Type() {
+	case ValueType_TUPLE:
+		return executor.resolveTuple(source.(TupleValue))
+	//       case ValueType_QUALIFIED:
+	//         return this.resolveQualified(source as QualifiedValue);
+	default:
+		{
+			result := ValueToString(source)
+			if result.Code != ResultCode_OK {
+				return ERROR("invalid variable name")
+			}
+			varname := result.Data
+			return executor.resolveVariable(varname)
+		}
+	}
+}
+
 //   private resolveQualified(qualified: QualifiedValue): Result {
 //     let result = this.resolveValue(qualified.source);
-//     if (result.code != ResultCode.OK) return result;
+//     if (result.code != ResultCode_OK) return result;
 //     for (const selector of qualified.selectors) {
 //       result = selector.apply(result.value);
-//       if (result.code != ResultCode.OK) return result;
+//       if (result.code != ResultCode_OK) return result;
 //     }
 //     return result;
 //   }
 
-//   /**
-//    * Resolve tuple values recursively
-//    *
-//    * @param tuple - Tuple to resolve
-//    *
-//    * @returns       Resolved tuple
-//    */
-//   private resolveTuple(tuple: TupleValue): Result {
-//     const values: Value[] = [];
-//     for (const value of tuple.values) {
-//       let result: Result;
-//       switch (value.type) {
-//         case ValueType.TUPLE:
-//           result = this.resolveTuple(value as TupleValue);
-//           break;
-//         default:
-//           result = this.resolveValue(value);
-//       }
-//       if (result.code != ResultCode.OK) return result;
-//       values.push(result.value);
-//     }
-//     return OK(new TupleValue(values));
-//   }
+// Resolve tuple values recursively
+func (executor *Executor) resolveTuple(tuple TupleValue) Result {
+	values := make([]Value, len(tuple.Values))
+	for i, value := range tuple.Values {
+		var result Result
+		switch value.Type() {
+		case ValueType_TUPLE:
+			result = executor.resolveTuple(value.(TupleValue))
+		default:
+			result = executor.resolveValue(value)
+		}
+		if result.Code != ResultCode_OK {
+			return result
+		}
+		values[i] = result.Value
+	}
+	return OK(NewTupleValue(values))
+}
 
-//   private resolveVariable(varname: string): Result {
-//     const value = this.variableResolver.resolve(varname);
-//     if (!value) return ERROR(`cannot resolve variable "${varname}"`);
-//     return OK(value);
-//   }
+func (executor *Executor) resolveVariable(varname string) Result {
+	value, ok := executor.VariableResolver.Resolve(varname)
+	if !ok {
+		return ERROR(`cannot resolve variable "` + varname + `"`)
+	}
+	return OK(value)
+}
+
 //   private resolveCommand(cmdname: Value): Result<Command> {
 //     const command = this.commandResolver.resolve(cmdname);
 //     if (!command) {
 //       const { data: name, code } = StringValue.toString(cmdname);
-//       if (code != ResultCode.OK) return ERROR("invalid command name");
+//       if (code != ResultCode_OK) return ERROR("invalid command name");
 //       return ERROR(`cannot resolve command "${name}"`);
 //     }
 //     return OK(NIL, command);
 //   }
 //   private resolveSelector(rules: Value[]): Result<Selector> {
 //     const result = this.selectorResolver.resolve(rules);
-//     if (result.code != ResultCode.OK) return result;
+//     if (result.code != ResultCode_OK) return result;
 //     if (!result.data)
 //       return ERROR(`cannot resolve selector {${displayList(rules)}}`);
 //     return result;
@@ -951,9 +942,9 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 //     const sections: string[] = [];
 
 //     sections.push(`
-//     if (state.result.code == ResultCode.YIELD && state.command?.resume) {
+//     if (state.result.code == ResultCode_YIELD && state.command?.resume) {
 //       state.result = state.command.resume(state.result, context);
-//       if (state.result.code != ResultCode.OK) return state.result;
+//       if (state.result.code != ResultCode_OK) return state.result;
 //     }
 //     `);
 
@@ -1000,7 +991,7 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 //           {
 //             const source = state.pop();
 //             const result = resolver.resolveValue(source);
-//             if (result.code != ResultCode.OK) return result;
+//             if (result.code != ResultCode_OK) return result;
 //             state.push(result.value);
 //           }
 //           `);
@@ -1029,7 +1020,7 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 //             const { data: selector, ...result2 } =
 //               IndexedSelector.create(index);
 //             const result = selector.apply(value);
-//             if (result.code != ResultCode.OK) return result;
+//             if (result.code != ResultCode_OK) return result;
 //             state.push(result.value);
 //           }
 //           `);
@@ -1043,9 +1034,9 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 //             const { data: selector, ...result2 } = KeyedSelector.create(
 //               keys.values
 //             );
-//             if (result2.code != ResultCode.OK) return result2;
+//             if (result2.code != ResultCode_OK) return result2;
 //             const result = selector.apply(value);
-//             if (result.code != ResultCode.OK) return result;
+//             if (result.code != ResultCode_OK) return result;
 //             state.push(result.value);
 //           }
 //           `);
@@ -1059,9 +1050,9 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 //             const { data: selector, ...result } = resolver.resolveSelector(
 //               rules.values
 //             );
-//             if (result.code != ResultCode.OK) return result;
+//             if (result.code != ResultCode_OK) return result;
 //             const result2 = applySelector(value, selector);
-//             if (result2.code != ResultCode.OK) return result2;
+//             if (result2.code != ResultCode_OK) return result2;
 //             state.push(result2.value);
 //           }
 //           `);
@@ -1074,10 +1065,10 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 //             if (args.values.length) {
 //               const cmdname = args.values[0];
 //               const { data: command, ...result } = resolver.resolveCommand(cmdname);
-//               if (result.code != ResultCode.OK) return result;
+//               if (result.code != ResultCode_OK) return result;
 //               state.command = command;
 //               state.result = state.command.execute(args.values, context);
-//               if (state.result.code != ResultCode.OK) return state.result;
+//               if (state.result.code != ResultCode_OK) return state.result;
 //             }
 //           }
 //           `);
@@ -1096,7 +1087,7 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 //             let s = "";
 //             for (const value of tuple.values) {
 //               const { data, ...result } = StringValue.toString(value);
-//               if (result.code != ResultCode.OK) return result;
+//               if (result.code != ResultCode_OK) return result;
 //               s += data;
 //             }
 //             state.push(new StringValue(s));
