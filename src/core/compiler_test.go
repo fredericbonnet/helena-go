@@ -1,13 +1,16 @@
 package core_test
 
 import (
+	"strconv"
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	. "helena/core"
 )
 
-// const asString = (value) => StringValue.toString(value).data;
+func asString(value Value) string { return ValueToString(value).Data }
 
 type mockVariableResolver struct {
 	variables map[string]Value
@@ -26,34 +29,54 @@ func (resolver *mockVariableResolver) register(name string, value Value) {
 	resolver.variables[name] = value
 }
 
-// class IntCommand implements Command {
-//   execute(args: Value[]): Result {
-//     return OK(args[0]);
-//   }
-// }
-// const INT_CMD = new IntCommand();
-// class MockCommandResolver implements CommandResolver {
-//   resolve(name: Value): Command {
-//     if (name.type == ValueType.INTEGER || !isNaN(parseInt(asString(name))))
-//       return INT_CMD;
-//     return this.commands.get(asString(name));
-//   }
+type intCommand struct {
+}
 
-//   commands: Map<string, Command> = new Map();
-//   register(name: string, command: Command) {
-//     this.commands.set(name, command);
-//   }
-// }
-// class FunctionCommand implements Command {
-//   fn: (args: Value[]) => Value;
-//   constructor(fn: (args: Value[]) => Value) {
-//     this.fn = fn;
-//   }
+func (command intCommand) Execute(args []Value, context any) Result {
+	return OK(args[0])
+}
 
-//   execute(args: Value[]): Result {
-//     return OK(this.fn(args));
-//   }
-// }
+type mockCommandResolver struct {
+	commands map[string]Command
+}
+
+func newMockCommandResolver() *mockCommandResolver {
+	return &mockCommandResolver{
+		commands: map[string]Command{},
+	}
+}
+
+func (resolver *mockCommandResolver) Resolve(name Value) (command Command, ok bool) {
+	if name.Type() == ValueType_INTEGER {
+		return intCommand{}, true
+	}
+	_, err := strconv.ParseInt(asString(name), 10, 64)
+	if err == nil {
+		return intCommand{}, true
+	}
+	c, ok := resolver.commands[asString(name)]
+	return c, ok
+}
+func (resolver *mockCommandResolver) register(name string, command Command) {
+	resolver.commands[name] = command
+}
+
+type functionCommand struct {
+	fn func(args []Value) Value
+}
+
+func (command functionCommand) Execute(args []Value, context any) Result {
+	return OK(command.fn(args))
+}
+
+type captureContextCommand struct {
+	context any
+}
+
+func (command *captureContextCommand) Execute(args []Value, context any) Result {
+	command.context = context
+	return OK(NIL)
+}
 
 // class MockSelectorResolver implements SelectorResolver {
 //   resolve(rules: Value[]): Result<Selector> {
@@ -69,7 +92,7 @@ var _ = Describe("Compilation and execution", func() {
 	var tokenizer Tokenizer
 	var parser *Parser
 	var variableResolver *mockVariableResolver
-	// var commandResolver MockCommandResolver
+	var commandResolver *mockCommandResolver
 	// var selectorResolver MockSelectorResolver
 	var compiler Compiler
 	var executor *Executor
@@ -105,12 +128,13 @@ var _ = Describe("Compilation and execution", func() {
 		parser = &Parser{}
 		compiler = Compiler{}
 		variableResolver = newMockVariableResolver()
-		//     commandResolver = new MockCommandResolver();
+		commandResolver = newMockCommandResolver()
 		//     selectorResolver = new MockSelectorResolver();
 		executor = &Executor{
 			variableResolver,
-			//       commandResolver,
-			//       selectorResolver
+			commandResolver,
+			//       selectorResolver,
+			nil,
 		}
 	})
 
@@ -194,21 +218,21 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key"),
 						}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() => STR("is"))
-						// );
-						// variableResolver.register("var1", STR("a"));
-						// variableResolver.register("var2", DICT(map[string]Value{ key: STR("tuple") }));
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([
-						//     STR("this"),
-						//     STR("is"),
-						//     STR("a"),
-						//     STR("complex"),
-						//     STR("tuple"),
-						//   ])
-						// );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return STR("is") }},
+						)
+						variableResolver.register("var1", STR("a"))
+						variableResolver.register("var2", DICT(map[string]Value{"key": STR("tuple")}))
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{
+								STR("this"),
+								STR("is"),
+								STR("a"),
+								STR("complex"),
+								STR("tuple"),
+							}),
+						))
 					})
 				})
 
@@ -269,13 +293,13 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmd"), STR("arg")}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand((args) => TUPLE([...args, STR("foo")]))
-						// );
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([STR("cmd"), STR("arg"), STR("foo")])
-						// );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(args []Value) Value { return TUPLE(append(append([]Value{}, args...), STR("foo"))) }},
+						)
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("cmd"), STR("arg"), STR("foo")}),
+						))
 					})
 					Specify("complex case", func() {
 						script := parse(
@@ -315,48 +339,48 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key"),
 						}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() => STR("is"))
-						// );
-						// variableResolver.register("var1", STR("a"));
-						// variableResolver.register(
-						//   "var2",
-						//   DICT(map[string]Value{ key: STR("expression") })
-						// );
-						// commandResolver.register(
-						//   "this",
-						//   new FunctionCommand((args) => TUPLE(args))
-						// );
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([
-						//     STR("this"),
-						//     STR("is"),
-						//     STR("a"),
-						//     STR("complex"),
-						//     STR("expression"),
-						//   ])
-						// );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return STR("is") }},
+						)
+						variableResolver.register("var1", STR("a"))
+						variableResolver.register(
+							"var2",
+							DICT(map[string]Value{"key": STR("expression")}),
+						)
+						commandResolver.register(
+							"this",
+							functionCommand{func(args []Value) Value { return TUPLE(args) }},
+						)
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{
+								STR("this"),
+								STR("is"),
+								STR("a"),
+								STR("complex"),
+								STR("expression"),
+							}),
+						))
 					})
-					//               Describe("exceptions", func() {
-					//                 Specify("unresolved command", func() {
-					//                    script := parse("[ cmd arg ]");
-					//                    program := compileFirstWord(script);
-					//                   Expect(program.OpCodes).To(Equal([]OpCode{
-					//                     OpCode_OPEN_FRAME,
-					//                     OpCode_PUSH_CONSTANT,
-					//                     OpCode_PUSH_CONSTANT,
-					//                     OpCode_CLOSE_FRAME,
-					//                     OpCode_EVALUATE_SENTENCE,
-					//                     OpCode_PUSH_RESULT,
-					//                   }));
-					//                   Expect(program.Constants).To(Equal([]Value{STR("cmd"), STR("arg")}))
+					Describe("exceptions", func() {
+						Specify("unresolved command", func() {
+							script := parse("[ cmd arg ]")
+							program := compileFirstWord(script)
+							Expect(program.OpCodes).To(Equal([]OpCode{
+								OpCode_OPEN_FRAME,
+								OpCode_PUSH_CONSTANT,
+								OpCode_PUSH_CONSTANT,
+								OpCode_CLOSE_FRAME,
+								OpCode_EVALUATE_SENTENCE,
+								OpCode_PUSH_RESULT,
+							}))
+							Expect(program.Constants).To(Equal([]Value{STR("cmd"), STR("arg")}))
 
-					//                   Expect(execute(program)).To(Equal(
-					//                     ERROR('cannot resolve command "cmd"')
-					//                   );
-					//                 });
-					//               });
+							Expect(execute(program)).To(Equal(
+								ERROR(`cannot resolve command "cmd"`),
+							))
+						})
+					})
 				})
 
 				Describe("strings", func() {
@@ -407,11 +431,11 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							// commandResolver.register(
-							//   "cmd",
-							//   new FunctionCommand(() => STR("is"))
-							// );
-							// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+							commandResolver.register(
+								"cmd",
+								functionCommand{func(_ []Value) Value { return STR("is") }},
+							)
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 						Specify("multiple commands", func() {
 							script := parse(`"this [cmd1][cmd2] a string"`)
@@ -440,15 +464,15 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							// commandResolver.register(
-							//   "cmd1",
-							//   new FunctionCommand(() => STR("i"))
-							// );
-							// commandResolver.register(
-							//   "cmd2",
-							//   new FunctionCommand(() => STR("s"))
-							// );
-							// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+							commandResolver.register(
+								"cmd1",
+								functionCommand{func(_ []Value) Value { return STR("i") }},
+							)
+							commandResolver.register(
+								"cmd2",
+								functionCommand{func(_ []Value) Value { return STR("s") }},
+							)
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 					})
 
@@ -617,11 +641,11 @@ var _ = Describe("Compilation and execution", func() {
 									STR(" a string"),
 								}))
 
-								// commandResolver.register(
-								//   "cmd",
-								//   new FunctionCommand(() => STR("is"))
-								// );
-								// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+								commandResolver.register(
+									"cmd",
+									functionCommand{func(_ []Value) Value { return STR("is") }},
+								)
+								Expect(evaluate(program)).To(Equal(STR("this is a string")))
 							})
 							Specify("double substitution", func() {
 								script := parse(`"this $$[cmd] a string"`)
@@ -645,12 +669,12 @@ var _ = Describe("Compilation and execution", func() {
 									STR(" a string"),
 								}))
 
-								// commandResolver.register(
-								//   "cmd",
-								//   new FunctionCommand(() => STR("var"))
-								// );
-								// variableResolver.register("var", STR("is"));
-								// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+								commandResolver.register(
+									"cmd",
+									functionCommand{func(_ []Value) Value { return STR("var") }},
+								)
+								variableResolver.register("var", STR("is"))
+								Expect(evaluate(program)).To(Equal(STR("this is a string")))
 							})
 						})
 					})
@@ -681,11 +705,11 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							// variableResolver.register(
-							// 	"varname",
-							// 	LIST([]Value{STR("value"), STR("is")}),
-							// )
-							// Expect(evaluate(program)).To(Equal(STR("this is a string")))
+							variableResolver.register(
+								"varname",
+								LIST([]Value{STR("value"), STR("is")}),
+							)
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 						Specify("double substitution", func() {
 							script := parse(`"this $$var1[0] a string"`)
@@ -713,9 +737,9 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							// variableResolver.register("var1", LIST([]Value{STR("var2")}))
-							// variableResolver.register("var2", STR("is"))
-							// Expect(evaluate(program)).To(Equal(STR("this is a string")))
+							variableResolver.register("var1", LIST([]Value{STR("var2")}))
+							variableResolver.register("var2", STR("is"))
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 						Specify("successive indexes", func() {
 							script := parse(`"this $varname[1][0] a string"`)
@@ -749,11 +773,11 @@ var _ = Describe("Compilation and execution", func() {
 								STR(" a string"),
 							}))
 
-							// variableResolver.register(
-							//   "varname",
-							//   LIST([STR("value1"), LIST([STR("is"), STR("value2")])])
-							// );
-							// Expect(evaluate(program)).To(Equal(STR("this is a string"));
+							variableResolver.register(
+								"varname",
+								LIST([]Value{STR("value1"), LIST([]Value{STR("is"), STR("value2")})}),
+							)
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
 						})
 					})
 
@@ -1057,30 +1081,30 @@ var _ = Describe("Compilation and execution", func() {
 							STR("var4"),
 						}))
 
-						//                 variableResolver.register("var1", STR("var5"));
-						//                 variableResolver.register("var5", STR("is"));
-						//                 variableResolver.register("variable 2", STR("var6"));
-						//                 variableResolver.register("var6", STR(" a"));
-						//                 commandResolver.register(
-						//                   "cmd1",
-						//                   new FunctionCommand(() => STR("string"))
-						//                 );
-						//                 commandResolver.register(
-						//                   "cmd2",
-						//                   new FunctionCommand(() => STR("it"))
-						//                 );
-						//                 variableResolver.register(
-						//                   "var3",
-						//                   LIST([STR("foo"), STR("ut")])
-						//                 );
-						//                 commandResolver.register(
-						//                   "cmd3",
-						//                   new FunctionCommand(() => INT(1))
-						//                 );
-						//                 variableResolver.register("var4", STR("ions"));
-						//                 Expect(evaluate(program)).To(Equal(
-						//                   STR("this is a string with substitutions")
-						//                 );
+						variableResolver.register("var1", STR("var5"))
+						variableResolver.register("var5", STR("is"))
+						variableResolver.register("variable 2", STR("var6"))
+						variableResolver.register("var6", STR(" a"))
+						commandResolver.register(
+							"cmd1",
+							functionCommand{func(_ []Value) Value { return STR("string") }},
+						)
+						commandResolver.register(
+							"cmd2",
+							functionCommand{func(_ []Value) Value { return STR("it") }},
+						)
+						variableResolver.register(
+							"var3",
+							LIST([]Value{STR("foo"), STR("ut")}),
+						)
+						commandResolver.register(
+							"cmd3",
+							functionCommand{func(_ []Value) Value { return INT(1) }},
+						)
+						variableResolver.register("var4", STR("ions"))
+						Expect(evaluate(program)).To(Equal(
+							STR("this is a string with substitutions"),
+						))
 					})
 				})
 
@@ -1149,14 +1173,14 @@ var _ = Describe("Compilation and execution", func() {
 						STR("_compound"),
 					}))
 
-					// variableResolver.register("var", DICT(map[string]Value{ key: STR("is") }));
-					// commandResolver.register(
-					//   "cmd",
-					//   new FunctionCommand(() => STR("literal-prefixed"))
-					// );
-					// Expect(evaluate(program)).To(Equal(
-					//   STR("this_is_a_literal-prefixed_compound")
-					// );
+					variableResolver.register("var", DICT(map[string]Value{"key": STR("is")}))
+					commandResolver.register(
+						"cmd",
+						functionCommand{func(_ []Value) Value { return STR("literal-prefixed") }},
+					)
+					Expect(evaluate(program)).To(Equal(
+						STR("this_is_a_literal-prefixed_compound"),
+					))
 				})
 				Specify("expression prefix", func() {
 					script := parse("[cmd a b]_is_an_${var}(key)_compound")
@@ -1191,17 +1215,17 @@ var _ = Describe("Compilation and execution", func() {
 						STR("_compound"),
 					}))
 
-					// commandResolver.register(
-					//   "cmd",
-					//   new FunctionCommand(() => STR("this"))
-					// );
-					// variableResolver.register(
-					//   "var",
-					//   DICT(map[string]Value{ key: STR("expression-prefixed") })
-					// );
-					// Expect(evaluate(program)).To(Equal(
-					//   STR("this_is_an_expression-prefixed_compound")
-					// );
+					commandResolver.register(
+						"cmd",
+						functionCommand{func(_ []Value) Value { return STR("this") }},
+					)
+					variableResolver.register(
+						"var",
+						DICT(map[string]Value{"key": STR("expression-prefixed")}),
+					)
+					Expect(evaluate(program)).To(Equal(
+						STR("this_is_an_expression-prefixed_compound"),
+					))
 				})
 				Specify("substitution prefix", func() {
 					script := parse("${var}(key)_is_a_[cmd a b]_compound")
@@ -1236,14 +1260,14 @@ var _ = Describe("Compilation and execution", func() {
 						STR("_compound"),
 					}))
 
-					// variableResolver.register("var", DICT(map[string]Value{ key: STR("this") }));
-					// commandResolver.register(
-					//   "cmd",
-					//   new FunctionCommand(() => STR("substitution-prefixed"))
-					// );
-					// Expect(evaluate(program)).To(Equal(
-					//   STR("this_is_a_substitution-prefixed_compound")
-					// );
+					variableResolver.register("var", DICT(map[string]Value{"key": STR("this")}))
+					commandResolver.register(
+						"cmd",
+						functionCommand{func(_ []Value) Value { return STR("substitution-prefixed") }},
+					)
+					Expect(evaluate(program)).To(Equal(
+						STR("this_is_a_substitution-prefixed_compound"),
+					))
 				})
 			})
 
@@ -1437,15 +1461,15 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmd")}))
 
-						//                 commandResolver.register(
-						//                   "cmd",
-						//                   new FunctionCommand(() =>
-						//                     LIST([STR("value1"), STR("value2")])
-						//                   )
-						//                 );
-						//                 Expect(evaluate(program)).To(Equal(
-						//                   LIST([STR("value1"), STR("value2")])
-						//                 );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value {
+								return LIST([]Value{STR("value1"), STR("value2")})
+							}},
+						)
+						Expect(evaluate(program)).To(Equal(
+							LIST([]Value{STR("value1"), STR("value2")}),
+						))
 					})
 					Specify("double substitution, scalar", func() {
 						script := parse("$$[cmd]")
@@ -1460,12 +1484,12 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmd")}))
 
-						//                 commandResolver.register(
-						//                   "cmd",
-						//                   new FunctionCommand(() => STR("var"))
-						//                 );
-						//                 variableResolver.register("var", STR("value"));
-						//                 Expect(evaluate(program)).To(Equal(STR("value"));
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return STR("var") }},
+						)
+						variableResolver.register("var", STR("value"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("double substitution, tuple", func() {
 						script := parse("$$[cmd]")
@@ -1480,15 +1504,15 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmd")}))
 
-						//                 commandResolver.register(
-						//                   "cmd",
-						//                   new FunctionCommand(() => TUPLE([STR("var1"), STR("var2")]))
-						//                 );
-						//                 variableResolver.register("var1", STR("value1"));
-						//                 variableResolver.register("var2", STR("value2"));
-						//                 Expect(evaluate(program)).To(Equal(
-						//                   TUPLE([STR("value1"), STR("value2")])
-						//                 );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return TUPLE([]Value{STR("var1"), STR("var2")}) }},
+						)
+						variableResolver.register("var1", STR("value1"))
+						variableResolver.register("var2", STR("value2"))
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("value1"), STR("value2")}),
+						))
 					})
 					Specify("two sentences", func() {
 						script := parse("[cmd1 result1; cmd2 result2]")
@@ -1513,16 +1537,16 @@ var _ = Describe("Compilation and execution", func() {
 							STR("result2"),
 						}))
 
-						//                 const called = {};
-						//                 const fn: Command = new FunctionCommand((args) => {
-						//                   const cmd = asString(args[0]);
-						//                   called[cmd] = called[cmd] ?? 0 + 1;
-						//                   return args[1];
-						//                 });
-						//                 commandResolver.register("cmd1", fn);
-						//                 commandResolver.register("cmd2", fn);
-						//                 Expect(evaluate(program)).To(Equal(STR("result2"));
-						//                 Expect(called).To(Equal({ cmd1: 1, cmd2: 1 });
+						called := map[string]uint{}
+						fn := functionCommand{func(args []Value) Value {
+							cmd := asString(args[0])
+							called[cmd] += 1
+							return args[1]
+						}}
+						commandResolver.register("cmd1", fn)
+						commandResolver.register("cmd2", fn)
+						Expect(evaluate(program)).To(Equal(STR("result2")))
+						Expect(called).To(Equal(map[string]uint{"cmd1": 1, "cmd2": 1}))
 					})
 					Specify("indirect command", func() {
 						script := parse("[$cmdname]")
@@ -1537,12 +1561,12 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmdname")}))
 
-						// variableResolver.register("cmdname", STR("cmd"));
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() => STR("value"))
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register("cmdname", STR("cmd"))
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return STR("value") }},
+						)
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 				})
 
@@ -1562,11 +1586,11 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("varname"), STR("1")}))
 
-						// variableResolver.register(
-						//   "varname",
-						//   LIST([STR("value1"), STR("value2")])
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value2"));
+						variableResolver.register(
+							"varname",
+							LIST([]Value{STR("value1"), STR("value2")}),
+						)
+						Expect(evaluate(program)).To(Equal(STR("value2")))
 					})
 					Specify("double substitution", func() {
 						script := parse("$$var1[0]")
@@ -1584,9 +1608,9 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("0")}))
 
-						// variableResolver.register("var1", LIST([STR("var2")]));
-						// variableResolver.register("var2", STR("value"));
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register("var1", LIST([]Value{STR("var2")}))
+						variableResolver.register("var2", STR("value"))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("successive indexes", func() {
 						script := parse("$varname[1][0]")
@@ -1613,14 +1637,14 @@ var _ = Describe("Compilation and execution", func() {
 							STR("0"),
 						}))
 
-						// variableResolver.register(
-						//   "varname",
-						//   LIST([
-						//     STR("value1"),
-						//     LIST([STR("value2_1"), STR("value2_2")]),
-						//   ])
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value2_1"));
+						variableResolver.register(
+							"varname",
+							LIST([]Value{
+								STR("value1"),
+								LIST([]Value{STR("value2_1"), STR("value2_2")}),
+							}),
+						)
+						Expect(evaluate(program)).To(Equal(STR("value2_1")))
 					})
 					Specify("indirect index", func() {
 						script := parse("$var1[$var2]")
@@ -1638,12 +1662,12 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("var2")}))
 
-						// variableResolver.register(
-						//   "var1",
-						//   LIST([STR("value1"), STR("value2"), STR("value3")])
-						// );
-						// variableResolver.register("var2", STR("1"));
-						// Expect(evaluate(program)).To(Equal(STR("value2"));
+						variableResolver.register(
+							"var1",
+							LIST([]Value{STR("value1"), STR("value2"), STR("value3")}),
+						)
+						variableResolver.register("var2", STR("1"))
+						Expect(evaluate(program)).To(Equal(STR("value2")))
 					})
 					Specify("command index", func() {
 						script := parse("$varname[cmd]")
@@ -1660,15 +1684,15 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("varname"), STR("cmd")}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() => STR("1"))
-						// );
-						// variableResolver.register(
-						//   "varname",
-						//   LIST([STR("value1"), STR("value2"), STR("value3")])
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value2"));
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return STR("1") }},
+						)
+						variableResolver.register(
+							"varname",
+							LIST([]Value{STR("value1"), STR("value2"), STR("value3")}),
+						)
+						Expect(evaluate(program)).To(Equal(STR("value2")))
 					})
 					Specify("scalar expression", func() {
 						script := parse("$[cmd][0]")
@@ -1688,11 +1712,11 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmd"), STR("0")}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() => LIST([STR("value")]))
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return LIST([]Value{STR("value")}) }},
+						)
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("tuple expression", func() {
 						script := parse("$[cmd][0]")
@@ -1712,15 +1736,15 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmd"), STR("0")}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() =>
-						//     TUPLE([LIST([STR("value1")]), LIST([STR("value2")])])
-						//   )
-						// );
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([STR("value1"), STR("value2")])
-						// );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value {
+								return TUPLE([]Value{LIST([]Value{STR("value1")}), LIST([]Value{STR("value2")})})
+							}},
+						)
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("value1"), STR("value2")}),
+						))
 					})
 				})
 
@@ -1992,11 +2016,11 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmd"), STR("key")}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() => DICT(map[string]Value{ key: STR("value") }))
-						// );
-						// Expect(evaluate(program)).To(Equal(STR("value"));
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return DICT(map[string]Value{"key": STR("value")}) }},
+						)
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("tuple expression", func() {
 						script := parse("$[cmd](key)")
@@ -2014,18 +2038,18 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmd"), STR("key")}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() =>
-						//     TUPLE([
-						//       DICT(map[string]Value{ key: STR("value1") }),
-						//       DICT(map[string]Value{ key: STR("value2") }),
-						//     ])
-						//   )
-						// );
-						// Expect(evaluate(program)).To(Equal(
-						//   TUPLE([STR("value1"), STR("value2")])
-						// );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value {
+								return TUPLE([]Value{
+									DICT(map[string]Value{"key": STR("value1")}),
+									DICT(map[string]Value{"key": STR("value2")}),
+								})
+							}},
+						)
+						Expect(evaluate(program)).To(Equal(
+							TUPLE([]Value{STR("value1"), STR("value2")}),
+						))
 					})
 				})
 
@@ -2162,7 +2186,7 @@ var _ = Describe("Compilation and execution", func() {
 
 						//                 commandResolver.register(
 						//                   "cmd",
-						//                   new FunctionCommand(() =>
+						//                   functionCommand{func(_ []Value) Value { return
 						//                     LIST([STR("value1"), STR("value2")])
 						//                   )
 						//                 );
@@ -2233,15 +2257,15 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("varname"), STR("cmd")}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() => STR("index"))
-						// );
-						// Expect(evaluate(program)).To(Equal(
-						//   new QualifiedValue(STR("varname"), [
-						//     new IndexedSelector(STR("index")),
-						//   ])
-						// );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return STR("index") }},
+						)
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(STR("varname"), []Selector{
+								NewIndexedSelector(STR("index")),
+							}),
+						))
 					})
 					Specify("keyed selector", func() {
 						script := parse("varname(key1 key2)")
@@ -2369,15 +2393,15 @@ var _ = Describe("Compilation and execution", func() {
 						//                 variableResolver.register("var3", STR("cmd3"));
 						//                 commandResolver.register(
 						//                   "cmd1",
-						//                   new FunctionCommand(() => STR("rule2"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("rule2"))
 						//                 );
 						//                 commandResolver.register(
 						//                   "cmd2",
-						//                   new FunctionCommand(() => STR("index1"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("index1"))
 						//                 );
 						//                 commandResolver.register(
 						//                   "cmd3",
-						//                   new FunctionCommand(() => STR("key3"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("key3"))
 						//                 );
 						//                 selectorResolver.register((rules) =>
 						//                   GenericSelector.create(rules)
@@ -2418,16 +2442,16 @@ var _ = Describe("Compilation and execution", func() {
 							STR("cmd"),
 						}))
 
-						// commandResolver.register(
-						//   "cmd",
-						//   new FunctionCommand(() => STR("index"))
-						// );
-						// Expect(evaluate(program)).To(Equal(
-						//   new QualifiedValue(
-						//     TUPLE([STR("varname1"), STR("varname2")]),
-						//     [new IndexedSelector(STR("index"))]
-						//   )
-						// );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return STR("index") }},
+						)
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(
+								TUPLE([]Value{STR("varname1"), STR("varname2")}),
+								[]Selector{NewIndexedSelector(STR("index"))},
+							),
+						))
 					})
 					Specify("keyed selector", func() {
 						script := parse("(varname1 varname2)(key1 key2)")
@@ -2577,19 +2601,19 @@ var _ = Describe("Compilation and execution", func() {
 						//                 variableResolver.register("var4", STR("rule1"));
 						//                 commandResolver.register(
 						//                   "cmd1",
-						//                   new FunctionCommand(() => STR("index1"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("index1"))
 						//                 );
 						//                 commandResolver.register(
 						//                   "cmd2",
-						//                   new FunctionCommand(() => STR("rule2"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("rule2"))
 						//                 );
 						//                 commandResolver.register(
 						//                   "cmd3",
-						//                   new FunctionCommand(() => STR("key3"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("key3"))
 						//                 );
 						//                 commandResolver.register(
 						//                   "cmd4",
-						//                   new FunctionCommand(() => STR("index2"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("index2"))
 						//                 );
 						//                 selectorResolver.register((rules) =>
 						//                   GenericSelector.create(rules)
@@ -2633,15 +2657,15 @@ var _ = Describe("Compilation and execution", func() {
 							STR("cmd"),
 						}))
 
-						//                 commandResolver.register(
-						//                   "cmd",
-						//                   new FunctionCommand(() => STR("index"))
-						//                 );
-						//                 Expect(evaluate(program)).To(Equal(
-						//                   new QualifiedValue(STR("source name"), [
-						//                     new IndexedSelector(STR("index")),
-						//                   ])
-						//                 );
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value { return STR("index") }},
+						)
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(STR("source name"), []Selector{
+								NewIndexedSelector(STR("index")),
+							}),
+						))
 					})
 					Specify("keyed selector", func() {
 						script := parse("{source name}(key1 key2)")
@@ -2769,15 +2793,15 @@ var _ = Describe("Compilation and execution", func() {
 						//                 variableResolver.register("var3", STR("cmd3"));
 						//                 commandResolver.register(
 						//                   "cmd1",
-						//                   new FunctionCommand(() => STR("rule2"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("rule2"))
 						//                 );
 						//                 commandResolver.register(
 						//                   "cmd2",
-						//                   new FunctionCommand(() => STR("index1"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("index1"))
 						//                 );
 						//                 commandResolver.register(
 						//                   "cmd3",
-						//                   new FunctionCommand(() => STR("key3"))
+						//                   functionCommand{func(_ []Value) Value { return  STR("key3"))
 						//                 );
 						//                 selectorResolver.register((rules) =>
 						//                   GenericSelector.create(rules)
@@ -2873,26 +2897,26 @@ var _ = Describe("Compilation and execution", func() {
 					STR("suffix"),
 				}))
 
-				//             commandResolver.register(
-				//               "cmd",
-				//               new FunctionCommand(() => TUPLE([STR("value1"), STR("value2")]))
-				//             );
-				//             Expect(evaluate(program)).To(Equal(
-				//               TUPLE([
-				//                 STR("prefix"),
-				//                 STR("value1"),
-				//                 STR("value2"),
-				//                 STR("suffix"),
-				//               ])
-				//             );
+				commandResolver.register(
+					"cmd",
+					functionCommand{func(_ []Value) Value { return TUPLE([]Value{STR("value1"), STR("value2")}) }},
+				)
+				Expect(evaluate(program)).To(Equal(
+					TUPLE([]Value{
+						STR("prefix"),
+						STR("value1"),
+						STR("value2"),
+						STR("suffix"),
+					}),
+				))
 			})
 			Describe("scripts", func() {
-				//             beforeEach(func() {
-				//               commandResolver.register(
-				//                 "cmd",
-				//                 new FunctionCommand((args) => TUPLE(args))
-				//               );
-				//             });
+				BeforeEach(func() {
+					commandResolver.register(
+						"cmd",
+						functionCommand{func(args []Value) Value { return TUPLE(args) }},
+					)
+				})
 				Specify("single variable", func() {
 					script := parse("cmd $*var arg")
 					program := compiler.CompileScript(*script)
@@ -2913,13 +2937,13 @@ var _ = Describe("Compilation and execution", func() {
 						STR("arg"),
 					}))
 
-					//               variableResolver.register(
-					//                 "var",
-					//                 TUPLE([STR("value1"), STR("value2")])
-					//               );
-					//               Expect(evaluate(program)).To(Equal(
-					//                 TUPLE([STR("cmd"), STR("value1"), STR("value2"), STR("arg")])
-					//               );
+					variableResolver.register(
+						"var",
+						TUPLE([]Value{STR("value1"), STR("value2")}),
+					)
+					Expect(evaluate(program)).To(Equal(
+						TUPLE([]Value{STR("cmd"), STR("value1"), STR("value2"), STR("arg")}),
+					))
 				})
 				Specify("multiple variables", func() {
 					script := parse("cmd $*(var1 var2) arg")
@@ -2945,11 +2969,11 @@ var _ = Describe("Compilation and execution", func() {
 						STR("arg"),
 					}))
 
-					//               variableResolver.register("var1", STR("value1"));
-					//               variableResolver.register("var2", STR("value2"));
-					//               Expect(evaluate(program)).To(Equal(
-					//                 TUPLE([STR("cmd"), STR("value1"), STR("value2"), STR("arg")])
-					//               );
+					variableResolver.register("var1", STR("value1"))
+					variableResolver.register("var2", STR("value2"))
+					Expect(evaluate(program)).To(Equal(
+						TUPLE([]Value{STR("cmd"), STR("value1"), STR("value2"), STR("arg")}),
+					))
 				})
 				Specify("expressions", func() {
 					script := parse("cmd $*[cmd2] arg")
@@ -2974,13 +2998,13 @@ var _ = Describe("Compilation and execution", func() {
 						STR("arg"),
 					}))
 
-					//               commandResolver.register(
-					//                 "cmd2",
-					//                 new FunctionCommand(() => TUPLE([STR("value1"), STR("value2")]))
-					//               );
-					//               Expect(evaluate(program)).To(Equal(
-					//                 TUPLE([STR("cmd"), STR("value1"), STR("value2"), STR("arg")])
-					//               );
+					commandResolver.register(
+						"cmd2",
+						functionCommand{func(_ []Value) Value { return TUPLE([]Value{STR("value1"), STR("value2")}) }},
+					)
+					Expect(evaluate(program)).To(Equal(
+						TUPLE([]Value{STR("cmd"), STR("value1"), STR("value2"), STR("arg")}),
+					))
 				})
 			})
 		})
@@ -2993,124 +3017,139 @@ var _ = Describe("Compilation and execution", func() {
 				Expect(evaluate(program)).To(Equal(NIL))
 			})
 
-			//           Specify("conditional evaluation", func() {
-			//             const script1 = parse("if true {cmd1 a} else {cmd2 b}");
-			//             const program1 = compiler.CompileScript(script1);
-			//             Expect(program1.OpCodes).To(Equal([]OpCode{
-			//               OpCode_OPEN_FRAME,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_CLOSE_FRAME,
-			//               OpCode_EVALUATE_SENTENCE,
-			//               OpCode_PUSH_RESULT,
-			//             }));
-			//             Expect(program1.Constants).To(Equal([]Value{
-			//               STR("if"),
-			//               STR("true"),
-			//               new ScriptValue(parse("cmd1 a"), "cmd1 a"),
-			//               STR("else"),
-			//               new ScriptValue(parse("cmd2 b"), "cmd2 b"),
-			//             }));
+			Specify("conditional evaluation", func() {
+				script1 := parse("if true {cmd1 a} else {cmd2 b}")
+				program1 := compiler.CompileScript(*script1)
+				Expect(program1.OpCodes).To(Equal([]OpCode{
+					OpCode_OPEN_FRAME,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_CLOSE_FRAME,
+					OpCode_EVALUATE_SENTENCE,
+					OpCode_PUSH_RESULT,
+				}))
+				Expect(program1.Constants).To(Equal([]Value{
+					STR("if"),
+					STR("true"),
+					NewScriptValue(*parse("cmd1 a"), "cmd1 a"),
+					STR("else"),
+					NewScriptValue(*parse("cmd2 b"), "cmd2 b"),
+				}))
 
-			//             const script2 = parse("if false {cmd1 a} else {cmd2 b}");
-			//             const program2 = compiler.CompileScript(script2);
-			//             Expect(program2.OpCodes).To(Equal([]OpCode{
-			//               OpCode_OPEN_FRAME,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_CLOSE_FRAME,
-			//               OpCode_EVALUATE_SENTENCE,
-			//               OpCode_PUSH_RESULT,
-			//             }));
-			//             Expect(program2.Constants).To(Equal([]Value{
-			//               STR("if"),
-			//               STR("false"),
-			//               new ScriptValue(parse("cmd1 a"), "cmd1 a"),
-			//               STR("else"),
-			//               new ScriptValue(parse("cmd2 b"), "cmd2 b"),
-			//             }));
+				script2 := parse("if false {cmd1 a} else {cmd2 b}")
+				program2 := compiler.CompileScript(*script2)
+				Expect(program2.OpCodes).To(Equal([]OpCode{
+					OpCode_OPEN_FRAME,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_CLOSE_FRAME,
+					OpCode_EVALUATE_SENTENCE,
+					OpCode_PUSH_RESULT,
+				}))
+				Expect(program2.Constants).To(Equal([]Value{
+					STR("if"),
+					STR("false"),
+					NewScriptValue(*parse("cmd1 a"), "cmd1 a"),
+					STR("else"),
+					NewScriptValue(*parse("cmd2 b"), "cmd2 b"),
+				}))
 
-			//             commandResolver.register(
-			//               "if",
-			//               new FunctionCommand((args) => {
-			//                 const condition = args[1];
-			//                 const block = asString(condition) == "true" ? args[2] : args[4];
-			//                 const script =
-			//                   block.type == ValueType.SCRIPT
-			//                     ? (block as ScriptValue).script
-			//                     : parse(asString(block));
-			//                  program := compiler.CompileScript(script);
-			//                 return evaluate(program);
-			//               })
-			//             );
-			//             commandResolver.register(
-			//               "cmd1",
-			//               new FunctionCommand((args) => args[1])
-			//             );
-			//             commandResolver.register(
-			//               "cmd2",
-			//               new FunctionCommand((args) => args[1])
-			//             );
+				commandResolver.register(
+					"if",
+					functionCommand{func(args []Value) Value {
+						condition := args[1]
+						var block Value
+						if asString(condition) == "true" {
+							block = args[2]
+						} else {
+							block = args[4]
+						}
+						var script Script
+						if block.Type() == ValueType_SCRIPT {
+							script = block.(ScriptValue).Script
+						} else {
+							script = *parse(asString(block))
 
-			//             Expect(evaluate(program1)).To(Equal(STR("a"));
-			//             Expect(evaluate(program2)).To(Equal(STR("b"));
-			//           });
+						}
+						program := compiler.CompileScript(script)
+						return evaluate(program)
+					}},
+				)
+				commandResolver.register(
+					"cmd1",
+					functionCommand{func(args []Value) Value {
+						return args[1]
+					}},
+				)
+				commandResolver.register(
+					"cmd2",
+					functionCommand{func(args []Value) Value {
+						return args[1]
+					}},
+				)
 
-			//           Specify("loop", func() {
-			//              script := parse("repeat 10 {cmd foo}");
-			//              program := compiler.CompileScript(script);
-			//             Expect(program.OpCodes).To(Equal([]OpCode{
-			//               OpCode_OPEN_FRAME,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_PUSH_CONSTANT,
-			//               OpCode_CLOSE_FRAME,
-			//               OpCode_EVALUATE_SENTENCE,
-			//               OpCode_PUSH_RESULT,
-			//             }));
-			//             Expect(program.Constants).To(Equal([]Value{
-			//               STR("repeat"),
-			//               STR("10"),
-			//               new ScriptValue(parse("cmd foo"), "cmd foo"),
-			//             }));
+				Expect(evaluate(program1)).To(Equal(STR("a")))
+				Expect(evaluate(program2)).To(Equal(STR("b")))
+			})
 
-			//             commandResolver.register(
-			//               "repeat",
-			//               new FunctionCommand((args) => {
-			//                 const nb = IntegerValue.toInteger(args[1]).data;
-			//                 const block = args[2];
-			//                 const script =
-			//                   block.type == ValueType.SCRIPT
-			//                     ? (block as ScriptValue).script
-			//                     : parse(asString(block));
-			//                  program := compiler.CompileScript(script);
-			//                 let value: Value = NIL;
-			//                 for (let i = 0; i < nb; i++) {
-			//                   value = evaluate(program);
-			//                 }
-			//                 return value;
-			//               })
-			//             );
-			//             let counter = 0;
-			//             let acc = "";
-			//             commandResolver.register(
-			//               "cmd",
-			//               new FunctionCommand((args) => {
-			//                 const value = asString(args[1]);
-			//                 acc += value;
-			//                 return INT(counter++);
-			//               })
-			//             );
-			//             Expect(evaluate(program)).To(Equal(INT(9));
-			//             Expect(counter).To(Equal(10);
-			//             Expect(acc).To(Equal("foo".repeat(10));
-			//           });
+			Specify("loop", func() {
+				script := parse("repeat 10 {cmd foo}")
+				program := compiler.CompileScript(*script)
+				Expect(program.OpCodes).To(Equal([]OpCode{
+					OpCode_OPEN_FRAME,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_PUSH_CONSTANT,
+					OpCode_CLOSE_FRAME,
+					OpCode_EVALUATE_SENTENCE,
+					OpCode_PUSH_RESULT,
+				}))
+				Expect(program.Constants).To(Equal([]Value{
+					STR("repeat"),
+					STR("10"),
+					NewScriptValue(*parse("cmd foo"), "cmd foo"),
+				}))
+
+				commandResolver.register(
+					"repeat",
+					functionCommand{func(args []Value) Value {
+						nb := ValueToInteger(args[1]).Data
+						block := args[2]
+						var script Script
+						if block.Type() == ValueType_SCRIPT {
+							script = block.(ScriptValue).Script
+						} else {
+							script = *parse(asString(block))
+						}
+						program := compiler.CompileScript(script)
+						var value Value = NIL
+						for i := 0; i < int(nb); i++ {
+							value = evaluate(program)
+						}
+						return value
+					}},
+				)
+				counter := 0
+				acc := ""
+				commandResolver.register(
+					"cmd",
+					functionCommand{func(args []Value) Value {
+						value := asString(args[1])
+						acc += value
+						counter++
+						return INT(int64(counter - 1))
+					}},
+				)
+				Expect(evaluate(program)).To(Equal(INT(9)))
+				Expect(counter).To(Equal(10))
+				Expect(acc).To(Equal(strings.Repeat("foo", 10)))
+			})
 		})
 
 		Describe("sentences", func() {
@@ -3173,36 +3212,31 @@ var _ = Describe("Compilation and execution", func() {
 	})
 
 	Describe("Executor", func() {
-		//         It("should pass opaque context to commands", func() {
-		//            script := parse("cmd");
-		//            program := compiler.CompileScript(script);
+		It("should pass opaque context to commands", func() {
+			script := parse("cmd")
+			program := compiler.CompileScript(*script)
 
-		//           let commandContext;
-		//           commandResolver.register("cmd", {
-		//             execute: (_args, context) => {
-		//               commandContext = context;
-		//               return OK(NIL);
-		//             },
-		//           });
+			cmd := &captureContextCommand{}
+			commandResolver.register("cmd", cmd)
 
-		//           const context = Symbol();
-		//           executor = new Executor(
-		//             variableResolver,
-		//             commandResolver,
-		//             selectorResolver,
-		//             context
-		//           );
-		//           execute(program);
-		//           Expect(commandContext).to.equal(context);
-		//         });
+			var context struct{}
+			executor = &Executor{
+				variableResolver,
+				commandResolver,
+				// selectorResolver,
+				context,
+			}
+			execute(program)
+			Expect(cmd.context).To(Equal(context))
+		})
 
 		Describe("exceptions", func() {
-			//           Specify("invalid command name", func() {
-			//              script := parse("[]");
-			//              program := compiler.CompileScript(script);
+			Specify("invalid command name", func() {
+				script := parse("[]")
+				program := compiler.CompileScript(*script)
 
-			//             Expect(execute(program)).To(Equal(ERROR("invalid command name"));
-			//           });
+				Expect(execute(program)).To(Equal(ERROR("invalid command name")))
+			})
 			Specify("invalid variable name", func() {
 				script := parse("$([])")
 				program := compiler.CompileScript(*script)
@@ -3219,14 +3253,14 @@ var _ = Describe("Compilation and execution", func() {
 					ERROR("value has no string representation"),
 				))
 			})
-			//           Specify("command substitution with no string representation", func() {
-			//              script := parse('"[]"');
-			//              program := compiler.CompileScript(script);
+			Specify("command substitution with no string representation", func() {
+				script := parse(`"[]"`)
+				program := compiler.CompileScript(*script)
 
-			//             Expect(execute(program)).To(Equal(
-			//               ERROR("value has no string representation")
-			//             );
-			//           });
+				Expect(execute(program)).To(Equal(
+					ERROR("value has no string representation"),
+				))
+			})
 		})
 	})
 

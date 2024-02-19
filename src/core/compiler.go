@@ -549,8 +549,8 @@ type ProgramState struct {
 	// Constant counter
 	CC uint
 
-	//   /** Last executed command */
-	//   command: Command;
+	// Last executed command
+	Command Command
 
 	// Last executed result value
 	Result Result
@@ -626,14 +626,14 @@ type Executor struct {
 	// Variable resolver used during execution
 	VariableResolver VariableResolver
 
-	//   /** Command resolver used during execution */
-	//   private readonly commandResolver: CommandResolver;
+	// Command resolver used during execution */
+	CommandResolver CommandResolver
 
 	//   /** Selector resolver used during execution */
 	//   private readonly selectorResolver: SelectorResolver;
 
-	//   /** Opaque context passed to commands */
-	//   private readonly context: unknown;
+	// Opaque context passed to commands
+	Context any
 }
 
 // Execute the given program and return last executed result
@@ -692,18 +692,21 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 				state.Push(NewQualifiedValue(source, []Selector{}))
 			}
 
-			//         case OpCode_SELECT_INDEX:
-			//           {
-			//             const index = state.pop();
-			//             const value = state.pop();
-			//             const { data: selector, ...result2 } =
-			//               IndexedSelector.create(index);
-			//             if (result2.code != ResultCode_OK) return result2;
-			//             const result = selector.apply(value);
-			//             if (result.code != ResultCode_OK) return result;
-			//             state.push(result.value);
-			//           }
-			//           break;
+		case OpCode_SELECT_INDEX:
+			{
+				index := state.Pop()
+				value := state.Pop()
+				result2 := CreateIndexedSelector(index)
+				if result2.Code != ResultCode_OK {
+					return result2.Result
+				}
+				selector := result2.Data
+				result := selector.Apply(value)
+				if result.Code != ResultCode_OK {
+					return result
+				}
+				state.Push(result.Value)
+			}
 
 		case OpCode_SELECT_KEYS:
 			{
@@ -735,23 +738,26 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 			//           }
 			//           break;
 
-			//         case OpCode_EVALUATE_SENTENCE:
-			//           {
-			//             const args = state.pop() as TupleValue;
-			//             if (args.values.length) {
-			//               const cmdname = args.values[0];
-			//               const { data: command, ...result } = this.resolveCommand(cmdname);
-			//               if (result.code != ResultCode_OK) return result;
-			//               state.command = command;
-			//               state.result = state.command.execute(args.values, this.context);
-			//               if (state.result.code != ResultCode_OK) return state.result;
-			//             }
-			//           }
-			//           break;
+		case OpCode_EVALUATE_SENTENCE:
+			{
+				args := state.Pop().(TupleValue)
+				if len(args.Values) > 0 {
+					cmdname := args.Values[0]
+					result := executor.resolveCommand(cmdname)
+					if result.Code != ResultCode_OK {
+						return result.Result
+					}
+					command := result.Data
+					state.Command = command
+					state.Result = state.Command.Execute(args.Values, executor.Context)
+					if state.Result.Code != ResultCode_OK {
+						return state.Result
+					}
+				}
+			}
 
-			//         case OpCode_PUSH_RESULT:
-			//           state.push(state.result.value);
-			//           break;
+		case OpCode_PUSH_RESULT:
+			state.Push(state.Result.Value)
 
 		case OpCode_JOIN_STRINGS:
 			{
@@ -889,15 +895,19 @@ func (executor *Executor) resolveVariable(varname string) Result {
 	return OK(value)
 }
 
-//   private resolveCommand(cmdname: Value): Result<Command> {
-//     const command = this.commandResolver.resolve(cmdname);
-//     if (!command) {
-//       const { data: name, code } = StringValue.toString(cmdname);
-//       if (code != ResultCode_OK) return ERROR("invalid command name");
-//       return ERROR(`cannot resolve command "${name}"`);
-//     }
-//     return OK(NIL, command);
-//   }
+func (executor *Executor) resolveCommand(cmdname Value) TypedResult[Command] {
+	command, ok := executor.CommandResolver.Resolve(cmdname)
+	if !ok {
+		result := ValueToString(cmdname)
+		if result.Code != ResultCode_OK {
+			return ResultAs[Command](ERROR("invalid command name"))
+		}
+		name := result.Data
+		return ResultAs[Command](ERROR(`cannot resolve command "` + name + `"`))
+	}
+	return OK_T[Command](NIL, command)
+}
+
 //   private resolveSelector(rules: Value[]): Result<Selector> {
 //     const result = this.selectorResolver.resolve(rules);
 //     if (result.code != ResultCode_OK) return result;

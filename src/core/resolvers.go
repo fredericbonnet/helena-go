@@ -12,13 +12,13 @@ type VariableResolver interface {
 	Resolve(name string) (value Value, ok bool)
 }
 
-// //
-// // Command resolver
-// //
-// type CommandResolver interface {
-// 	// Resolve a command from its name
-// 	Resolve(name Value) Command
-// }
+//
+// Command resolver
+//
+type CommandResolver interface {
+	// Resolve a command from its name
+	Resolve(name Value) (value Command, ok bool)
+}
 
 // //
 // // Selector resolver
