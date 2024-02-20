@@ -78,22 +78,37 @@ func (command *captureContextCommand) Execute(args []Value, context any) Result 
 	return OK(NIL)
 }
 
-// class MockSelectorResolver implements SelectorResolver {
-//   resolve(rules: Value[]): Result<Selector> {
-//     return this.builder(rules);
-//   }
-//   builder: (rules) => Result<Selector> = () => OK(NIL, undefined);
-//   register(builder: (rules) => Result<Selector>) {
-//     this.builder = builder;
-//   }
-// }
+type builderFn func(rules []Value) (result TypedResult[Selector], ok bool)
+type mockSelectorResolver struct {
+	builder builderFn
+}
+
+func newMockSelectorResolver() *mockSelectorResolver {
+	return &mockSelectorResolver{
+		builder: func(rules []Value) (result TypedResult[Selector], ok bool) { return ResultAs[Selector](OK(NIL)), false },
+	}
+}
+
+func (resolver *mockSelectorResolver) Resolve(rules []Value) (result TypedResult[Selector], ok bool) {
+	return resolver.builder(rules)
+}
+func (resolver *mockSelectorResolver) register(builder builderFn) {
+	resolver.builder = builder
+}
+
+type lastSelector struct{}
+
+func (selector lastSelector) Apply(value Value) Result {
+	list := value.(ListValue)
+	return OK(list.Values[len(list.Values)-1])
+}
 
 var _ = Describe("Compilation and execution", func() {
 	var tokenizer Tokenizer
 	var parser *Parser
 	var variableResolver *mockVariableResolver
 	var commandResolver *mockCommandResolver
-	// var selectorResolver MockSelectorResolver
+	var selectorResolver *mockSelectorResolver
 	var compiler Compiler
 	var executor *Executor
 
@@ -129,11 +144,11 @@ var _ = Describe("Compilation and execution", func() {
 		compiler = Compiler{}
 		variableResolver = newMockVariableResolver()
 		commandResolver = newMockCommandResolver()
-		//     selectorResolver = new MockSelectorResolver();
+		selectorResolver = newMockSelectorResolver()
 		executor = &Executor{
 			variableResolver,
 			commandResolver,
-			//       selectorResolver,
+			selectorResolver,
 			nil,
 		}
 	})
@@ -880,152 +895,151 @@ var _ = Describe("Compilation and execution", func() {
 					})
 
 					Describe("custom selectors", func() {
-						//                 const lastSelector = {
-						//                   apply(value: Value): Result {
-						//                     const list = value as ListValue;
-						//                     return OK(list.values[list.values.length - 1]);
-						//                   },
-						//                 };
-						//                 Specify("simple substitution", func() {
-						//                    script := parse('"this $varname{last} a string"');
-						//                    program := compileFirstWord(script);
-						//                   Expect(program.OpCodes).To(Equal([]OpCode{
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_RESOLVE_VALUE,
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_SELECT_RULES,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_JOIN_STRINGS,
-						//                   }));
-						//                   Expect(program.Constants).To(Equal([]Value{
-						//                     STR("this "),
-						//                     STR("varname"),
-						//                     STR("last"),
-						//                     STR(" a string"),
-						//                   }));
+						builder := func(selector Selector) builderFn {
+							return func(_ []Value) (result TypedResult[Selector], ok bool) {
+								return OK_T[Selector](NIL, selector), true
+							}
+						}
+						Specify("simple substitution", func() {
+							script := parse(`"this $varname{last} a string"`)
+							program := compileFirstWord(script)
+							Expect(program.OpCodes).To(Equal([]OpCode{
+								OpCode_OPEN_FRAME,
+								OpCode_PUSH_CONSTANT,
+								OpCode_PUSH_CONSTANT,
+								OpCode_RESOLVE_VALUE,
+								OpCode_OPEN_FRAME,
+								OpCode_OPEN_FRAME,
+								OpCode_PUSH_CONSTANT,
+								OpCode_CLOSE_FRAME,
+								OpCode_CLOSE_FRAME,
+								OpCode_SELECT_RULES,
+								OpCode_PUSH_CONSTANT,
+								OpCode_CLOSE_FRAME,
+								OpCode_JOIN_STRINGS,
+							}))
+							Expect(program.Constants).To(Equal([]Value{
+								STR("this "),
+								STR("varname"),
+								STR("last"),
+								STR(" a string"),
+							}))
 
-						//                   variableResolver.register(
-						//                     "varname",
-						//                     LIST([STR("value1"), STR("value2"), STR("is")])
-						//                   );
-						//                   selectorResolver.register(() => OK(NIL, lastSelector));
-						//                   Expect(evaluate(program)).To(Equal(STR("this is a string"));
-						//                 });
-						//                 Specify("double substitution", func() {
-						//                    script := parse('"this $$var1{last} a string"');
-						//                    program := compileFirstWord(script);
-						//                   Expect(program.OpCodes).To(Equal([]OpCode{
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_RESOLVE_VALUE,
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_SELECT_RULES,
-						//                     OpCode_RESOLVE_VALUE,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_JOIN_STRINGS,
-						//                   }));
-						//                   Expect(program.Constants).To(Equal([]Value{
-						//                     STR("this "),
-						//                     STR("var1"),
-						//                     STR("last"),
-						//                     STR(" a string"),
-						//                   }));
+							variableResolver.register(
+								"varname",
+								LIST([]Value{STR("value1"), STR("value2"), STR("is")}),
+							)
+							selectorResolver.register(builder(lastSelector{}))
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
+						})
+						Specify("double substitution", func() {
+							script := parse(`"this $$var1{last} a string"`)
+							program := compileFirstWord(script)
+							Expect(program.OpCodes).To(Equal([]OpCode{
+								OpCode_OPEN_FRAME,
+								OpCode_PUSH_CONSTANT,
+								OpCode_PUSH_CONSTANT,
+								OpCode_RESOLVE_VALUE,
+								OpCode_OPEN_FRAME,
+								OpCode_OPEN_FRAME,
+								OpCode_PUSH_CONSTANT,
+								OpCode_CLOSE_FRAME,
+								OpCode_CLOSE_FRAME,
+								OpCode_SELECT_RULES,
+								OpCode_RESOLVE_VALUE,
+								OpCode_PUSH_CONSTANT,
+								OpCode_CLOSE_FRAME,
+								OpCode_JOIN_STRINGS,
+							}))
+							Expect(program.Constants).To(Equal([]Value{
+								STR("this "),
+								STR("var1"),
+								STR("last"),
+								STR(" a string"),
+							}))
 
-						//                   variableResolver.register(
-						//                     "var1",
-						//                     LIST([STR("var2"), STR("var3")])
-						//                   );
-						//                   variableResolver.register("var3", STR("is"));
-						//                   selectorResolver.register(() => OK(NIL, lastSelector));
-						//                   Expect(evaluate(program)).To(Equal(STR("this is a string"));
-						//                 });
-						//                 Specify("successive selectors", func() {
-						//                    script := parse('"this $var{last}{last} a string"');
-						//                    program := compileFirstWord(script);
-						//                   Expect(program.OpCodes).To(Equal([]OpCode{
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_RESOLVE_VALUE,
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_SELECT_RULES,
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_OPEN_FRAME,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_SELECT_RULES,
-						//                     OpCode_PUSH_CONSTANT,
-						//                     OpCode_CLOSE_FRAME,
-						//                     OpCode_JOIN_STRINGS,
-						//                   }));
-						//                   Expect(program.Constants).To(Equal([]Value{
-						//                     STR("this "),
-						//                     STR("var"),
-						//                     STR("last"),
-						//                     STR("last"),
-						//                     STR(" a string"),
-						//                   }));
+							variableResolver.register(
+								"var1",
+								LIST([]Value{STR("var2"), STR("var3")}),
+							)
+							variableResolver.register("var3", STR("is"))
+							selectorResolver.register(builder(lastSelector{}))
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
+						})
+						Specify("successive selectors", func() {
+							script := parse(`"this $var{last}{last} a string"`)
+							program := compileFirstWord(script)
+							Expect(program.OpCodes).To(Equal([]OpCode{
+								OpCode_OPEN_FRAME,
+								OpCode_PUSH_CONSTANT,
+								OpCode_PUSH_CONSTANT,
+								OpCode_RESOLVE_VALUE,
+								OpCode_OPEN_FRAME,
+								OpCode_OPEN_FRAME,
+								OpCode_PUSH_CONSTANT,
+								OpCode_CLOSE_FRAME,
+								OpCode_CLOSE_FRAME,
+								OpCode_SELECT_RULES,
+								OpCode_OPEN_FRAME,
+								OpCode_OPEN_FRAME,
+								OpCode_PUSH_CONSTANT,
+								OpCode_CLOSE_FRAME,
+								OpCode_CLOSE_FRAME,
+								OpCode_SELECT_RULES,
+								OpCode_PUSH_CONSTANT,
+								OpCode_CLOSE_FRAME,
+								OpCode_JOIN_STRINGS,
+							}))
+							Expect(program.Constants).To(Equal([]Value{
+								STR("this "),
+								STR("var"),
+								STR("last"),
+								STR("last"),
+								STR(" a string"),
+							}))
 
-						//                   variableResolver.register(
-						//                     "var",
-						//                     LIST([STR("value1"), LIST([STR("value2"), STR("is")])])
-						//                   );
-						//                   selectorResolver.register(() => OK(NIL, lastSelector));
-						//                   Expect(evaluate(program)).To(Equal(STR("this is a string"));
-						//                 });
-						//                 Describe("exceptions", func() {
-						//                   Specify("unresolved selector", func() {
-						//                      script := parse('"this $varname{last} a string"');
-						//                      program := compileFirstWord(script);
-						//                     Expect(program.OpCodes).To(Equal([]OpCode{
-						//                       OpCode_OPEN_FRAME,
-						//                       OpCode_PUSH_CONSTANT,
-						//                       OpCode_PUSH_CONSTANT,
-						//                       OpCode_RESOLVE_VALUE,
-						//                       OpCode_OPEN_FRAME,
-						//                       OpCode_OPEN_FRAME,
-						//                       OpCode_PUSH_CONSTANT,
-						//                       OpCode_CLOSE_FRAME,
-						//                       OpCode_CLOSE_FRAME,
-						//                       OpCode_SELECT_RULES,
-						//                       OpCode_PUSH_CONSTANT,
-						//                       OpCode_CLOSE_FRAME,
-						//                       OpCode_JOIN_STRINGS,
-						//                     }));
-						//                     Expect(program.Constants).To(Equal([]Value{
-						//                       STR("this "),
-						//                       STR("varname"),
-						//                       STR("last"),
-						//                       STR(" a string"),
-						//                     }));
+							variableResolver.register(
+								"var",
+								LIST([]Value{STR("value1"), LIST([]Value{STR("value2"), STR("is")})}),
+							)
+							selectorResolver.register(builder(lastSelector{}))
+							Expect(evaluate(program)).To(Equal(STR("this is a string")))
+						})
+						Describe("exceptions", func() {
+							Specify("unresolved selector", func() {
+								script := parse(`"this $varname{last} a string"`)
+								program := compileFirstWord(script)
+								Expect(program.OpCodes).To(Equal([]OpCode{
+									OpCode_OPEN_FRAME,
+									OpCode_PUSH_CONSTANT,
+									OpCode_PUSH_CONSTANT,
+									OpCode_RESOLVE_VALUE,
+									OpCode_OPEN_FRAME,
+									OpCode_OPEN_FRAME,
+									OpCode_PUSH_CONSTANT,
+									OpCode_CLOSE_FRAME,
+									OpCode_CLOSE_FRAME,
+									OpCode_SELECT_RULES,
+									OpCode_PUSH_CONSTANT,
+									OpCode_CLOSE_FRAME,
+									OpCode_JOIN_STRINGS,
+								}))
+								Expect(program.Constants).To(Equal([]Value{
+									STR("this "),
+									STR("varname"),
+									STR("last"),
+									STR(" a string"),
+								}))
 
-						//                     variableResolver.register(
-						//                       "varname",
-						//                       LIST([STR("value1"), STR("value2"), STR("is")])
-						//                     );
-						//                     Expect(execute(program)).To(Equal(
-						//                       ERROR("cannot resolve selector {(last)}")
-						//                     );
-						//                   });
-						//                 });
+								variableResolver.register(
+									"varname",
+									LIST([]Value{STR("value1"), STR("value2"), STR("is")}),
+								)
+								Expect(execute(program)).To(Equal(
+									ERROR("cannot resolve selector {(last)}"),
+								))
+							})
+						})
 					})
 
 					Specify("string with multiple substitutions", func() {
@@ -2054,13 +2068,11 @@ var _ = Describe("Compilation and execution", func() {
 				})
 
 				Describe("custom selectors", func() {
-					//               const lastSelector = {
-					//                 apply(value: Value): Result {
-					//                   const list = value as ListValue;
-					//                   return OK(list.values[list.values.length - 1]);
-					//                 },
-					//               };
-
+					builder := func(selector Selector) builderFn {
+						return func(_ []Value) (result TypedResult[Selector], ok bool) {
+							return OK_T[Selector](NIL, selector), true
+						}
+					}
 					Specify("simple substitution", func() {
 						script := parse("$varname{last}")
 						program := compileFirstWord(script)
@@ -2076,12 +2088,12 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("varname"), STR("last")}))
 
-						// variableResolver.register(
-						//   "varname",
-						//   LIST([STR("value1"), STR("value2"), STR("value3")])
-						// );
-						// selectorResolver.register(() => OK(NIL, lastSelector));
-						// Expect(evaluate(program)).To(Equal(STR("value3"));
+						variableResolver.register(
+							"varname",
+							LIST([]Value{STR("value1"), STR("value2"), STR("value3")}),
+						)
+						selectorResolver.register(builder(lastSelector{}))
+						Expect(evaluate(program)).To(Equal(STR("value3")))
 					})
 					Specify("double substitution", func() {
 						script := parse("$$var1{last}")
@@ -2099,13 +2111,13 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("last")}))
 
-						//                 variableResolver.register(
-						//                   "var1",
-						//                   LIST([STR("var2"), STR("var3")])
-						//                 );
-						//                 variableResolver.register("var3", STR("value"));
-						//                 selectorResolver.register(() => OK(NIL, lastSelector));
-						//                 Expect(evaluate(program)).To(Equal(STR("value"));
+						variableResolver.register(
+							"var1",
+							LIST([]Value{STR("var2"), STR("var3")}),
+						)
+						variableResolver.register("var3", STR("value"))
+						selectorResolver.register(builder(lastSelector{}))
+						Expect(evaluate(program)).To(Equal(STR("value")))
 					})
 					Specify("successive selectors", func() {
 						script := parse("$var{last}{last}")
@@ -2132,15 +2144,15 @@ var _ = Describe("Compilation and execution", func() {
 							STR("last"),
 						}))
 
-						//                 variableResolver.register(
-						//                   "var",
-						//                   LIST([
-						//                     STR("value1"),
-						//                     LIST([STR("value2_1"), STR("value2_2")]),
-						//                   ])
-						//                 );
-						//                 selectorResolver.register(() => OK(NIL, lastSelector));
-						//                 Expect(evaluate(program)).To(Equal(STR("value2_2"));
+						variableResolver.register(
+							"var",
+							LIST([]Value{
+								STR("value1"),
+								LIST([]Value{STR("value2_1"), STR("value2_2")}),
+							}),
+						)
+						selectorResolver.register(builder(lastSelector{}))
+						Expect(evaluate(program)).To(Equal(STR("value2_2")))
 					})
 					Specify("indirect selector", func() {
 						script := parse("$var1{$var2}")
@@ -2158,13 +2170,13 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("var2")}))
 
-						//                 variableResolver.register(
-						//                   "var1",
-						//                   LIST([STR("value1"), STR("value2"), STR("value3")])
-						//                 );
-						//                 variableResolver.register("var2", STR("last"));
-						//                 selectorResolver.register(() => OK(NIL, lastSelector));
-						//                 Expect(evaluate(program)).To(Equal(STR("value3"));
+						variableResolver.register(
+							"var1",
+							LIST([]Value{STR("value1"), STR("value2"), STR("value3")}),
+						)
+						variableResolver.register("var2", STR("last"))
+						selectorResolver.register(builder(lastSelector{}))
+						Expect(evaluate(program)).To(Equal(STR("value3")))
 					})
 					Specify("expression", func() {
 						script := parse("$[cmd]{last}")
@@ -2184,43 +2196,43 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("cmd"), STR("last")}))
 
-						//                 commandResolver.register(
-						//                   "cmd",
-						//                   functionCommand{func(_ []Value) Value { return
-						//                     LIST([STR("value1"), STR("value2")])
-						//                   )
-						//                 );
-						//                 selectorResolver.register(() => OK(NIL, lastSelector));
-						//                 Expect(evaluate(program)).To(Equal(STR("value2"));
+						commandResolver.register(
+							"cmd",
+							functionCommand{func(_ []Value) Value {
+								return LIST([]Value{STR("value1"), STR("value2")})
+							}},
+						)
+						selectorResolver.register(builder(lastSelector{}))
+						Expect(evaluate(program)).To(Equal(STR("value2")))
 					})
-					//               Describe("exceptions", func() {
-					//                 Specify("unresolved selector", func() {
-					//                    script := parse("$varname{last}");
-					//                    program := compileFirstWord(script);
-					//                   Expect(program.OpCodes).To(Equal([]OpCode{
-					//                     OpCode_PUSH_CONSTANT,
-					//                     OpCode_RESOLVE_VALUE,
-					//                     OpCode_OPEN_FRAME,
-					//                     OpCode_OPEN_FRAME,
-					//                     OpCode_PUSH_CONSTANT,
-					//                     OpCode_CLOSE_FRAME,
-					//                     OpCode_CLOSE_FRAME,
-					//                     OpCode_SELECT_RULES,
-					//                   }));
-					//                   Expect(program.Constants).To(Equal([]Value{
-					//                     STR("varname"),
-					//                     STR("last"),
-					//                   }));
+					Describe("exceptions", func() {
+						Specify("unresolved selector", func() {
+							script := parse("$varname{last}")
+							program := compileFirstWord(script)
+							Expect(program.OpCodes).To(Equal([]OpCode{
+								OpCode_PUSH_CONSTANT,
+								OpCode_RESOLVE_VALUE,
+								OpCode_OPEN_FRAME,
+								OpCode_OPEN_FRAME,
+								OpCode_PUSH_CONSTANT,
+								OpCode_CLOSE_FRAME,
+								OpCode_CLOSE_FRAME,
+								OpCode_SELECT_RULES,
+							}))
+							Expect(program.Constants).To(Equal([]Value{
+								STR("varname"),
+								STR("last"),
+							}))
 
-					//                   variableResolver.register(
-					//                     "varname",
-					//                     LIST([STR("value1"), STR("value2"), STR("value3")])
-					//                   );
-					//                   Expect(execute(program)).To(Equal(
-					//                     ERROR("cannot resolve selector {(last)}")
-					//                   );
-					//                 });
-					//               });
+							variableResolver.register(
+								"varname",
+								LIST([]Value{STR("value1"), STR("value2"), STR("value3")}),
+							)
+							Expect(execute(program)).To(Equal(
+								ERROR("cannot resolve selector {(last)}"),
+							))
+						})
+					})
 				})
 
 				Describe("exceptions", func() {
@@ -2317,17 +2329,17 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arg2"),
 						}))
 
-						// selectorResolver.register((rules) =>
-						//   GenericSelector.create(rules)
-						// );
-						// Expect(evaluate(program)).To(Equal(
-						//   new QualifiedValue(STR("varname"), [
-						//     new GenericSelector([
-						//       TUPLE([STR("rule1"), STR("arg1")]),
-						//       TUPLE([STR("rule2"), STR("arg2")]),
-						//     ]),
-						//   ])
-						// );
+						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
+							return CreateGenericSelector(rules), true
+						})
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(STR("varname"), []Selector{
+								NewGenericSelector([]Value{
+									TUPLE([]Value{STR("rule1"), STR("arg1")}),
+									TUPLE([]Value{STR("rule2"), STR("arg2")}),
+								}),
+							}),
+						))
 					})
 					Specify("complex case", func() {
 						script := parse(
@@ -2388,35 +2400,35 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key4"),
 						}))
 
-						//                 variableResolver.register("var1", STR("key2"));
-						//                 variableResolver.register("var2", STR("rule1"));
-						//                 variableResolver.register("var3", STR("cmd3"));
-						//                 commandResolver.register(
-						//                   "cmd1",
-						//                   functionCommand{func(_ []Value) Value { return  STR("rule2"))
-						//                 );
-						//                 commandResolver.register(
-						//                   "cmd2",
-						//                   functionCommand{func(_ []Value) Value { return  STR("index1"))
-						//                 );
-						//                 commandResolver.register(
-						//                   "cmd3",
-						//                   functionCommand{func(_ []Value) Value { return  STR("key3"))
-						//                 );
-						//                 selectorResolver.register((rules) =>
-						//                   GenericSelector.create(rules)
-						//                 );
-						//                 Expect(evaluate(program)).To(Equal(
-						//                   new QualifiedValue(STR("varname"), [
-						//                     new KeyedSelector([STR("key1"), STR("key2")]),
-						//                     new GenericSelector([
-						//                       TUPLE([STR("rule1")]),
-						//                       TUPLE([STR("rule2")]),
-						//                     ]),
-						//                     new IndexedSelector(STR("index1")),
-						//                     new KeyedSelector([STR("key3"), STR("key4")]),
-						//                   ])
-						//                 );
+						variableResolver.register("var1", STR("key2"))
+						variableResolver.register("var2", STR("rule1"))
+						variableResolver.register("var3", STR("cmd3"))
+						commandResolver.register(
+							"cmd1",
+							functionCommand{func(_ []Value) Value { return STR("rule2") }},
+						)
+						commandResolver.register(
+							"cmd2",
+							functionCommand{func(_ []Value) Value { return STR("index1") }},
+						)
+						commandResolver.register(
+							"cmd3",
+							functionCommand{func(_ []Value) Value { return STR("key3") }},
+						)
+						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
+							return CreateGenericSelector(rules), true
+						})
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(STR("varname"), []Selector{
+								NewKeyedSelector([]Value{STR("key1"), STR("key2")}),
+								NewGenericSelector([]Value{
+									TUPLE([]Value{STR("rule1")}),
+									TUPLE([]Value{STR("rule2")}),
+								}),
+								NewIndexedSelector(STR("index1")),
+								NewKeyedSelector([]Value{STR("key3"), STR("key4")}),
+							}),
+						))
 					})
 				})
 				Describe("tuple prefix", func() {
@@ -2514,20 +2526,20 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arg2"),
 						}))
 
-						// selectorResolver.register((rules) =>
-						//   GenericSelector.create(rules)
-						// );
-						// Expect(evaluate(program)).To(Equal(
-						//   new QualifiedValue(
-						//     TUPLE([STR("varname1"), STR("varname2")]),
-						//     [
-						//       new GenericSelector([
-						//         TUPLE([STR("rule1"), STR("arg1")]),
-						//         TUPLE([STR("rule2"), STR("arg2")]),
-						//       ]),
-						//     ]
-						//   )
-						// );
+						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
+							return CreateGenericSelector(rules), true
+						})
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(
+								TUPLE([]Value{STR("varname1"), STR("varname2")}),
+								[]Selector{
+									NewGenericSelector([]Value{
+										TUPLE([]Value{STR("rule1"), STR("arg1")}),
+										TUPLE([]Value{STR("rule2"), STR("arg2")}),
+									}),
+								},
+							),
+						))
 					})
 					Specify("complex case", func() {
 						script := parse(
@@ -2595,47 +2607,47 @@ var _ = Describe("Compilation and execution", func() {
 							STR("cmd4"),
 						}))
 
-						//                 variableResolver.register("var1", STR("varname2"));
-						//                 variableResolver.register("var2", STR("key2"));
-						//                 variableResolver.register("var3", STR("cmd3"));
-						//                 variableResolver.register("var4", STR("rule1"));
-						//                 commandResolver.register(
-						//                   "cmd1",
-						//                   functionCommand{func(_ []Value) Value { return  STR("index1"))
-						//                 );
-						//                 commandResolver.register(
-						//                   "cmd2",
-						//                   functionCommand{func(_ []Value) Value { return  STR("rule2"))
-						//                 );
-						//                 commandResolver.register(
-						//                   "cmd3",
-						//                   functionCommand{func(_ []Value) Value { return  STR("key3"))
-						//                 );
-						//                 commandResolver.register(
-						//                   "cmd4",
-						//                   functionCommand{func(_ []Value) Value { return  STR("index2"))
-						//                 );
-						//                 selectorResolver.register((rules) =>
-						//                   GenericSelector.create(rules)
-						//                 );
-						//                 Expect(evaluate(program)).To(Equal(
-						//                   new QualifiedValue(
-						//                     TUPLE([STR("varname1"), STR("varname2")]),
-						//                     [
-						//                       new IndexedSelector(STR("index1")),
-						//                       new KeyedSelector([
-						//                         STR("key1"),
-						//                         STR("key2"),
-						//                         STR("key3"),
-						//                       ]),
-						//                       new GenericSelector([
-						//                         TUPLE([STR("rule1")]),
-						//                         TUPLE([STR("rule2")]),
-						//                       ]),
-						//                       new IndexedSelector(STR("index2")),
-						//                     ]
-						//                   )
-						//                 );
+						variableResolver.register("var1", STR("varname2"))
+						variableResolver.register("var2", STR("key2"))
+						variableResolver.register("var3", STR("cmd3"))
+						variableResolver.register("var4", STR("rule1"))
+						commandResolver.register(
+							"cmd1",
+							functionCommand{func(_ []Value) Value { return STR("index1") }},
+						)
+						commandResolver.register(
+							"cmd2",
+							functionCommand{func(_ []Value) Value { return STR("rule2") }},
+						)
+						commandResolver.register(
+							"cmd3",
+							functionCommand{func(_ []Value) Value { return STR("key3") }},
+						)
+						commandResolver.register(
+							"cmd4",
+							functionCommand{func(_ []Value) Value { return STR("index2") }},
+						)
+						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
+							return CreateGenericSelector(rules), true
+						})
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(
+								TUPLE([]Value{STR("varname1"), STR("varname2")}),
+								[]Selector{
+									NewIndexedSelector(STR("index1")),
+									NewKeyedSelector([]Value{
+										STR("key1"),
+										STR("key2"),
+										STR("key3"),
+									}),
+									NewGenericSelector([]Value{
+										TUPLE([]Value{STR("rule1")}),
+										TUPLE([]Value{STR("rule2")}),
+									}),
+									NewIndexedSelector(STR("index2")),
+								},
+							),
+						))
 					})
 				})
 				Describe("block prefix", func() {
@@ -2717,17 +2729,17 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arg2"),
 						}))
 
-						//                 selectorResolver.register((rules) =>
-						//                   GenericSelector.create(rules)
-						//                 );
-						//                 Expect(evaluate(program)).To(Equal(
-						//                   new QualifiedValue(STR("source name"), [
-						//                     new GenericSelector([
-						//                       TUPLE([STR("rule1"), STR("arg1")]),
-						//                       TUPLE([STR("rule2"), STR("arg2")]),
-						//                     ]),
-						//                   ])
-						//                 );
+						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
+							return CreateGenericSelector(rules), true
+						})
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(STR("source name"), []Selector{
+								NewGenericSelector([]Value{
+									TUPLE([]Value{STR("rule1"), STR("arg1")}),
+									TUPLE([]Value{STR("rule2"), STR("arg2")}),
+								}),
+							}),
+						))
 					})
 					Specify("complex case", func() {
 						script := parse(
@@ -2788,35 +2800,35 @@ var _ = Describe("Compilation and execution", func() {
 							STR("key4"),
 						}))
 
-						//                 variableResolver.register("var1", STR("key2"));
-						//                 variableResolver.register("var2", STR("rule1"));
-						//                 variableResolver.register("var3", STR("cmd3"));
-						//                 commandResolver.register(
-						//                   "cmd1",
-						//                   functionCommand{func(_ []Value) Value { return  STR("rule2"))
-						//                 );
-						//                 commandResolver.register(
-						//                   "cmd2",
-						//                   functionCommand{func(_ []Value) Value { return  STR("index1"))
-						//                 );
-						//                 commandResolver.register(
-						//                   "cmd3",
-						//                   functionCommand{func(_ []Value) Value { return  STR("key3"))
-						//                 );
-						//                 selectorResolver.register((rules) =>
-						//                   GenericSelector.create(rules)
-						//                 );
-						//                 Expect(evaluate(program)).To(Equal(
-						//                   new QualifiedValue(STR("source name"), [
-						//                     new KeyedSelector([STR("key1"), STR("key2")]),
-						//                     new GenericSelector([
-						//                       TUPLE([STR("rule1")]),
-						//                       TUPLE([STR("rule2")]),
-						//                     ]),
-						//                     new IndexedSelector(STR("index1")),
-						//                     new KeyedSelector([STR("key3"), STR("key4")]),
-						//                   ])
-						//                 );
+						variableResolver.register("var1", STR("key2"))
+						variableResolver.register("var2", STR("rule1"))
+						variableResolver.register("var3", STR("cmd3"))
+						commandResolver.register(
+							"cmd1",
+							functionCommand{func(_ []Value) Value { return STR("rule2") }},
+						)
+						commandResolver.register(
+							"cmd2",
+							functionCommand{func(_ []Value) Value { return STR("index1") }},
+						)
+						commandResolver.register(
+							"cmd3",
+							functionCommand{func(_ []Value) Value { return STR("key3") }},
+						)
+						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
+							return CreateGenericSelector(rules), true
+						})
+						Expect(evaluate(program)).To(Equal(
+							NewQualifiedValue(STR("source name"), []Selector{
+								NewKeyedSelector([]Value{STR("key1"), STR("key2")}),
+								NewGenericSelector([]Value{
+									TUPLE([]Value{STR("rule1")}),
+									TUPLE([]Value{STR("rule2")}),
+								}),
+								NewIndexedSelector(STR("index1")),
+								NewKeyedSelector([]Value{STR("key3"), STR("key4")}),
+							}),
+						))
 					})
 				})
 			})
@@ -3223,7 +3235,7 @@ var _ = Describe("Compilation and execution", func() {
 			executor = &Executor{
 				variableResolver,
 				commandResolver,
-				// selectorResolver,
+				selectorResolver,
 				context,
 			}
 			execute(program)

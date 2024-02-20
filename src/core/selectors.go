@@ -85,7 +85,7 @@ func NewIndexedSelector(index Value) IndexedSelector {
 // Factory function, returns a result instead of panicking like the constructor.
 func CreateIndexedSelector(index Value) TypedResult[Selector] {
 	if index == NIL {
-		return ResultAs[Selector](ERROR("invalid index"))
+		return ERROR_T[Selector]("invalid index")
 	}
 	return OK_T(NIL, Selector(NewIndexedSelector(index)))
 }
@@ -129,7 +129,7 @@ func NewKeyedSelector(keys []Value) KeyedSelector {
 // Factory function, returns a result instead of panicking like the constructor.
 func CreateKeyedSelector(keys []Value) TypedResult[Selector] {
 	if len(keys) == 0 {
-		return ResultAs[Selector](ERROR("empty selector"))
+		return ERROR_T[Selector]("empty selector")
 	}
 	return OK_T(NIL, Selector(NewKeyedSelector(keys)))
 }
@@ -179,7 +179,7 @@ func NewGenericSelector(rules []Value) GenericSelector {
 // Factory function, returns a result instead of panicking like the constructor.
 func CreateGenericSelector(rules []Value) TypedResult[Selector] {
 	if len(rules) == 0 {
-		return ResultAs[Selector](ERROR("empty selector"))
+		return ERROR_T[Selector]("empty selector")
 	}
 	return OK_T(NIL, Selector(NewGenericSelector(rules)))
 }

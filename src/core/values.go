@@ -151,7 +151,7 @@ func ValueToBoolean(value Value) TypedResult[bool] {
 	if s == "false" {
 		return OK_T(NIL, false)
 	}
-	return ResultAs[bool](ERROR(`invalid boolean "` + s + `"`))
+	return ERROR_T[bool](`invalid boolean "` + s + `"`)
 }
 
 func (value BooleanValue) Display(_ DisplayFunction) string {
@@ -387,12 +387,12 @@ func ValueToString(value Value) TypedResult[string] {
 			}
 		}
 	}
-	return ResultAs[string](ERROR("value has no string representation"))
+	return ERROR_T[string]("value has no string representation")
 }
 
 // Convert value to string, or default value if value has no string representation
 func ValueToStringOrDefault(value Value, def Value) TypedResult[string] {
-	return ResultAs[string](ERROR("TODO"))
+	return ERROR_T[string]("TODO")
 }
 
 // Return index-th string character as StringValue

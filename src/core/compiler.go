@@ -342,7 +342,6 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 					for level := 1; level < int(substitute.Levels); level++ {
 						program.PushOpCode(OpCode_RESOLVE_VALUE)
 					}
-					// substitute = nil
 					mode = INITIAL
 				}
 			}
@@ -626,11 +625,11 @@ type Executor struct {
 	// Variable resolver used during execution
 	VariableResolver VariableResolver
 
-	// Command resolver used during execution */
+	// Command resolver used during execution
 	CommandResolver CommandResolver
 
-	//   /** Selector resolver used during execution */
-	//   private readonly selectorResolver: SelectorResolver;
+	// Selector resolver used during execution
+	SelectorResolver SelectorResolver
 
 	// Opaque context passed to commands
 	Context any
@@ -724,19 +723,21 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 				state.Push(result.Value)
 			}
 
-			//         case OpCode_SELECT_RULES:
-			//           {
-			//             const rules = state.pop() as TupleValue;
-			//             const value = state.pop();
-			//             const { data: selector, ...result } = this.resolveSelector(
-			//               rules.values
-			//             );
-			//             if (result.code != ResultCode_OK) return result;
-			//             const result2 = applySelector(value, selector);
-			//             if (result2.code != ResultCode_OK) return result2;
-			//             state.push(result2.value);
-			//           }
-			//           break;
+		case OpCode_SELECT_RULES:
+			{
+				rules := state.Pop().(TupleValue)
+				value := state.Pop()
+				result := executor.resolveSelector(rules.Values)
+				if result.Code != ResultCode_OK {
+					return result.Result
+				}
+				selector := result.Data
+				result2 := ApplySelector(value, selector)
+				if result2.Code != ResultCode_OK {
+					return result2
+				}
+				state.Push(result2.Value)
+			}
 
 		case OpCode_EVALUATE_SENTENCE:
 			{
@@ -844,8 +845,8 @@ func (executor *Executor) resolveValue(source Value) Result {
 	switch source.Type() {
 	case ValueType_TUPLE:
 		return executor.resolveTuple(source.(TupleValue))
-	//       case ValueType_QUALIFIED:
-	//         return this.resolveQualified(source as QualifiedValue);
+	case ValueType_QUALIFIED:
+		return executor.resolveQualified(source.(QualifiedValue))
 	default:
 		{
 			result := ValueToString(source)
@@ -858,15 +859,19 @@ func (executor *Executor) resolveValue(source Value) Result {
 	}
 }
 
-//   private resolveQualified(qualified: QualifiedValue): Result {
-//     let result = this.resolveValue(qualified.source);
-//     if (result.code != ResultCode_OK) return result;
-//     for (const selector of qualified.selectors) {
-//       result = selector.apply(result.value);
-//       if (result.code != ResultCode_OK) return result;
-//     }
-//     return result;
-//   }
+func (executor *Executor) resolveQualified(qualified QualifiedValue) Result {
+	result := executor.resolveValue(qualified.Source)
+	if result.Code != ResultCode_OK {
+		return result
+	}
+	for _, selector := range qualified.Selectors {
+		result = selector.Apply(result.Value)
+		if result.Code != ResultCode_OK {
+			return result
+		}
+	}
+	return result
+}
 
 // Resolve tuple values recursively
 func (executor *Executor) resolveTuple(tuple TupleValue) Result {
@@ -900,22 +905,24 @@ func (executor *Executor) resolveCommand(cmdname Value) TypedResult[Command] {
 	if !ok {
 		result := ValueToString(cmdname)
 		if result.Code != ResultCode_OK {
-			return ResultAs[Command](ERROR("invalid command name"))
+			return ERROR_T[Command]("invalid command name")
 		}
 		name := result.Data
-		return ResultAs[Command](ERROR(`cannot resolve command "` + name + `"`))
+		return ERROR_T[Command](`cannot resolve command "` + name + `"`)
 	}
 	return OK_T[Command](NIL, command)
 }
 
-//   private resolveSelector(rules: Value[]): Result<Selector> {
-//     const result = this.selectorResolver.resolve(rules);
-//     if (result.code != ResultCode_OK) return result;
-//     if (!result.data)
-//       return ERROR(`cannot resolve selector {${displayList(rules)}}`);
-//     return result;
-//   }
-// }
+func (executor *Executor) resolveSelector(rules []Value) TypedResult[Selector] {
+	result, ok := executor.SelectorResolver.Resolve(rules)
+	if result.Code != ResultCode_OK {
+		return result
+	}
+	if !ok {
+		return ERROR_T[Selector](`cannot resolve selector {` + DisplayList(rules, nil) + `}`)
+	}
+	return result
+}
 
 // /**
 //  * Helena program translator
