@@ -146,8 +146,7 @@ func (compiler Compiler) emitWord(program *Program, word Word) {
 		compiler.emitQualified(program, word.Morphemes)
 	case WordType_IGNORED:
 	case WordType_INVALID:
-		// throw new InvalidWordStructureError("invalid word structure");
-		panic("TODO")
+		panic(InvalidWordStructureError)
 	default:
 		panic("CANTHAPPEN")
 	}
@@ -197,8 +196,7 @@ func (compiler Compiler) emitRoot(program *Program, root Morpheme) {
 		}
 
 	default:
-		//         throw new UnexpectedMorphemeError("unexpected morpheme");
-		panic("TODO")
+		panic(UnexpectedMorphemeError)
 	}
 }
 func (compiler Compiler) emitCompound(program *Program, morphemes []Morpheme) {
@@ -236,8 +234,7 @@ func (compiler Compiler) emitSubstitution(program *Program, morphemes []Morpheme
 		}
 
 	default:
-		// throw new UnexpectedMorphemeError("unexpected morpheme");
-		panic("TODO")
+		panic(UnexpectedMorphemeError)
 	}
 	for i := 2; i < len(morphemes); i++ {
 		morpheme := morphemes[i]
@@ -261,8 +258,7 @@ func (compiler Compiler) emitSubstitution(program *Program, morphemes []Morpheme
 			}
 
 		default:
-			// throw new UnexpectedMorphemeError("unexpected morpheme");
-			panic("TODO")
+			panic(UnexpectedMorphemeError)
 		}
 	}
 	for level := 1; level < int(substitute.Levels); level++ {
@@ -294,8 +290,7 @@ func (compiler Compiler) emitQualified(program *Program, morphemes []Morpheme) {
 		}
 
 	default:
-		// throw new UnexpectedMorphemeError("unexpected morpheme");
-		panic("TODO")
+		panic(UnexpectedMorphemeError)
 	}
 	for i := 1; i < len(morphemes); i++ {
 		morpheme := morphemes[i]
@@ -319,8 +314,7 @@ func (compiler Compiler) emitQualified(program *Program, morphemes []Morpheme) {
 			}
 
 		default:
-			// throw new UnexpectedMorphemeError("unexpected morpheme");
-			panic("TODO")
+			panic(UnexpectedMorphemeError)
 		}
 	}
 }
@@ -377,8 +371,7 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 					}
 
 				default:
-					// throw new UnexpectedMorphemeError("unexpected morpheme");
-					panic("TODO")
+					panic(UnexpectedMorphemeError)
 				}
 				mode = SELECTABLE
 			}
@@ -406,8 +399,7 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 					}
 
 				default:
-					// throw new UnexpectedMorphemeError("unexpected morpheme");
-					panic("TODO")
+					panic(UnexpectedMorphemeError)
 				}
 			}
 
@@ -432,8 +424,7 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 					}
 
 				default:
-					// throw new UnexpectedMorphemeError("unexpected morpheme");
-					panic("TODO")
+					panic(UnexpectedMorphemeError)
 				}
 			}
 		}
@@ -647,8 +638,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 		state = NewProgramState()
 	}
 	if state.Result.Code == ResultCode_YIELD {
-		resumable, ok := state.Command.(ResumableCommand)
-		if ok {
+		if resumable, ok := state.Command.(ResumableCommand); ok {
 			state.Result = resumable.Resume(state.Result, executor.Context)
 			if state.Result.Code != ResultCode_OK {
 				return state.Result

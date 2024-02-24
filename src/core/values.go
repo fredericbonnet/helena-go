@@ -26,11 +26,13 @@ const (
 	ValueType_QUALIFIED
 )
 
+//
 // /** Helena custom value types */
 // export interface CustomValueType {
 //   /** Custom value name */
 //   readonly name: string;
 // }
+//
 
 // Helena value
 type Value interface {
@@ -705,8 +707,7 @@ func (value QualifiedValue) SelectIndex(index Value) Result {
 }
 func (value QualifiedValue) SelectKey(key Value) Result {
 	if len(value.Selectors) > 0 {
-		last, ok := value.Selectors[len(value.Selectors)-1].(KeyedSelector)
-		if ok {
+		if last, ok := value.Selectors[len(value.Selectors)-1].(KeyedSelector); ok {
 			// Merge successive keys
 			keys := make([]Value, len(last.Keys)+1)
 			copy(keys, last.Keys)

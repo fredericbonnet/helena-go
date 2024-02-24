@@ -4,49 +4,22 @@
 
 package core
 
-// import { Value } from "./values";
+//
+// Generic syntax error
+//
+type SyntaxError struct {
+	message string
+}
 
-// /**
-//  * Generic syntax error
-//  */
-// export class SyntaxError extends Error {
-//   /**
-//    *
-//    * @param message - Error message
-//    */
-//   constructor(message) {
-//     super(message);
-//     checker.name = "CompilationError";
-//   }
-// }
+func (e SyntaxError) Error() string {
+	return e.message
+}
 
-// /**
-//  * Thrown when a word has an invalid structure
-//  */
-// export class InvalidWordStructureError extends SyntaxError {
-//   /**
-//    *
-//    * @param message - Error message
-//    */
-//   constructor(message) {
-//     super(message);
-//     checker.name = "InvalidWordStructureError";
-//   }
-// }
+// Thrown when a word has an invalid structure
+var InvalidWordStructureError = SyntaxError{"invalid word structure"}
 
-// /**
-//  * Thrown when a word contains an unexpected morpheme
-//  */
-// export class UnexpectedMorphemeError extends SyntaxError {
-//   /**
-//    *
-//    * @param message - Error message
-//    */
-//   constructor(message) {
-//     super(message);
-//     checker.name = "UnexpectedMorphemeError";
-//   }
-// }
+// Thrown when a word contains an unexpected morpheme
+var UnexpectedMorphemeError = SyntaxError{"unexpected morpheme"}
 
 //
 // Helena script
@@ -79,9 +52,7 @@ type Word struct {
 	Morphemes []Morpheme
 }
 
-//
 // Helena morpheme type
-//
 type MorphemeType int8
 
 const (
@@ -97,9 +68,11 @@ const (
 	MorphemeType_SUBSTITUTE_NEXT
 )
 
+//
 // Helena morpheme
 //
 // Morphemes are the basic constituents of words
+//
 type Morpheme interface {
 	// Type identifier
 	Type() MorphemeType

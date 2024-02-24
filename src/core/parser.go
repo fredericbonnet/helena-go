@@ -698,8 +698,7 @@ func (parser *Parser) ensureWord() bool {
 func (parser *Parser) addLiteral(value string) {
 	current := parser.context.currentMorpheme()
 	if current != nil {
-		morpheme, ok := current.(*literalNode)
-		if ok && !parser.withinSubstitution() {
+		if morpheme, ok := current.(*literalNode); ok && !parser.withinSubstitution() {
 			morpheme.value += value
 			(*parser.context.morphemes)[len(*parser.context.morphemes)-1] = morpheme
 			return
@@ -979,8 +978,7 @@ func (parser *Parser) addBlockCommentSequence(value string) {
 func (parser *Parser) beginSubstitution(value string) {
 	current := parser.context.currentMorpheme()
 	if current != nil {
-		morpheme, ok := current.(*substituteNextNode)
-		if ok {
+		if morpheme, ok := current.(*substituteNextNode); ok {
 			morpheme.value += value
 			morpheme.levels++
 			if !parser.stream.end() && parser.stream.current().Type == TokenType_ASTERISK {
