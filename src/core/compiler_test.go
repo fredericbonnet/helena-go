@@ -69,6 +69,26 @@ func (command functionCommand) Execute(args []Value, context any) Result {
 	return OK(command.fn(args))
 }
 
+type simpleCommand struct {
+	fn func(args []Value) Result
+}
+
+func (command simpleCommand) Execute(args []Value, context any) Result {
+	return command.fn(args)
+}
+
+type resumableCommand struct {
+	exec   func(args []Value, context any) Result
+	resume func(result Result, context any) Result
+}
+
+func (command resumableCommand) Execute(args []Value, context any) Result {
+	return command.exec(args, context)
+}
+func (command resumableCommand) Resume(result Result, context any) Result {
+	return command.resume(result, context)
+}
+
 type captureContextCommand struct {
 	context any
 }
@@ -85,7 +105,7 @@ type mockSelectorResolver struct {
 
 func newMockSelectorResolver() *mockSelectorResolver {
 	return &mockSelectorResolver{
-		builder: func(rules []Value) (result TypedResult[Selector], ok bool) { return ResultAs[Selector](OK(NIL)), false },
+		builder: func(rules []Value) (result TypedResult[Selector], ok bool) { return OK_T[Selector](NIL, nil), false },
 	}
 }
 
@@ -3277,119 +3297,110 @@ var _ = Describe("Compilation and execution", func() {
 	})
 
 	Describe("Program", func() {
-		//         It("should be resumable", func() {
-		//            script := parse(
-		//             "break 1; ok 2; break 3; break 4; ok 5; break 6"
-		//           );
-		//            program := compiler.CompileScript(script);
+		It("should be resumable", func() {
+			script := parse(
+				"break 1; ok 2; break 3; break 4; ok 5; break 6",
+			)
+			program := compiler.CompileScript(*script)
 
-		//           commandResolver.register("break", {
-		//             execute(args) {
-		//               return BREAK(args[1]);
-		//             },
-		//           });
-		//           commandResolver.register("ok", {
-		//             execute(args) {
-		//               return OK(args[1]);
-		//             },
-		//           });
-		//           const state = new ProgramState();
-		//           Expect(executor.execute(program, state)).To(Equal(BREAK(STR("1")));
-		//           Expect(executor.execute(program, state)).To(Equal(BREAK(STR("3")));
-		//           Expect(executor.execute(program, state)).To(Equal(BREAK(STR("4")));
-		//           Expect(executor.execute(program, state)).To(Equal(BREAK(STR("6")));
-		//           Expect(executor.execute(program, state)).To(Equal(OK(STR("6")));
-		//         });
-		//         It("result should be settable", func() {
-		//            script := parse("ok [break 1]");
-		//            program := compiler.CompileScript(script);
+			commandResolver.register("break", simpleCommand{func(args []Value) Result {
+				return BREAK(args[1])
+			}})
+			commandResolver.register("ok", simpleCommand{func(args []Value) Result {
+				return OK(args[1])
+			}})
+			state := NewProgramState()
+			Expect(executor.Execute(program, state)).To(Equal(BREAK(STR("1"))))
+			Expect(executor.Execute(program, state)).To(Equal(BREAK(STR("3"))))
+			Expect(executor.Execute(program, state)).To(Equal(BREAK(STR("4"))))
+			Expect(executor.Execute(program, state)).To(Equal(BREAK(STR("6"))))
+			Expect(executor.Execute(program, state)).To(Equal(OK(STR("6"))))
+		})
+		Specify("result should be settable", func() {
+			script := parse("ok [break 1]")
+			program := compiler.CompileScript(*script)
 
-		//           commandResolver.register("break", {
-		//             execute(args) {
-		//               return BREAK(args[1]);
-		//             },
-		//           });
-		//           commandResolver.register("ok", {
-		//             execute(args) {
-		//               return OK(args[1]);
-		//             },
-		//           });
-		//           const state = new ProgramState();
-		//           Expect(executor.execute(program, state)).To(Equal(BREAK(STR("1")));
-		//           state.result = OK(STR("2"));
-		//           Expect(executor.execute(program, state)).To(Equal(OK(STR("2")));
-		//         });
-		//         It("should support resumable commands", func() {
-		//            script := parse("ok [cmd]");
-		//            program := compiler.CompileScript(script);
+			commandResolver.register("break", simpleCommand{func(args []Value) Result {
+				return BREAK(args[1])
+			}})
+			commandResolver.register("ok", simpleCommand{func(args []Value) Result {
+				return OK(args[1])
+			}})
+			state := NewProgramState()
+			Expect(executor.Execute(program, state)).To(Equal(BREAK(STR("1"))))
+			state.Result = OK(STR("2"))
+			Expect(executor.Execute(program, state)).To(Equal(OK(STR("2"))))
+		})
+		It("should support resumable commands", func() {
+			script := parse("ok [cmd]")
+			program := compiler.CompileScript(*script)
 
-		//           commandResolver.register("cmd", {
-		//             execute(_args) {
-		//               return YIELD(INT(1));
-		//             },
-		//             resume(result) {
-		//               const i = (result.value as IntegerValue).value;
-		//               if (i == 5) return OK(STR("done"));
-		//               return YIELD(INT(i + 1));
-		//             },
-		//           });
-		//           commandResolver.register("ok", {
-		//             execute(args) {
-		//               return OK(args[1]);
-		//             },
-		//           });
+			commandResolver.register("cmd", resumableCommand{
+				func(_ []Value, _ any) Result {
+					return YIELD(INT(1))
+				},
+				func(result Result, _ any) Result {
+					i := result.Value.(IntegerValue).Value
+					if i == 5 {
+						return OK(STR("done"))
+					}
+					return YIELD(INT(i + 1))
+				},
+			})
+			commandResolver.register("ok", simpleCommand{func(args []Value) Result {
+				return OK(args[1])
+			}})
 
-		//           const state = new ProgramState();
-		//           Expect(executor.execute(program, state)).To(Equal(YIELD(INT(1)));
-		//           Expect(executor.execute(program, state)).To(Equal(YIELD(INT(2)));
-		//           Expect(executor.execute(program, state)).To(Equal(YIELD(INT(3)));
-		//           Expect(executor.execute(program, state)).To(Equal(YIELD(INT(4)));
-		//           Expect(executor.execute(program, state)).To(Equal(YIELD(INT(5)));
-		//           Expect(executor.execute(program, state)).To(Equal(OK(STR("done")));
-		//         });
-		//         It("should support resumable command state", func() {
-		//            script := parse("ok [cmd]");
-		//            program := compiler.CompileScript(script);
+			state := NewProgramState()
+			Expect(executor.Execute(program, state)).To(Equal(YIELD(INT(1))))
+			Expect(executor.Execute(program, state)).To(Equal(YIELD(INT(2))))
+			Expect(executor.Execute(program, state)).To(Equal(YIELD(INT(3))))
+			Expect(executor.Execute(program, state)).To(Equal(YIELD(INT(4))))
+			Expect(executor.Execute(program, state)).To(Equal(YIELD(INT(5))))
+			Expect(executor.Execute(program, state)).To(Equal(OK(STR("done"))))
+		})
+		It("should support resumable command state", func() {
+			script := parse("ok [cmd]")
+			program := compiler.CompileScript(*script)
 
-		//           commandResolver.register("cmd", {
-		//             execute(_args) {
-		//               return YIELD(STR("begin"), 1);
-		//             },
-		//             resume(result) {
-		//               const step = result.data as number;
-		//               switch (step) {
-		//                 case 1:
-		//                   return YIELD(STR(`step one`), step + 1);
-		//                 case 2:
-		//                   return YIELD(STR(`step two`), step + 1);
-		//                 case 3:
-		//                   return YIELD(STR(`step three`), step + 1);
-		//                 case 4:
-		//                   return OK(STR("end"));
-		//               }
-		//             },
-		//           });
-		//           commandResolver.register("ok", {
-		//             execute(args) {
-		//               return OK(args[1]);
-		//             },
-		//           });
+			commandResolver.register("cmd", resumableCommand{
+				func(_ []Value, _ any) Result {
+					return YIELD_STATE(STR("begin"), 1)
+				},
+				func(result Result, _ any) Result {
+					step := result.Data.(int)
+					switch step {
+					case 1:
+						return YIELD_STATE(STR(`step one`), step+1)
+					case 2:
+						return YIELD_STATE(STR(`step two`), step+1)
+					case 3:
+						return YIELD_STATE(STR(`step three`), step+1)
+					case 4:
+						return OK(STR("end"))
+					}
+					panic("CANTHAPPEN")
+				},
+			})
+			commandResolver.register("ok", simpleCommand{func(args []Value) Result {
+				return OK(args[1])
+			}})
 
-		//           const state = new ProgramState();
-		//           Expect(executor.execute(program, state)).To(Equal(
-		//             YIELD(STR("begin"), 1)
-		//           );
-		//           Expect(executor.execute(program, state)).To(Equal(
-		//             YIELD(STR("step one"), 2)
-		//           );
-		//           Expect(executor.execute(program, state)).To(Equal(
-		//             YIELD(STR("step two"), 3)
-		//           );
-		//           Expect(executor.execute(program, state)).To(Equal(
-		//             YIELD(STR("step three"), 4)
-		//           );
-		//           Expect(executor.execute(program, state)).To(Equal(OK(STR("end")));
-		//         });
+			state := NewProgramState()
+			Expect(executor.Execute(program, state)).To(Equal(
+				YIELD_STATE(STR("begin"), 1),
+			))
+			Expect(executor.Execute(program, state)).To(Equal(
+				YIELD_STATE(STR("step one"), 2),
+			))
+			Expect(executor.Execute(program, state)).To(Equal(
+				YIELD_STATE(STR("step two"), 3),
+			))
+			Expect(executor.Execute(program, state)).To(Equal(
+				YIELD_STATE(STR("step three"), 4),
+			))
+			Expect(executor.Execute(program, state)).To(Equal(OK(STR("end"))))
+		})
 	})
 	//     });
 	//   }

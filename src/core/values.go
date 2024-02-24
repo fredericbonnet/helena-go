@@ -124,7 +124,7 @@ func BooleanValueFromValue(value Value) TypedResult[BooleanValue] {
 	}
 	result := ValueToBoolean(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[BooleanValue](result.Result)
+		return ResultAs[BooleanValue](result.AsResult())
 	}
 	if result.Data {
 		return OK_T(TRUE, TRUE)
@@ -142,7 +142,7 @@ func ValueToBoolean(value Value) TypedResult[bool] {
 	}
 	result := ValueToString(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[bool](result.Result)
+		return ResultAs[bool](result.AsResult())
 	}
 	s := result.Data
 	if s == "true" {
@@ -193,7 +193,7 @@ func IntegerValueFromValue(value Value) TypedResult[IntegerValue] {
 	}
 	result := ValueToInteger(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[IntegerValue](result.Result)
+		return ResultAs[IntegerValue](result.AsResult())
 	}
 	v := NewIntegerValue(result.Data)
 	return OK_T(v, v)
@@ -240,7 +240,7 @@ func ValueToInteger(value Value) TypedResult[int64] {
 	// }
 	result := ValueToString(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[int64](result.Result)
+		return ResultAs[int64](result.AsResult())
 	}
 	s := result.Data
 	n, err := strconv.ParseInt(s, 10, 64)
@@ -280,7 +280,7 @@ func RealValueFromValue(value Value) TypedResult[RealValue] {
 	}
 	result := ValueToFloat(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[RealValue](result.Result)
+		return ResultAs[RealValue](result.AsResult())
 	}
 	v := NewRealValue(result.Data)
 	return OK_T(v, v)
@@ -322,7 +322,7 @@ func ValueToFloat(value Value) TypedResult[float64] {
 	}
 	result := ValueToString(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[float64](result.Result)
+		return ResultAs[float64](result.AsResult())
 	}
 	s := result.Data
 	n, err := strconv.ParseFloat(s, 64)
@@ -358,7 +358,7 @@ func StringValueFromValue(value Value) TypedResult[StringValue] {
 	}
 	result := ValueToString(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[StringValue](result.Result)
+		return ResultAs[StringValue](result.AsResult())
 	}
 	v := NewStringValue(result.Data)
 	return OK_T(v, v)
@@ -399,7 +399,7 @@ func ValueToStringOrDefault(value Value, def Value) TypedResult[string] {
 func StringAt(value string, index Value) Result {
 	result := ValueToInteger(index)
 	if result.Code != ResultCode_OK {
-		return result.Result
+		return result.AsResult()
 	}
 	i := result.Data
 	if i < 0 || i >= int64(len(value)) {
@@ -452,7 +452,7 @@ func ListValueFromValue(value Value) TypedResult[ListValue] {
 	}
 	result := ValueToValues(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[ListValue](result.Result)
+		return ResultAs[ListValue](result.AsResult())
 	}
 	v := NewListValue(result.Data)
 	return OK_T(v, v)
@@ -476,7 +476,7 @@ func ValueToValues(value Value) TypedResult[[]Value] {
 func ListAt(values []Value, index Value) Result {
 	result := ValueToInteger(index)
 	if result.Code != ResultCode_OK {
-		return result.Result
+		return result.AsResult()
 	}
 	i := result.Data
 	if i < 0 || i >= int64(len(values)) {

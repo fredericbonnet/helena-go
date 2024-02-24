@@ -646,10 +646,15 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 	if state == nil {
 		state = NewProgramState()
 	}
-	//     if (state.result.code == ResultCode_YIELD && state.command?.resume) {
-	//       state.result = state.command.resume(state.result, this.context);
-	//       if (state.result.code != ResultCode_OK) return state.result;
-	//     }
+	if state.Result.Code == ResultCode_YIELD {
+		resumable, ok := state.Command.(ResumableCommand)
+		if ok {
+			state.Result = resumable.Resume(state.Result, executor.Context)
+			if state.Result.Code != ResultCode_OK {
+				return state.Result
+			}
+		}
+	}
 	for state.PC < uint(len(program.OpCodes)) {
 		opcode := program.OpCodes[state.PC]
 		state.PC++
@@ -697,7 +702,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 				value := state.Pop()
 				result2 := CreateIndexedSelector(index)
 				if result2.Code != ResultCode_OK {
-					return result2.Result
+					return result2.AsResult()
 				}
 				selector := result2.Data
 				result := selector.Apply(value)
@@ -713,7 +718,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 				value := state.Pop()
 				result2 := CreateKeyedSelector(keys.Values)
 				if result2.Code != ResultCode_OK {
-					return result2.Result
+					return result2.AsResult()
 				}
 				selector := result2.Data
 				result := selector.Apply(value)
@@ -729,7 +734,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 				value := state.Pop()
 				result := executor.resolveSelector(rules.Values)
 				if result.Code != ResultCode_OK {
-					return result.Result
+					return result.AsResult()
 				}
 				selector := result.Data
 				result2 := ApplySelector(value, selector)
@@ -746,7 +751,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 					cmdname := args.Values[0]
 					result := executor.resolveCommand(cmdname)
 					if result.Code != ResultCode_OK {
-						return result.Result
+						return result.AsResult()
 					}
 					command := result.Data
 					state.Command = command
@@ -767,7 +772,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 				for _, value := range tuple.Values {
 					result := ValueToString(value)
 					if result.Code != ResultCode_OK {
-						return result.Result
+						return result.AsResult()
 					}
 					s += result.Data
 				}

@@ -4,8 +4,6 @@
 
 package core
 
-// import { Value, NIL, STR } from "./values";
-
 // Helena standard result codes
 type ResultCode int8
 
@@ -25,35 +23,31 @@ const (
 // }
 
 // Helena result
-type Result struct {
+type TypedResult[T any] struct {
 	// Result code
 	// readonly code: ResultCode | CustomResultCode;
 	Code ResultCode
 
 	// Result value
 	Value Value
-}
-type TypedResult[T any] struct {
-	Result
 
 	// Extra data
 	Data T
 }
+type Result TypedResult[any]
 
-func ResultAs[To any](result Result) TypedResult[To] {
-	return TypedResult[To]{Result: result}
+func (result TypedResult[any]) AsResult() Result {
+	return Result{Code: result.Code, Value: result.Value, Data: nil}
 }
 
-// /**
-//  * Convenience functions for results
-//  */
+func ResultAs[To any](result Result) TypedResult[To] {
+	return TypedResult[To]{Code: result.Code, Value: result.Value}
+}
 
-// /* eslint-disable jsdoc/require-jsdoc */
-// export const OK = <T = unknown>(value: Value, data?: T): Result<T> => ({
-//   code: ResultCode.OK,
-//   value,
-//   data,
-// });
+//
+// Convenience functions for results
+//
+
 func OK(value Value) Result {
 	return Result{
 		Code:  ResultCode_OK,
@@ -62,40 +56,60 @@ func OK(value Value) Result {
 }
 func OK_T[T any](value Value, data T) TypedResult[T] {
 	return TypedResult[T]{
-		Result: OK(value),
-		Data:   data,
+		Code:  ResultCode_OK,
+		Value: value,
+		Data:  data,
 	}
 }
 
-// export const RETURN = (value: Value = NIL): Result => ({
-//   code: ResultCode.RETURN,
-//   value,
-// });
-// export const YIELD = (value: Value = NIL, state?): Result => ({
-//   code: ResultCode.YIELD,
-//   value,
-//   data: state,
-// });
+func RETURN(value Value) Result {
+	return Result{
+		Code:  ResultCode_RETURN,
+		Value: value,
+	}
+}
+
+func YIELD(value Value) Result {
+	return Result{
+		Code:  ResultCode_YIELD,
+		Value: value,
+	}
+}
+func YIELD_STATE(value Value, state any) Result {
+	return Result{
+		Code:  ResultCode_YIELD,
+		Value: value,
+		Data:  state,
+	}
+}
+
 func ERROR(message string) Result {
-	return Result{ //Result<never>
+	return Result{
 		Code:  ResultCode_ERROR,
 		Value: STR(message),
 	}
 }
 func ERROR_T[T any](message string) TypedResult[T] {
 	return TypedResult[T]{
-		Result: ERROR(message),
+		Code:  ResultCode_ERROR,
+		Value: STR(message),
 	}
 }
 
-// export const BREAK = (value: Value = NIL): Result => ({
-//   code: ResultCode.BREAK,
-//   value,
-// });
-// export const CONTINUE = (value: Value = NIL): Result => ({
-//   code: ResultCode.CONTINUE,
-//   value,
-// });
+func BREAK(value Value) Result {
+	return Result{
+		Code:  ResultCode_BREAK,
+		Value: value,
+	}
+}
+
+func CONTINUE(value Value) Result {
+	return Result{
+		Code:  ResultCode_CONTINUE,
+		Value: value,
+	}
+}
+
 // export const CUSTOM_RESULT = (
 //   code: CustomResultCode,
 //   value: Value = NIL
