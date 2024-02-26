@@ -30,9 +30,8 @@ func newMockVariableResolver() *mockVariableResolver {
 		variables: map[string]Value{},
 	}
 }
-func (resolver *mockVariableResolver) Resolve(name string) (value Value, ok bool) {
-	v, ok := resolver.variables[name]
-	return v, ok
+func (resolver *mockVariableResolver) Resolve(name string) Value {
+	return resolver.variables[name]
 }
 func (resolver *mockVariableResolver) register(name string, value Value) {
 	resolver.variables[name] = value
@@ -55,15 +54,14 @@ func newMockCommandResolver() *mockCommandResolver {
 	}
 }
 
-func (resolver *mockCommandResolver) Resolve(name Value) (command Command, ok bool) {
+func (resolver *mockCommandResolver) Resolve(name Value) Command {
 	if name.Type() == ValueType_INTEGER {
-		return intCommand{}, true
+		return intCommand{}
 	}
 	if _, err := strconv.ParseInt(asString(name), 10, 64); err == nil {
-		return intCommand{}, true
+		return intCommand{}
 	}
-	c, ok := resolver.commands[asString(name)]
-	return c, ok
+	return resolver.commands[asString(name)]
 }
 func (resolver *mockCommandResolver) register(name string, command Command) {
 	resolver.commands[name] = command
@@ -106,18 +104,18 @@ func (command *captureContextCommand) Execute(args []Value, context any) Result 
 	return OK(NIL)
 }
 
-type builderFn func(rules []Value) (result TypedResult[Selector], ok bool)
+type builderFn func(rules []Value) TypedResult[Selector]
 type mockSelectorResolver struct {
 	builder builderFn
 }
 
 func newMockSelectorResolver() *mockSelectorResolver {
 	return &mockSelectorResolver{
-		builder: func(rules []Value) (result TypedResult[Selector], ok bool) { return OK_T[Selector](NIL, nil), false },
+		builder: func(rules []Value) TypedResult[Selector] { return OK_T[Selector](NIL, nil) },
 	}
 }
 
-func (resolver *mockSelectorResolver) Resolve(rules []Value) (result TypedResult[Selector], ok bool) {
+func (resolver *mockSelectorResolver) Resolve(rules []Value) TypedResult[Selector] {
 	return resolver.builder(rules)
 }
 func (resolver *mockSelectorResolver) register(builder builderFn) {

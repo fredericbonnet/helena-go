@@ -888,16 +888,16 @@ func (executor *Executor) resolveTuple(tuple TupleValue) Result {
 }
 
 func (executor *Executor) resolveVariable(varname string) Result {
-	value, ok := executor.VariableResolver.Resolve(varname)
-	if !ok {
+	value := executor.VariableResolver.Resolve(varname)
+	if value == nil {
 		return ERROR(`cannot resolve variable "` + varname + `"`)
 	}
 	return OK(value)
 }
 
 func (executor *Executor) resolveCommand(cmdname Value) TypedResult[Command] {
-	command, ok := executor.CommandResolver.Resolve(cmdname)
-	if !ok {
+	command := executor.CommandResolver.Resolve(cmdname)
+	if command == nil {
 		result := ValueToString(cmdname)
 		if result.Code != ResultCode_OK {
 			return ERROR_T[Command]("invalid command name")
@@ -909,11 +909,11 @@ func (executor *Executor) resolveCommand(cmdname Value) TypedResult[Command] {
 }
 
 func (executor *Executor) resolveSelector(rules []Value) TypedResult[Selector] {
-	result, ok := executor.SelectorResolver.Resolve(rules)
+	result := executor.SelectorResolver.Resolve(rules)
 	if result.Code != ResultCode_OK {
 		return result
 	}
-	if !ok {
+	if result.Data == nil {
 		return ERROR_T[Selector](`cannot resolve selector {` + DisplayList(rules, nil) + `}`)
 	}
 	return result

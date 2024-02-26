@@ -3,7 +3,7 @@ package picol_dialect
 import (
 	"strconv"
 
-	core "helena/core"
+	"helena/core"
 )
 
 type PicolScope struct {
@@ -15,13 +15,13 @@ type PicolScope struct {
 
 type variableResolver struct{ scope *PicolScope }
 
-func (resolver variableResolver) Resolve(name string) (value core.Value, ok bool) {
+func (resolver variableResolver) Resolve(name string) core.Value {
 	return resolver.scope.resolveVariable(name)
 }
 
 type commandResolver struct{ scope *PicolScope }
 
-func (resolver commandResolver) Resolve(name core.Value) (command core.Command, ok bool) {
+func (resolver commandResolver) Resolve(name core.Value) core.Command {
 	return resolver.scope.resolveCommand(name)
 }
 
@@ -40,19 +40,21 @@ func NewPicolScope(parent *PicolScope) *PicolScope {
 	return scope
 }
 
-func (scope *PicolScope) resolveVariable(name string) (value core.Value, ok bool) {
-	v, ok := scope.Variables[name]
-	return v, ok
+func (scope *PicolScope) resolveVariable(name string) core.Value {
+	return scope.Variables[name]
 }
-func (scope *PicolScope) resolveCommand(name core.Value) (command core.Command, ok bool) {
+func (scope *PicolScope) resolveCommand(name core.Value) core.Command {
 	return scope.resolveNamedCommand(core.ValueToString(name).Data)
 }
-func (scope *PicolScope) resolveNamedCommand(name string) (command core.Command, ok bool) {
-	v, ok := scope.Commands[name]
-	if !ok && scope.Parent != nil {
+func (scope *PicolScope) resolveNamedCommand(name string) core.Command {
+	cmd := scope.Commands[name]
+	if cmd != nil {
+		return cmd
+	}
+	if scope.Parent != nil {
 		return scope.Parent.resolveNamedCommand(name)
 	}
-	return v, ok
+	return nil
 }
 
 func asString(value core.Value) string { return core.ValueToString(value).Data }
@@ -436,8 +438,8 @@ var setCmd = makeCommand(
 		case 2:
 			{
 				name := asString(args[1])
-				value, ok := scope.resolveVariable(name)
-				if ok {
+				value := scope.resolveVariable(name)
+				if value != nil {
 					return core.OK(value)
 				}
 				return core.ERROR(`can't read "` + name + `": no such variable`)

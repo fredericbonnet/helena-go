@@ -9,7 +9,7 @@ package core
 //
 type VariableResolver interface {
 	// Resolve a value from its name
-	Resolve(name string) (value Value, ok bool)
+	Resolve(name string) Value
 }
 
 //
@@ -17,7 +17,7 @@ type VariableResolver interface {
 //
 type CommandResolver interface {
 	// Resolve a command from its name
-	Resolve(name Value) (value Command, ok bool)
+	Resolve(name Value) Command
 }
 
 //
@@ -25,5 +25,5 @@ type CommandResolver interface {
 //
 type SelectorResolver interface {
 	// Resolve a selector from a set of rules
-	Resolve(rules []Value) (result TypedResult[Selector], ok bool)
+	Resolve(rules []Value) TypedResult[Selector]
 }

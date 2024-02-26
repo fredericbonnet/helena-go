@@ -802,8 +802,8 @@ var _ = Describe("Compilation and execution", func() {
 
 					Describe("custom selectors", func() {
 						builder := func(selector Selector) builderFn {
-							return func(_ []Value) (result TypedResult[Selector], ok bool) {
-								return OK_T[Selector](NIL, selector), true
+							return func(_ []Value) TypedResult[Selector] {
+								return OK_T(NIL, selector)
 							}
 						}
 						Specify("simple substitution", func() {
@@ -1975,8 +1975,8 @@ var _ = Describe("Compilation and execution", func() {
 
 				Describe("custom selectors", func() {
 					builder := func(selector Selector) builderFn {
-						return func(_ []Value) (result TypedResult[Selector], ok bool) {
-							return OK_T[Selector](NIL, selector), true
+						return func(_ []Value) TypedResult[Selector] {
+							return OK_T(NIL, selector)
 						}
 					}
 					Specify("simple substitution", func() {
@@ -2235,8 +2235,8 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arg2"),
 						}))
 
-						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
-							return CreateGenericSelector(rules), true
+						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+							return CreateGenericSelector(rules)
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("varname"), []Selector{
@@ -2321,8 +2321,8 @@ var _ = Describe("Compilation and execution", func() {
 							"cmd3",
 							functionCommand{func(_ []Value) Value { return STR("key3") }},
 						)
-						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
-							return CreateGenericSelector(rules), true
+						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+							return CreateGenericSelector(rules)
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("varname"), []Selector{
@@ -2432,8 +2432,8 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arg2"),
 						}))
 
-						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
-							return CreateGenericSelector(rules), true
+						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+							return CreateGenericSelector(rules)
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(
@@ -2533,8 +2533,8 @@ var _ = Describe("Compilation and execution", func() {
 							"cmd4",
 							functionCommand{func(_ []Value) Value { return STR("index2") }},
 						)
-						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
-							return CreateGenericSelector(rules), true
+						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+							return CreateGenericSelector(rules)
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(
@@ -2635,8 +2635,8 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arg2"),
 						}))
 
-						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
-							return CreateGenericSelector(rules), true
+						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+							return CreateGenericSelector(rules)
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("source name"), []Selector{
@@ -2721,8 +2721,8 @@ var _ = Describe("Compilation and execution", func() {
 							"cmd3",
 							functionCommand{func(_ []Value) Value { return STR("key3") }},
 						)
-						selectorResolver.register(func(rules []Value) (TypedResult[Selector], bool) {
-							return CreateGenericSelector(rules), true
+						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+							return CreateGenericSelector(rules)
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("source name"), []Selector{
