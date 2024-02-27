@@ -19,14 +19,15 @@ type ResumableCommand interface {
 	Resume(result Result, context any) Result
 }
 
+type CommandHelpOptions struct {
+	Prefix string
+	Skip   uint
+}
 type CommandWithHelp interface {
 	// Return help for the command and a list of arguments
 	//
 	// Provided arguments will be validated against the command signature
 	//
 	// Help formating options can be provided
-	Help(args []Value, options struct {
-		prefix string
-		skip   uint
-	}, context any)
+	Help(args []Value, options CommandHelpOptions, context any) Result
 }
