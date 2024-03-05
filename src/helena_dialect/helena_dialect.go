@@ -34,7 +34,7 @@ func InitCommands(
 	//   rootDir?: string
 ) {
 	registerBasicCommands(scope)
-	//   registerVariableCommands(scope);
+	registerVariableCommands(scope)
 
 	//   registerMathCommands(scope);
 	//   registerLogicCommands(scope);

@@ -8,17 +8,6 @@ import (
 	. "helena/helena_dialect"
 )
 
-var NIL = core.NIL
-var STR = core.STR
-var TUPLE = core.TUPLE
-
-var OK = core.OK
-var RETURN = core.RETURN
-var YIELD = core.YIELD
-var ERROR = core.ERROR
-var BREAK = core.BREAK
-var CONTINUE = core.CONTINUE
-
 var _ = Describe("Helena basic commands", func() {
 	var rootScope *Scope
 
