@@ -220,7 +220,9 @@ func (scope *Scope) ResolveVariable(name string) core.Value {
 func (scope *Scope) ResolveCommand(value core.Value) core.Command {
 	// if (value.type == ValueType_TUPLE) return expandPrefixCmd;
 	// if (value.type == ValueType_COMMAND) return (value as CommandValue).command;
-	// if (RealValue.isNumber(value)) return numberCmd;
+	if core.ValueIsNumber(value) {
+		return numberCmd
+	}
 	result := core.ValueToString(value)
 	if result.Code != core.ResultCode_OK {
 		return nil

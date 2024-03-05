@@ -288,28 +288,23 @@ func RealValueFromValue(value Value) TypedResult[RealValue] {
 	return OK_T(v, v)
 }
 
-//   /**
-//    * Test if value is convertible to number
-//    * - Reals
-//    * - Integers
-//    * - Strings: any Number()-accepted string
-//    *
-//    * @param value - Value to convert
-//    *
-//    * @returns       True if value is convertible
-//    */
-//   static isNumber(value: Value): boolean {
-//     switch (value.type) {
-//       case ValueType_INTEGER:
-//       case ValueType_REAL:
-//         return true;
-//       default: {
-//         const { data, code } = StringValue.toString(value);
-//         if (code != ResultCode_OK) return false;
-//         return !isNaN(Number(data));
-//       }
-//     }
-//   }
+// Report whether value is convertible to number
+// - Reals
+// - Integers
+// - Strings: any ParseFloat()-accepted string
+func ValueIsNumber(value Value) bool {
+	switch value.Type() {
+	case ValueType_INTEGER:
+	case ValueType_REAL:
+		return true
+	}
+	result := ValueToString(value)
+	if result.Code != ResultCode_OK {
+		return false
+	}
+	_, err := strconv.ParseFloat(result.Data, 64)
+	return err == nil
+}
 
 // Convert value to float:
 // - Reals: use float value

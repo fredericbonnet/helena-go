@@ -281,32 +281,32 @@ var _ = Describe("Helena constants and variables", func() {
 			It("should return the default value for a unknown variable", func() {
 				Expect(evaluate("get var default")).To(Equal(STR("default")))
 				Expect(evaluate("get var(key) default")).To(Equal(STR("default")))
-				// Expect(evaluate("get var[1] default")).To(Equal(STR("default")))
+				Expect(evaluate("get var[1] default")).To(Equal(STR("default")))
 			})
 
 			Describe("Qualified names", func() {
-				//         Specify("indexed selector", func() {
-				//           rootScope.setNamedVariable("var", LIST([STR("val1"), STR("val2")]));
-				//           Expect(evaluate("get var[1]")).To(Equal(STR("val2"));
-				//         });
+				Specify("indexed selector", func() {
+					rootScope.SetNamedVariable("var", LIST([]core.Value{STR("val1"), STR("val2")}))
+					Expect(evaluate("get var[1]")).To(Equal(STR("val2")))
+				})
 				Specify("keyed selector", func() {
 					rootScope.SetNamedVariable("var", DICT(map[string]core.Value{"key": STR("val")}))
 					Expect(evaluate("get var(key)")).To(Equal(STR("val")))
 				})
-				//         Specify("should work recursively", func() {
-				//           rootScope.setNamedVariable(
-				//             "var",
-				//             DICT(map[string]core.Value{ key: LIST([STR("val1"), STR("val2")]) })
-				//           );
-				//           Expect(evaluate("get var(key)[1]")).To(Equal(STR("val2"));
-				//         });
+				Specify("should work recursively", func() {
+					rootScope.SetNamedVariable(
+						"var",
+						DICT(map[string]core.Value{"key": LIST([]core.Value{STR("val1"), STR("val2")})}),
+					)
+					Expect(evaluate("get var(key)[1]")).To(Equal(STR("val2")))
+				})
 				It("should return the default value when a selector fails", func() {
 					rootScope.SetNamedConstant("l", LIST([]core.Value{}))
 					rootScope.SetNamedConstant("m", DICT(map[string]core.Value{}))
-					// Expect(evaluate("get l[1] default")).To(Equal(STR("default")))
+					Expect(evaluate("get l[1] default")).To(Equal(STR("default")))
 					Expect(evaluate("get l(key) default")).To(Equal(STR("default")))
-					// Expect(evaluate("get l[0](key) default")).To(Equal(STR("default")))
-					// Expect(evaluate("get m[1] default")).To(Equal(STR("default")))
+					Expect(evaluate("get l[0](key) default")).To(Equal(STR("default")))
+					Expect(evaluate("get m[1] default")).To(Equal(STR("default")))
 					Expect(evaluate("get m(key) default")).To(Equal(STR("default")))
 				})
 			})
@@ -328,15 +328,15 @@ var _ = Describe("Helena constants and variables", func() {
 						execute("idem (val1 (val2 val3))"),
 					))
 				})
-				// It("should support qualified names", func() {
-				// 	rootScope.SetNamedVariable("var1", LIST([]core.Value{STR("val1"), STR("val2")}))
-				// 	rootScope.SetNamedVariable("var2", LIST([]core.Value{STR("val3"), STR("val4")}))
-				// 	rootScope.SetNamedVariable("var3", LIST([]core.Value{STR("val5"), STR("val6")}))
-				// 	Expect(evaluate("get (var1 (var2 var3))[1]")).To(Equal(
-				// 		evaluate("idem (val2 (val4 val6))"),
-				// 	))
-				// 	Expect(evaluate("get (var1[1])")).To(Equal(evaluate("idem (val2)")))
-				// })
+				It("should support qualified names", func() {
+					rootScope.SetNamedVariable("var1", LIST([]core.Value{STR("val1"), STR("val2")}))
+					rootScope.SetNamedVariable("var2", LIST([]core.Value{STR("val3"), STR("val4")}))
+					rootScope.SetNamedVariable("var3", LIST([]core.Value{STR("val5"), STR("val6")}))
+					Expect(evaluate("get (var1 (var2 var3))[1]")).To(Equal(
+						evaluate("idem (val2 (val4 val6))"),
+					))
+					Expect(evaluate("get (var1[1])")).To(Equal(evaluate("idem (val2)")))
+				})
 			})
 		})
 
@@ -391,35 +391,35 @@ var _ = Describe("Helena constants and variables", func() {
 			It("should return `false` for a unknown variable", func() {
 				Expect(evaluate("exists var")).To(Equal(FALSE))
 				Expect(evaluate("exists var(key)")).To(Equal(FALSE))
-				// Expect(evaluate("exists var[1]")).To(Equal(FALSE))
+				Expect(evaluate("exists var[1]")).To(Equal(FALSE))
 			})
 
 			Describe("Qualified names", func() {
-				//         Specify("indexed selector", func() {
-				//           rootScope.setNamedVariable("var", LIST([STR("val1"), STR("val2")]));
-				//           Expect(evaluate("exists var[1]")).To(Equal(TRUE);
-				//         });
+				Specify("indexed selector", func() {
+					rootScope.SetNamedVariable("var", LIST([]core.Value{STR("val1"), STR("val2")}))
+					Expect(evaluate("exists var[1]")).To(Equal(TRUE))
+				})
 				Specify("keyed selector", func() {
 					rootScope.SetNamedVariable("var", DICT(map[string]core.Value{"key": STR("val")}))
 					Expect(evaluate("exists var(key)")).To(Equal(TRUE))
 				})
-				// Specify("recursive selectors", func() {
-				// 	rootScope.SetNamedVariable(
-				// 		"var",
-				// 		DICT(map[string]core.Value{"key": LIST([]core.Value{STR("val1"), STR("val2")})}),
-				// 	)
-				// 	Expect(evaluate("exists var(key)[1]")).To(Equal(TRUE))
-				// })
+				Specify("recursive selectors", func() {
+					rootScope.SetNamedVariable(
+						"var",
+						DICT(map[string]core.Value{"key": LIST([]core.Value{STR("val1"), STR("val2")})}),
+					)
+					Expect(evaluate("exists var(key)[1]")).To(Equal(TRUE))
+				})
 				It("should return `false` for a unknown variable", func() {
-					// Expect(evaluate("exists var[1]")).To(Equal(FALSE))
+					Expect(evaluate("exists var[1]")).To(Equal(FALSE))
 					Expect(evaluate("exists var(key)")).To(Equal(FALSE))
 				})
 				It("should return `false` when a selector fails", func() {
 					rootScope.SetNamedConstant("l", LIST([]core.Value{}))
 					rootScope.SetNamedConstant("m", DICT(map[string]core.Value{}))
-					// Expect(evaluate("exists l[1]")).To(Equal(FALSE))
+					Expect(evaluate("exists l[1]")).To(Equal(FALSE))
 					Expect(evaluate("exists l(key)")).To(Equal(FALSE))
-					// Expect(evaluate("exists m[1]")).To(Equal(FALSE))
+					Expect(evaluate("exists m[1]")).To(Equal(FALSE))
 					Expect(evaluate("exists m(key)")).To(Equal(FALSE))
 				})
 			})
@@ -535,13 +535,13 @@ var _ = Describe("Helena constants and variables", func() {
 			Specify("qualified `varname`", func() {
 				rootScope.SetNamedVariable("var", LIST([]core.Value{STR("val1"), STR("val2")}))
 				rootScope.SetNamedVariable("var", DICT(map[string]core.Value{"key": STR("val")}))
-				// Expect(execute("unset var[1]")).To(Equal(ERROR("invalid variable name")))
+				Expect(execute("unset var[1]")).To(Equal(ERROR("invalid variable name")))
 				Expect(execute("unset var(key)")).To(Equal(
 					ERROR("invalid variable name"),
 				))
-				// Expect(execute("unset (var[1] var(key))")).To(Equal(
-				// 	ERROR("invalid variable name"),
-				// ))
+				Expect(execute("unset (var[1] var(key))")).To(Equal(
+					ERROR("invalid variable name"),
+				))
 			})
 			Specify("existing constant", func() {
 				rootScope.Context.Constants["cst"] = STR("old")

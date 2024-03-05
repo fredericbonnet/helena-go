@@ -17,6 +17,8 @@ func TestHelenaDialect(t *testing.T) {
 var NIL = core.NIL
 var TRUE = core.TRUE
 var FALSE = core.FALSE
+var INT = core.INT
+var REAL = core.REAL
 var STR = core.STR
 var LIST = core.LIST
 var DICT = core.DICT
