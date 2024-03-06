@@ -36,7 +36,7 @@ func InitCommands(
 	registerBasicCommands(scope)
 	registerVariableCommands(scope)
 
-	//   registerMathCommands(scope);
+	registerMathCommands(scope)
 	//   registerLogicCommands(scope);
 	//   registerControlCommands(scope);
 

@@ -122,7 +122,7 @@ var _ = Describe("Picol dialect", func() {
 				Expect(evaluate("* 45 67")).To(Equal(REAL(45 * 67)))
 				Expect(evaluate("* 1.23e-4 -56")).To(Equal(REAL(1.23e-4 * -56)))
 			})
-			It("should add several numbers", func() {
+			It("should multiply several numbers", func() {
 				expr := "*"
 				numbers := make([]float64, 10)
 				var total float64 = 1
