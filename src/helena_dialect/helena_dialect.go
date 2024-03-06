@@ -62,5 +62,5 @@ func InitCommands(
 	//   scope.registerNamedCommand("closure", closureCmd);
 	//   scope.registerNamedCommand("proc", procCmd);
 	//   scope.registerNamedCommand("coroutine", coroutineCmd);
-	//   scope.registerNamedCommand("alias", aliasCmd);
+	scope.RegisterNamedCommand("alias", aliasCmd{})
 }

@@ -112,7 +112,7 @@ type scopeContext struct {
 	parent    *scopeContext
 	Constants map[string]core.Value
 	Variables map[string]core.Value
-	commands  map[string]core.Command
+	Commands  map[string]core.Command
 }
 
 func newScopeContext(parent *scopeContext) *scopeContext {
@@ -120,7 +120,7 @@ func newScopeContext(parent *scopeContext) *scopeContext {
 		parent:    parent,
 		Constants: map[string]core.Value{},
 		Variables: map[string]core.Value{},
-		commands:  map[string]core.Command{},
+		Commands:  map[string]core.Command{},
 	}
 }
 
@@ -221,7 +221,9 @@ func (scope *Scope) ResolveCommand(value core.Value) core.Command {
 	if value.Type() == core.ValueType_TUPLE {
 		return expandPrefixCmd
 	}
-	// if (value.type == ValueType_COMMAND) return (value as CommandValue).command;
+	if value.Type() == core.ValueType_COMMAND {
+		return value.(core.CommandValue).Command
+	}
 	if core.ValueIsNumber(value) {
 		return numberCmd
 	}
@@ -235,7 +237,7 @@ func (scope *Scope) ResolveCommand(value core.Value) core.Command {
 func (scope *Scope) ResolveNamedCommand(name string) core.Command {
 	context := scope.Context
 	for context != nil {
-		command := context.commands[name]
+		command := context.Commands[name]
 		if command != nil {
 			return command
 		}
@@ -359,14 +361,17 @@ func (scope *Scope) ResolveValue(value core.Value) core.Result {
 	return scope.Execute(program, nil)
 }
 
-//   registerCommand(name: Value, command: Command) core.Result {
-//     const { data: cmdname, code } = core.ValueToString(name);
-//     if (code != core.ResultCode_OK) return core.ERROR("invalid command name");
-//     this.registerNamedCommand(cmdname, command);
-//     return core.OK(NIL);
-//   }
+func (scope *Scope) RegisterCommand(name core.Value, command core.Command) core.Result {
+	result := core.ValueToString(name)
+	if result.Code != core.ResultCode_OK {
+		return core.ERROR("invalid command name")
+	}
+	cmdname := result.Data
+	scope.RegisterNamedCommand(cmdname, command)
+	return core.OK(core.NIL)
+}
 func (scope *Scope) RegisterNamedCommand(name string, command core.Command) {
-	scope.Context.commands[name] = command
+	scope.Context.Commands[name] = command
 }
 
 //   hasLocalCommand(name: string): boolean {
