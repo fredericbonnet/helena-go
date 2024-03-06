@@ -11,9 +11,9 @@ import "helena/core"
 
 const LET_SIGNATURE = "let constname value"
 
-type LetCommand struct{}
+type letCmd struct{}
 
-func (LetCommand) Execute(args []core.Value, context any) core.Result {
+func (letCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	switch len(args) {
 	case 3:
@@ -28,7 +28,7 @@ func (LetCommand) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(LET_SIGNATURE)
 	}
 }
-func (LetCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (letCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 3 {
 		return ARITY_ERROR(LET_SIGNATURE)
 	}
@@ -37,9 +37,9 @@ func (LetCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core
 
 const SET_SIGNATURE = "set varname value"
 
-type SetCommand struct{}
+type setCmd struct{}
 
-func (SetCommand) Execute(args []core.Value, context any) core.Result {
+func (setCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	switch len(args) {
 	case 3:
@@ -54,7 +54,7 @@ func (SetCommand) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(SET_SIGNATURE)
 	}
 }
-func (SetCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (setCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 3 {
 		return ARITY_ERROR(SET_SIGNATURE)
 	}
@@ -63,9 +63,9 @@ func (SetCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core
 
 const GET_SIGNATURE = "get varname ?default?"
 
-type GetCommand struct{}
+type getCmd struct{}
 
-func (GetCommand) Execute(args []core.Value, context any) core.Result {
+func (getCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	switch len(args) {
 	case 2:
@@ -95,7 +95,7 @@ func (GetCommand) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(GET_SIGNATURE)
 	}
 }
-func (GetCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (getCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 3 {
 		return ARITY_ERROR(GET_SIGNATURE)
 	}
@@ -104,9 +104,9 @@ func (GetCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core
 
 const EXISTS_SIGNATURE = "exists varname"
 
-type ExistsCommand struct{}
+type existsCmd struct{}
 
-func (ExistsCommand) Execute(args []core.Value, context any) core.Result {
+func (existsCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	switch len(args) {
 	case 2:
@@ -124,7 +124,7 @@ func (ExistsCommand) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(EXISTS_SIGNATURE)
 	}
 }
-func (ExistsCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (existsCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(EXISTS_SIGNATURE)
 	}
@@ -133,9 +133,9 @@ func (ExistsCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) c
 
 const UNSET_SIGNATURE = "unset varname"
 
-type UnsetCommand struct{}
+type unsetCmd struct{}
 
-func (UnsetCommand) Execute(args []core.Value, context any) core.Result {
+func (unsetCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	switch len(args) {
 	case 2:
@@ -144,7 +144,7 @@ func (UnsetCommand) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(UNSET_SIGNATURE)
 	}
 }
-func (UnsetCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (unsetCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(UNSET_SIGNATURE)
 	}
@@ -174,9 +174,9 @@ func unset(scope *Scope, name core.Value, check bool) core.Result {
 }
 
 func registerVariableCommands(scope *Scope) {
-	scope.RegisterNamedCommand("let", LetCommand{})
-	scope.RegisterNamedCommand("set", SetCommand{})
-	scope.RegisterNamedCommand("get", GetCommand{})
-	scope.RegisterNamedCommand("exists", ExistsCommand{})
-	scope.RegisterNamedCommand("unset", UnsetCommand{})
+	scope.RegisterNamedCommand("let", letCmd{})
+	scope.RegisterNamedCommand("set", setCmd{})
+	scope.RegisterNamedCommand("get", getCmd{})
+	scope.RegisterNamedCommand("exists", existsCmd{})
+	scope.RegisterNamedCommand("unset", unsetCmd{})
 }

@@ -20,9 +20,9 @@ var numberSubcommands = NewSubcommands([]string{
 	"<=",
 })
 
-type NumberCommand struct{}
+type numberCommand struct{}
 
-func (NumberCommand) Execute(args []core.Value, _ any) core.Result {
+func (numberCommand) Execute(args []core.Value, _ any) core.Result {
 	result := core.ValueToFloat(args[0])
 	if result.Code != core.ResultCode_OK {
 		return result.AsResult()
@@ -53,7 +53,7 @@ func (NumberCommand) Execute(args []core.Value, _ any) core.Result {
 	})
 }
 
-var numberCmd = NumberCommand{}
+var numberCmd = numberCommand{}
 
 func arithmetics(args []core.Value, operand1 float64) core.Result {
 	if len(args)%2 == 0 {

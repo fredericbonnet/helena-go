@@ -4,15 +4,15 @@ import "helena/core"
 
 const IDEM_SIGNATURE = "idem value"
 
-type IdemCommand struct{}
+type idemCmd struct{}
 
-func (IdemCommand) Execute(args []core.Value, _ any) core.Result {
+func (idemCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(IDEM_SIGNATURE)
 	}
 	return core.OK(args[1])
 }
-func (IdemCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (idemCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(IDEM_SIGNATURE)
 	}
@@ -21,9 +21,9 @@ func (IdemCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) cor
 
 const RETURN_SIGNATURE = "return ?result?"
 
-type ReturnCommand struct{}
+type returnCmd struct{}
 
-func (ReturnCommand) Execute(args []core.Value, _ any) core.Result {
+func (returnCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(RETURN_SIGNATURE)
 	}
@@ -33,7 +33,7 @@ func (ReturnCommand) Execute(args []core.Value, _ any) core.Result {
 		return core.RETURN(core.NIL)
 	}
 }
-func (ReturnCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (returnCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(RETURN_SIGNATURE)
 	}
@@ -42,9 +42,9 @@ func (ReturnCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) c
 
 const YIELD_SIGNATURE = "yield ?result?"
 
-type YieldCommand struct{}
+type yieldCmd struct{}
 
-func (YieldCommand) Execute(args []core.Value, _ any) core.Result {
+func (yieldCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(YIELD_SIGNATURE)
 	}
@@ -54,7 +54,7 @@ func (YieldCommand) Execute(args []core.Value, _ any) core.Result {
 		return core.YIELD(core.NIL)
 	}
 }
-func (YieldCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (yieldCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(YIELD_SIGNATURE)
 	}
@@ -63,16 +63,16 @@ func (YieldCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) co
 
 const TAILCALL_SIGNATURE = "tailcall body"
 
-type TailcallCommand struct{}
+type tailcallCmd struct{}
 
-func (TailcallCommand) Execute(args []core.Value, context any) core.Result {
+func (tailcallCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if len(args) != 2 {
 		return ARITY_ERROR(TAILCALL_SIGNATURE)
 	}
 	return CreateDeferredValue(core.ResultCode_RETURN, args[1], scope)
 }
-func (TailcallCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (tailcallCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(TAILCALL_SIGNATURE)
 	}
@@ -81,9 +81,9 @@ func (TailcallCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any)
 
 const ERROR_SIGNATURE = "error message"
 
-type ErrorCommand struct{}
+type errorCmd struct{}
 
-func (ErrorCommand) Execute(args []core.Value, _ any) core.Result {
+func (errorCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(ERROR_SIGNATURE)
 	}
@@ -96,7 +96,7 @@ func (ErrorCommand) Execute(args []core.Value, _ any) core.Result {
 		Value: args[1],
 	}
 }
-func (ErrorCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (errorCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(ERROR_SIGNATURE)
 	}
@@ -105,15 +105,15 @@ func (ErrorCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) co
 
 const BREAK_SIGNATURE = "break"
 
-type BreakCommand struct{}
+type breakCmd struct{}
 
-func (BreakCommand) Execute(args []core.Value, _ any) core.Result {
+func (breakCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 1 {
 		return ARITY_ERROR(BREAK_SIGNATURE)
 	}
 	return core.BREAK(core.NIL)
 }
-func (BreakCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (breakCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 1 {
 		return ARITY_ERROR(BREAK_SIGNATURE)
 	}
@@ -122,15 +122,15 @@ func (BreakCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) co
 
 const CONTINUE_SIGNATURE = "continue"
 
-type ContinueCommand struct{}
+type continueCmd struct{}
 
-func (ContinueCommand) Execute(args []core.Value, _ any) core.Result {
+func (continueCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 1 {
 		return ARITY_ERROR(CONTINUE_SIGNATURE)
 	}
 	return core.CONTINUE(core.NIL)
 }
-func (ContinueCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (continueCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 1 {
 		return ARITY_ERROR(CONTINUE_SIGNATURE)
 	}
@@ -139,16 +139,16 @@ func (ContinueCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any)
 
 const EVAL_SIGNATURE = "eval body"
 
-type EvalCommand struct{}
+type evalCmd struct{}
 
-func (EvalCommand) Execute(args []core.Value, context any) core.Result {
+func (evalCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if len(args) != 2 {
 		return ARITY_ERROR(EVAL_SIGNATURE)
 	}
 	return CreateDeferredValue(core.ResultCode_YIELD, args[1], scope)
 }
-func (EvalCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (evalCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
 		return ARITY_ERROR(EVAL_SIGNATURE)
 	}
@@ -157,9 +157,9 @@ func (EvalCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) cor
 
 const HELP_SIGNATURE = "help command ?arg ...?"
 
-type HelpCommand struct{}
+type helpCmd struct{}
 
-func (HelpCommand) Execute(args []core.Value, context any) core.Result {
+func (helpCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if len(args) < 2 {
 		return ARITY_ERROR(HELP_SIGNATURE)
@@ -186,18 +186,18 @@ func (HelpCommand) Execute(args []core.Value, context any) core.Result {
 		}
 	}
 }
-func (HelpCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (helpCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(HELP_SIGNATURE))
 }
 
 func registerBasicCommands(scope *Scope) {
-	scope.RegisterNamedCommand("idem", IdemCommand{})
-	scope.RegisterNamedCommand("return", ReturnCommand{})
-	scope.RegisterNamedCommand("tailcall", TailcallCommand{})
-	scope.RegisterNamedCommand("yield", YieldCommand{})
-	scope.RegisterNamedCommand("error", ErrorCommand{})
-	scope.RegisterNamedCommand("break", BreakCommand{})
-	scope.RegisterNamedCommand("continue", ContinueCommand{})
-	scope.RegisterNamedCommand("eval", EvalCommand{})
-	scope.RegisterNamedCommand("help", HelpCommand{})
+	scope.RegisterNamedCommand("idem", idemCmd{})
+	scope.RegisterNamedCommand("return", returnCmd{})
+	scope.RegisterNamedCommand("tailcall", tailcallCmd{})
+	scope.RegisterNamedCommand("yield", yieldCmd{})
+	scope.RegisterNamedCommand("error", errorCmd{})
+	scope.RegisterNamedCommand("break", breakCmd{})
+	scope.RegisterNamedCommand("continue", continueCmd{})
+	scope.RegisterNamedCommand("eval", evalCmd{})
+	scope.RegisterNamedCommand("help", helpCmd{})
 }

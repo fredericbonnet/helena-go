@@ -4,9 +4,9 @@ import "helena/core"
 
 const ADD_SIGNATURE = "+ number ?number ...?"
 
-type AddCommand struct{}
+type addCmd struct{}
 
-func (AddCommand) Execute(args []core.Value, _ any) core.Result {
+func (addCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) < 2 {
 		return ARITY_ERROR(ADD_SIGNATURE)
 	}
@@ -21,15 +21,15 @@ func (AddCommand) Execute(args []core.Value, _ any) core.Result {
 	}
 	return core.OK(floatToValue(total))
 }
-func (AddCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (addCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(ADD_SIGNATURE))
 }
 
 const SUBTRACT_SIGNATURE = "- number ?number ...?"
 
-type SubtractCommand struct{}
+type subtractCmd struct{}
 
-func (SubtractCommand) Execute(args []core.Value, _ any) core.Result {
+func (subtractCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) < 2 {
 		return ARITY_ERROR(SUBTRACT_SIGNATURE)
 	}
@@ -51,15 +51,15 @@ func (SubtractCommand) Execute(args []core.Value, _ any) core.Result {
 	}
 	return core.OK(floatToValue(total))
 }
-func (SubtractCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (subtractCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(SUBTRACT_SIGNATURE))
 }
 
 const MULTIPLY_SIGNATURE = "* number ?number ...?"
 
-type MultiplyCommand struct{}
+type multiplyCmd struct{}
 
-func (MultiplyCommand) Execute(args []core.Value, _ any) core.Result {
+func (multiplyCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) < 2 {
 		return ARITY_ERROR(MULTIPLY_SIGNATURE)
 	}
@@ -81,15 +81,15 @@ func (MultiplyCommand) Execute(args []core.Value, _ any) core.Result {
 	}
 	return core.OK(floatToValue(total))
 }
-func (MultiplyCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (multiplyCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(MULTIPLY_SIGNATURE))
 }
 
 const DIVIDE_SIGNATURE = "/ number number ?number ...?"
 
-type DivideCommand struct{}
+type divideCmd struct{}
 
-func (DivideCommand) Execute(args []core.Value, _ any) core.Result {
+func (divideCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) < 3 {
 		return ARITY_ERROR(DIVIDE_SIGNATURE)
 	}
@@ -108,12 +108,12 @@ func (DivideCommand) Execute(args []core.Value, _ any) core.Result {
 	}
 	return core.OK(floatToValue(total))
 }
-func (DivideCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (divideCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(DIVIDE_SIGNATURE))
 }
 func registerMathCommands(scope *Scope) {
-	scope.RegisterNamedCommand("+", AddCommand{})
-	scope.RegisterNamedCommand("-", SubtractCommand{})
-	scope.RegisterNamedCommand("*", MultiplyCommand{})
-	scope.RegisterNamedCommand("/", DivideCommand{})
+	scope.RegisterNamedCommand("+", addCmd{})
+	scope.RegisterNamedCommand("-", subtractCmd{})
+	scope.RegisterNamedCommand("*", multiplyCmd{})
+	scope.RegisterNamedCommand("/", divideCmd{})
 }
