@@ -218,7 +218,9 @@ func (scope *Scope) ResolveVariable(name string) core.Value {
 	return nil
 }
 func (scope *Scope) ResolveCommand(value core.Value) core.Command {
-	// if (value.type == ValueType_TUPLE) return expandPrefixCmd;
+	if value.Type() == core.ValueType_TUPLE {
+		return expandPrefixCmd
+	}
 	// if (value.type == ValueType_COMMAND) return (value as CommandValue).command;
 	if core.ValueIsNumber(value) {
 		return numberCmd
@@ -375,52 +377,73 @@ func (scope *Scope) RegisterNamedCommand(name string, command core.Command) {
 //   }
 // }
 
-// type ExpandPrefixState = {
-//   command: Command;
-//   result core.Result;
-// };
-// export const expandPrefixCmd: Command = {
-//   execute(args: Value[], scope: Scope) core.Result {
-//     const [command, args2] = resolveLeadingTuple(args, scope);
-//     if (!command) {
-//       if (!args2 || args2.length == 0) return core.OK(NIL);
-//       const { data: cmdname, code } = core.ValueToString(args2[0]);
-//       return core.ERROR(
-//         code != core.ResultCode_OK
-//           ? `invalid command name`
-//           : `cannot resolve command "${cmdname}"`
-//       );
-//     }
-//     const result = command.execute(args2, scope);
-//     if (result.Code == ResultCode.YIELD) {
-//       const state = { command, result } as ExpandPrefixState;
-//       return YIELD(state.result.value, state);
-//     }
-//     return result;
-//   },
-//   resume(result core.Result, scope: Scope) core.Result {
-//     const { command, result: commandResult } = result.data as ExpandPrefixState;
-//     if (!command.resume) return core.OK(result.value);
-//     const result2 = command.resume(
-//       { ...commandResult, value core.result.value },
-//       scope
-//     );
-//     if (result2.Code == ResultCode.YIELD)
-//       return YIELD(result2.value, { command, result core.result2 });
-//     return result2;
-//   },
-// };
+type ExpandPrefixState struct {
+	command core.Command
+	result  core.Result
+}
+type ExpandPrefixCommand struct{}
 
-// function resolveLeadingTuple(args: Value[], scope: Scope): [Command, Value[]] {
-//   if (args.length == 0) return [null, null];
-//   const [lead, ...rest] = args;
-//   if (lead.type != ValueType_TUPLE) {
-//     const command = scope.resolveCommand(lead);
-//     return [command, args];
-//   }
-//   const tuple = lead as TupleValue;
-//   return resolveLeadingTuple([...tuple.values, ...rest], scope);
-// }
+func (ExpandPrefixCommand) Execute(args []core.Value, context any) core.Result {
+	scope := context.(*Scope)
+	command, args2 := resolveLeadingTuple(args, scope)
+	if command == nil {
+		if len(args2) == 0 {
+			return core.OK(core.NIL)
+		}
+		result := core.ValueToString(args2[0])
+		if result.Code != core.ResultCode_OK {
+			return core.ERROR(`invalid command name`)
+		} else {
+			cmdname := result.Data
+			return core.ERROR(`cannot resolve command "` + cmdname + `"`)
+
+		}
+	}
+	result := command.Execute(args2, scope)
+	if result.Code == core.ResultCode_YIELD {
+
+		state := ExpandPrefixState{command, result}
+		return core.YIELD_STATE(state.result.Value, state)
+	}
+	return result
+}
+func (ExpandPrefixCommand) Resume(result core.Result, context any) core.Result {
+	scope := context.(*Scope)
+	state := result.Data.(ExpandPrefixState)
+	command := state.command
+	commandResult := state.result
+	resumable, ok := command.(core.ResumableCommand)
+	if !ok {
+		return core.OK(result.Value)
+	}
+	result2 := resumable.Resume(
+		core.Result{
+			Code:  commandResult.Code,
+			Value: result.Value,
+			Data:  commandResult.Data,
+		},
+		scope,
+	)
+	if result2.Code == core.ResultCode_YIELD {
+		return core.YIELD_STATE(result2.Value, ExpandPrefixState{command, result2})
+	}
+	return result2
+}
+
+var expandPrefixCmd = ExpandPrefixCommand{}
+
+func resolveLeadingTuple(args []core.Value, scope *Scope) (core.Command, []core.Value) {
+	if len(args) == 0 {
+		return nil, nil
+	}
+	lead, rest := args[0], args[1:]
+	if lead.Type() != core.ValueType_TUPLE {
+		command := scope.ResolveCommand(lead)
+		return command, args
+	}
+	tuple := lead.(core.TupleValue)
+	return resolveLeadingTuple(append(append([]core.Value{}, tuple.Values...), rest...), scope)
+}
 
 func DestructureValue(
 	apply func(name core.Value, value core.Value, check bool) core.Result,
