@@ -633,26 +633,23 @@ func (value ScriptValue) Display(fn DisplayFunction) string {
 	return "{" + *value.Source + "}"
 }
 
-// /**
-//  * Command value
-//  *
-//  * Command values encapsulate commands. They cannot be created directly from
-//  * source.
-//  */
-// export class CommandValue implements Value {
-//   /** @override */
-//   readonly type = ValueType_COMMAND;
+// Command value
+//
+// Command values encapsulate commands. They cannot be created directly from
+// source.
+type CommandValue struct {
+	// Encapsulated command
+	Command Command
+}
 
-//   /** Encapsulated command */
-//   readonly command: Command;
+func (value CommandValue) Type() ValueType {
+	return ValueType_COMMAND
+}
 
-//   /**
-//    * @param command - Command to encapsulate
-//    */
-//   constructor(command: Command) {
-//     this.command = command;
-//   }
-// }
+// Constructor with command to encapsulate
+func NewCommandValue(command Command) CommandValue {
+	return CommandValue{command}
+}
 
 // Qualified value
 //

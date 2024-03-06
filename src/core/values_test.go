@@ -770,32 +770,40 @@ var _ = Describe("values", func() {
 	})
 
 	Describe("CommandValue", func() {
-		//     Specify("type should be COMMAND", func() {
-		//        value :=  CommandValue{{ Value}xecute: func() OK(NIL) });
-		//       Expect(value.Type()).To(Equal(ValueType_COMMAND);
-		//     });
-		//     It("should not be index-selectable", func() {
-		//        value := new CommandValue({ execute: func() OK(NIL) });
-		//Expect(func() { _ = Value(TRUE).(IndexSelectable) }).To(Panic())//       Expect(value).to.not.have.property("selectIndex");
-		//       Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(value)).To(Equal(
-		//         ERROR("value is not index-selectable")
-		//       );
-		//     });
-		//     It("should not be key-selectable", func() {
-		//        value := new CommandValue({ execute: func() OK(NIL) });
-		//Expect(func() { _ = Value(TRUE).(KeySelectable) }).To(Panic())//       Expect(value).to.not.have.property("selectKey");
-		//       Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(value)).To(Equal(
-		//         ERROR("value is not key-selectable")
-		//       );
-		//     });
-		//     It("should not be selectable", func() {
-		//        value := new CommandValue({ execute: func() OK(NIL) });
-		//Expect(func() { _ = Value(NIL).(Selectable) }).To(Panic())//       Expect(value).to.not.have.property("select");
-		//Expect(func() { _ = Value(TRUE).(RulesSelectable) }).To(Panic())//       Expect(value).to.not.have.property("selectRules");
-		//       Expect(
-		//         NewGenericSelector([]Value{NewStringValue("rule")}).Apply(value)
-		//       ).To(Equal(ERROR("value is not selectable"));
-		//     });
+		Specify("type should be COMMAND", func() {
+			value := NewCommandValue(simpleCommand{func(args []Value) Result {
+				return OK(NIL)
+			}})
+			Expect(value.Type()).To(Equal(ValueType_COMMAND))
+		})
+		It("should not be index-selectable", func() {
+			value := NewCommandValue(simpleCommand{func(args []Value) Result {
+				return OK(NIL)
+			}})
+			Expect(func() { _ = Value(TRUE).(IndexSelectable) }).To(Panic())
+			Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(value)).To(Equal(
+				ERROR("value is not index-selectable"),
+			))
+		})
+		It("should not be key-selectable", func() {
+			value := NewCommandValue(simpleCommand{func(args []Value) Result {
+				return OK(NIL)
+			}})
+			Expect(func() { _ = Value(TRUE).(KeySelectable) }).To(Panic())
+			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(value)).To(Equal(
+				ERROR("value is not key-selectable"),
+			))
+		})
+		It("should not be selectable", func() {
+			value := NewCommandValue(simpleCommand{func(args []Value) Result {
+				return OK(NIL)
+			}})
+			Expect(func() { _ = Value(NIL).(Selectable) }).To(Panic())
+			Expect(func() { _ = Value(TRUE).(RulesSelectable) }).To(Panic())
+			Expect(
+				NewGenericSelector([]Value{NewStringValue("rule")}).Apply(value),
+			).To(Equal(ERROR("value is not selectable")))
+		})
 	})
 
 	Describe("QualifiedValue", func() {
