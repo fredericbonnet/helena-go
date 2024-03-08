@@ -33,10 +33,9 @@ type DeferredValue struct {
 	Program *core.Program
 }
 
-func (value DeferredValue) Type() core.ValueType {
+func (DeferredValue) Type() core.ValueType {
 	return -1
 }
-
 func CreateDeferredValue(code core.ResultCode, value core.Value, scope *Scope) core.Result {
 	var program *core.Program
 	switch value.Type() {

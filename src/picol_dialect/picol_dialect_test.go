@@ -773,7 +773,7 @@ var _ = Describe("Picol dialect", func() {
 	Describe("proc", func() {
 		It("should define a new command", func() {
 			evaluate("proc cmd {} {}")
-			Expect(rootScope.Commands["cmd"]).To(Not(BeNil()))
+			Expect(rootScope.Commands["cmd"]).NotTo(BeNil())
 		})
 		It("should replace existing commands", func() {
 			evaluate("proc cmd {} {}")
