@@ -2,133 +2,172 @@ package helena_dialect
 
 import "helena/core"
 
-// /* eslint-disable jsdoc/require-jsdoc */ // TODO
-// import { ERROR, OK, Result, ResultCode } from "../core/results";
-// import { NIL, StringValue, Value, ValueType } from "../core/values";
-// import { valueToArray } from "./lists";
-
 func ARITY_ERROR(signature string) core.Result {
 	return core.ERROR(`wrong # args: should be "` + signature + `"`)
 }
 
-// export type Argument = {
-//   readonly name: string;
-//   readonly type: "required" | "optional" | "remainder";
-//   readonly default?: Value;
-//   readonly guard?: Value;
-// };
+type ArgumentType uint8
 
-// export function buildArguments(specs: Value): Result<Argument[]> {
-//   const args: Argument[] = [];
-//   const argnames = new Set<string>();
-//   let hasRemainder = false;
-//   const { data: values, ...result } = valueToArray(specs);
-//   if (result.code != ResultCode.OK) return ERROR("invalid argument list");
-//   for (const value of values) {
-//     const { data: arg, ...result } = buildArgument(value);
-//     if (result.code != ResultCode.OK) return result;
-//     if (arg.type == "remainder" && hasRemainder)
-//       return ERROR("only one remainder argument is allowed");
-//     if (argnames.has(arg.name))
-//       return ERROR(`duplicate argument "${arg.name}"`);
-//     hasRemainder = arg.type == "remainder";
-//     argnames.add(arg.name);
-//     args.push(arg);
-//   }
-//   return OK(NIL, args);
-// }
-// function buildArgument(value: Value): Result<Argument> {
-//   switch (value.type) {
-//     case ValueType.LIST:
-//     case ValueType.TUPLE:
-//     case ValueType.SCRIPT: {
-//       const { data: specs, ...result } = valueToArray(value);
-//       if (result.code != ResultCode.OK) return result;
-//       switch (specs.length) {
-//         case 0:
-//           return ERROR("empty argument specifier");
-//         case 1: {
-//           const { data: name, code } = StringValue.toString(specs[0]);
-//           if (code != ResultCode.OK) return ERROR("invalid argument name");
-//           if (name == "" || name == "?") return ERROR("empty argument name");
-//           if (name[0] == "?") {
-//             return OK(NIL, { name: name.substring(1), type: "optional" });
-//           } else {
-//             return OK(NIL, { name, type: "required" });
-//           }
-//         }
-//         case 2: {
-//           const { data: nameOrGuard, code: code1 } = StringValue.toString(
-//             specs[0]
-//           );
-//           const { data: nameOrDefault, code: code2 } = StringValue.toString(
-//             specs[1]
-//           );
-//           if (code1 != ResultCode.OK && code2 != ResultCode.OK)
-//             return ERROR("invalid argument name");
-//           if (
-//             (nameOrGuard == "" || nameOrGuard == "?") &&
-//             (nameOrDefault == "" || nameOrDefault == "?")
-//           )
-//             return ERROR("empty argument name");
-//           if (code1 == ResultCode.OK && nameOrGuard[0] == "?") {
-//             return OK(NIL, {
-//               name: nameOrGuard.substring(1),
-//               type: "optional",
-//               default: specs[1],
-//             });
-//           } else if (nameOrDefault[0] == "?") {
-//             return OK(NIL, {
-//               name: nameOrDefault.substring(1),
-//               type: "optional",
-//               guard: specs[0],
-//             });
-//           } else {
-//             return OK(NIL, {
-//               name: nameOrDefault,
-//               type: "required",
-//               guard: specs[0],
-//             });
-//           }
-//         }
-//         case 3: {
-//           const { data: name, code } = StringValue.toString(specs[1]);
-//           if (code != ResultCode.OK) return ERROR("invalid argument name");
-//           if (name == "" || name == "?") return ERROR("empty argument name");
-//           if (name[0] != "?")
-//             return ERROR(`default argument "${name}" must be optional`);
-//           return OK(NIL, {
-//             name: name.substring(1),
-//             type: "optional",
-//             default: specs[2],
-//             guard: specs[0],
-//           });
-//         }
-//         default: {
-//           const { data: name, code } = StringValue.toString(specs[0]);
-//           if (code != ResultCode.OK) return ERROR("invalid argument name");
-//           return ERROR(`too many specifiers for argument "${name}"`);
-//         }
-//       }
-//     }
-//     default: {
-//       const { data: name, code } = StringValue.toString(value);
-//       if (code != ResultCode.OK) return ERROR("invalid argument name");
-//       if (name == "" || name == "?") return ERROR("empty argument name");
-//       if (name[0] == "*") {
-//         if (name.length == 1) {
-//           return OK(NIL, { name, type: "remainder" });
-//         } else {
-//           return OK(NIL, { name: name.substring(1), type: "remainder" });
-//         }
-//       } else if (name[0] == "?") {
-//         return OK(NIL, { name: name.substring(1), type: "optional" });
-//       } else {
-//         return OK(NIL, { name, type: "required" });
-//       }
-//     }
-//   }
-// }
+const (
+	ArgumentType_REQUIRED ArgumentType = iota
+	ArgumentType_OPTIONAL
+	ArgumentType_REMAINDER
+)
+
+type Argument struct {
+	Name    string
+	Type    ArgumentType
+	Default core.Value
+	Guard   core.Value
+}
+
+func buildArguments(specs core.Value) core.TypedResult[[]Argument] {
+	args := []Argument{}
+	argnames := map[string]struct{}{}
+	hasRemainder := false
+	result := ValueToArray(specs)
+	if result.Code != core.ResultCode_OK {
+		return core.ERROR_T[[]Argument]("invalid argument list")
+	}
+	values := result.Data
+	for _, value := range values {
+		result := buildArgument(value)
+		if result.Code != core.ResultCode_OK {
+			return core.ResultAs[[]Argument](result.AsResult())
+		}
+		arg := result.Data
+		if arg.Type == ArgumentType_REMAINDER && hasRemainder {
+			return core.ERROR_T[[]Argument]("only one remainder argument is allowed")
+		}
+		if _, ok := argnames[arg.Name]; ok {
+			return core.ERROR_T[[]Argument](`duplicate argument "` + arg.Name + `"`)
+		}
+		hasRemainder = arg.Type == ArgumentType_REMAINDER
+		argnames[arg.Name] = struct{}{}
+		args = append(args, arg)
+	}
+	return core.OK_T(core.NIL, args)
+}
+
+func buildArgument(value core.Value) core.TypedResult[Argument] {
+	switch value.Type() {
+	case core.ValueType_LIST,
+		core.ValueType_TUPLE,
+		core.ValueType_SCRIPT:
+		{
+			result := ValueToArray(value)
+			if result.Code != core.ResultCode_OK {
+				return core.ResultAs[Argument](result.AsResult())
+			}
+			specs := result.Data
+			switch len(specs) {
+			case 0:
+				return core.ERROR_T[Argument]("empty argument specifier")
+			case 1:
+				{
+					result := core.ValueToString(specs[0])
+					if result.Code != core.ResultCode_OK {
+						return core.ERROR_T[Argument]("invalid argument name")
+					}
+					name := result.Data
+					if name == "" || name == "?" {
+						return core.ERROR_T[Argument]("empty argument name")
+					}
+					if name[0] == '?' {
+						return core.OK_T(core.NIL, Argument{Name: name[1:], Type: ArgumentType_OPTIONAL})
+					} else {
+						return core.OK_T(core.NIL, Argument{Name: name, Type: ArgumentType_REQUIRED})
+					}
+				}
+			case 2:
+				{
+					result1 := core.ValueToString(specs[0])
+					result2 := core.ValueToString(specs[1])
+					if result1.Code != core.ResultCode_OK && result2.Code != core.ResultCode_OK {
+						return core.ERROR_T[Argument]("invalid argument name")
+					}
+					nameOrGuard := result1.Data
+					nameOrDefault := result2.Data
+					if (nameOrGuard == "" || nameOrGuard == "?") &&
+						(nameOrDefault == "" || nameOrDefault == "?") {
+						return core.ERROR_T[Argument]("empty argument name")
+					}
+					if result1.Code == core.ResultCode_OK && nameOrGuard[0] == '?' {
+						return core.OK_T(core.NIL, Argument{
+							Name:    nameOrGuard[1:],
+							Type:    ArgumentType_OPTIONAL,
+							Default: specs[1],
+						})
+					} else if nameOrDefault[0] == '?' {
+						return core.OK_T(core.NIL, Argument{
+							Name:  nameOrDefault[1:],
+							Type:  ArgumentType_OPTIONAL,
+							Guard: specs[0],
+						})
+					} else {
+						return core.OK_T[Argument](core.NIL, Argument{
+							Name:  nameOrDefault,
+							Type:  ArgumentType_REQUIRED,
+							Guard: specs[0],
+						})
+					}
+				}
+			case 3:
+				{
+					result := core.ValueToString(specs[1])
+					if result.Code != core.ResultCode_OK {
+						return core.ERROR_T[Argument]("invalid argument name")
+					}
+					name := result.Data
+					if name == "" || name == "?" {
+						return core.ERROR_T[Argument]("empty argument name")
+					}
+					if name[0] != '?' {
+						return core.ERROR_T[Argument](`default argument "` + name + `" must be optional`)
+					}
+					return core.OK_T(core.NIL, Argument{
+						Name:    name[1:],
+						Type:    ArgumentType_OPTIONAL,
+						Default: specs[2],
+						Guard:   specs[0],
+					})
+				}
+			default:
+				{
+					result := core.ValueToString(specs[0])
+					if result.Code != core.ResultCode_OK {
+						return core.ERROR_T[Argument]("invalid argument name")
+					}
+					name := result.Data
+					return core.ERROR_T[Argument](`too many specifiers for argument "` + name + `"`)
+				}
+			}
+		}
+	default:
+		{
+			result := core.ValueToString(value)
+			if result.Code != core.ResultCode_OK {
+				return core.ERROR_T[Argument]("invalid argument name")
+			}
+			name := result.Data
+			if name == "" || name == "?" {
+				return core.ERROR_T[Argument]("empty argument name")
+			}
+			if name[0] == '*' {
+				if len(name) == 1 {
+					return core.OK_T(core.NIL, Argument{Name: name, Type: ArgumentType_REMAINDER})
+				} else {
+					return core.OK_T(core.NIL, Argument{Name: name[1:], Type: ArgumentType_REMAINDER})
+				}
+			} else if name[0] == '?' {
+				return core.OK_T(core.NIL, Argument{Name: name[1:], Type: ArgumentType_OPTIONAL})
+			} else {
+				return core.OK_T(core.NIL, Argument{Name: name, Type: ArgumentType_REQUIRED})
+			}
+		}
+	}
+}
+
 // export function buildUsage(args: Argument[], skip = 0) {
 //   const parts = [];
 //   for (let i = skip; i < args.length; i++) {

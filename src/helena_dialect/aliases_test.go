@@ -47,7 +47,7 @@ var _ = Describe("Helena aliases", func() {
 
 			It("should define a new command", func() {
 				evaluate("alias cmd idem")
-				Expect(rootScope.Context.Commands["cmd"]).ToNot(BeNil())
+				Expect(rootScope.Context.Commands["cmd"]).NotTo(BeNil())
 			})
 			It("should replace existing commands", func() {
 				evaluate("alias cmd set")
@@ -222,7 +222,7 @@ var _ = Describe("Helena aliases", func() {
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("val1")))
-						Expect(result.Data).ToNot(BeNil())
+						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(STR("val2"))
 						result = process.Run()
@@ -272,7 +272,7 @@ var _ = Describe("Helena aliases", func() {
 			Specify("the metacommand should return the aliased command", func() {
 				value := evaluate("set cmd [alias cmd set]")
 				Expect(evaluate("$cmd").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("$cmd")).ToNot(Equal(value))
+				Expect(evaluate("$cmd")).NotTo(Equal(value))
 				Expect(evaluate("[$cmd] var val")).To(Equal(STR("val")))
 				Expect(evaluate("get var")).To(Equal(STR("val")))
 			})

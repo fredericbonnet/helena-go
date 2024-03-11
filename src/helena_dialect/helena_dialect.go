@@ -46,7 +46,7 @@ func InitCommands(
 	//   registerDictCommands(scope);
 	//   registerTupleCommands(scope);
 	//   registerScriptCommands(scope);
-	//   registerArgspecCommands(scope);
+	registerArgspecCommands(scope)
 
 	//   scope.registerNamedCommand("scope", scopeCmd);
 	//   scope.registerNamedCommand("namespace", namespaceCmd);
