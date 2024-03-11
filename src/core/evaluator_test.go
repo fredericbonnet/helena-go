@@ -1279,5 +1279,29 @@ var _ = Describe("CompilingEvaluator", func() {
 				ERROR("value has no string representation"),
 			))
 		})
+		Specify("no variable resolver", func() {
+			script := parse("$varname")
+
+			evaluator = NewCompilingEvaluator(nil, nil, nil, nil)
+			Expect(evaluator.EvaluateScript(*script)).To(Equal(
+				ERROR("no variable resolver"),
+			))
+		})
+		Specify("no command resolver", func() {
+			script := parse("cmd")
+
+			evaluator = NewCompilingEvaluator(nil, nil, nil, nil)
+			Expect(evaluator.EvaluateScript(*script)).To(Equal(
+				ERROR("no command resolver"),
+			))
+		})
+		Specify("no selector resolver", func() {
+			script := parse("varname{last}")
+
+			evaluator = NewCompilingEvaluator(nil, nil, nil, nil)
+			Expect(evaluator.EvaluateScript(*script)).To(Equal(
+				ERROR("no selector resolver"),
+			))
+		})
 	})
 })

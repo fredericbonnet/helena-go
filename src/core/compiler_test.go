@@ -3179,6 +3179,28 @@ var _ = Describe("Compilation and execution", func() {
 					ERROR("value has no string representation"),
 				))
 			})
+			Specify("no variable resolver", func() {
+				script := parse("$varname")
+				program := compiler.CompileScript(*script)
+
+				executor = &Executor{}
+				Expect(execute(program)).To(Equal(ERROR("no variable resolver")))
+			})
+			Specify("no command resolver", func() {
+				script := parse("cmd")
+				program := compiler.CompileScript(*script)
+
+				executor = &Executor{}
+				Expect(execute(program)).To(Equal(ERROR("no command resolver")))
+			})
+			Specify("no selector resolver", func() {
+				script := parse("varname{last}")
+				program := compiler.CompileScript(*script)
+
+				executor = &Executor{}
+				Expect(execute(program)).To(Equal(ERROR("no selector resolver")))
+			})
+
 		})
 	})
 

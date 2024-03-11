@@ -888,6 +888,9 @@ func (executor *Executor) resolveTuple(tuple TupleValue) Result {
 }
 
 func (executor *Executor) resolveVariable(varname string) Result {
+	if executor.VariableResolver == nil {
+		return ERROR("no variable resolver")
+	}
 	value := executor.VariableResolver.Resolve(varname)
 	if value == nil {
 		return ERROR(`cannot resolve variable "` + varname + `"`)
@@ -896,6 +899,9 @@ func (executor *Executor) resolveVariable(varname string) Result {
 }
 
 func (executor *Executor) resolveCommand(cmdname Value) TypedResult[Command] {
+	if executor.CommandResolver == nil {
+		return ERROR_T[Command]("no command resolver")
+	}
 	command := executor.CommandResolver.Resolve(cmdname)
 	if command == nil {
 		result := ValueToString(cmdname)
@@ -909,6 +915,9 @@ func (executor *Executor) resolveCommand(cmdname Value) TypedResult[Command] {
 }
 
 func (executor *Executor) resolveSelector(rules []Value) TypedResult[Selector] {
+	if executor.SelectorResolver == nil {
+		return ERROR_T[Selector]("no selector resolver")
+	}
 	result := executor.SelectorResolver.Resolve(rules)
 	if result.Code != ResultCode_OK {
 		return result
