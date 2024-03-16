@@ -16,9 +16,9 @@ func newAliasMetacommand(alias *aliasCommand) *aliasMetacommand {
 
 var aliasMetacommandSubcommands = NewSubcommands([]string{"subcommands", "command"})
 
-func (command *aliasMetacommand) Execute(args []core.Value, _ any) core.Result {
+func (metacommand *aliasMetacommand) Execute(args []core.Value, _ any) core.Result {
 	if len(args) == 1 {
-		return core.OK(command.alias.value)
+		return core.OK(metacommand.alias.value)
 	}
 	return aliasMetacommandSubcommands.Dispatch(args[1], SubcommandHandlers{
 		"subcommands": func() core.Result {
@@ -31,12 +31,12 @@ func (command *aliasMetacommand) Execute(args []core.Value, _ any) core.Result {
 			if len(args) != 2 {
 				return ARITY_ERROR("<alias> command")
 			}
-			return core.OK(command.alias.cmd)
+			return core.OK(metacommand.alias.cmd)
 		},
 	})
 }
-func (command *aliasMetacommand) Resume(result core.Result, context any) core.Result {
-	return command.alias.Resume(result, context)
+func (metacommand *aliasMetacommand) Resume(result core.Result, context any) core.Result {
+	return metacommand.alias.Resume(result, context)
 }
 
 type aliasCommand struct {

@@ -372,14 +372,16 @@ func (scope *Scope) RegisterCommand(name core.Value, command core.Command) core.
 func (scope *Scope) RegisterNamedCommand(name string, command core.Command) {
 	scope.Context.Commands[name] = command
 }
-
-//   hasLocalCommand(name: string): boolean {
-//     return scope.Context.commands.has(name);
-//   }
-//   getLocalCommands(): string[] {
-//     return [...scope.Context.commands.keys()];
-//   }
-// }
+func (scope *Scope) HasLocalCommand(name string) bool {
+	return scope.Context.Commands[name] != nil
+}
+func (scope *Scope) GetLocalCommands() []string {
+	names := make([]string, 0, len(scope.Context.Commands))
+	for name := range scope.Context.Commands {
+		names = append(names, name)
+	}
+	return names
+}
 
 type ExpandPrefixState struct {
 	command core.Command

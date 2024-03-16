@@ -50,3 +50,33 @@ func (command commandWithHelp) Execute(args []core.Value, context any) core.Resu
 func (command commandWithHelp) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	return command.help(args, options, context)
 }
+
+type exampleSpec struct {
+	script string
+	result any
+}
+type exampleExecutor = func(spec exampleSpec) core.Result
+
+func executeExample(executor exampleExecutor, spec exampleSpec) {
+	result := executor(spec)
+	switch r := spec.result.(type) {
+	case nil:
+		Expect(result.Code).To(Equal(core.ResultCode_OK))
+	case core.Result:
+		Expect(result).To(Equal(r))
+	case core.Value:
+		Expect(result).To(Equal(OK(r)))
+	}
+}
+func specifyExample(executor exampleExecutor) func(any) {
+	return func(specs any) {
+		switch s := specs.(type) {
+		case exampleSpec:
+			executeExample(executor, s)
+		case []exampleSpec:
+			for _, spec := range s {
+				executeExample(executor, spec)
+			}
+		}
+	}
+}

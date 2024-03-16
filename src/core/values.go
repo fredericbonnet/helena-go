@@ -363,6 +363,15 @@ func StringValueFromValue(value Value) TypedResult[StringValue] {
 
 // Convert value to string
 func ValueToString(value Value) TypedResult[string] {
+	return valueToString(value, nil)
+}
+
+// Convert value to string, or default value if value has no string representation
+func ValueToStringOrDefault(value Value, def string) TypedResult[string] {
+	return valueToString(value, &def)
+}
+
+func valueToString(value Value, def *string) TypedResult[string] {
 	switch value.Type() {
 	case ValueType_STRING:
 		return OK_T(NIL, value.(StringValue).Value)
@@ -384,12 +393,10 @@ func ValueToString(value Value) TypedResult[string] {
 			}
 		}
 	}
+	if def != nil {
+		return OK_T(NIL, *def)
+	}
 	return ERROR_T[string]("value has no string representation")
-}
-
-// Convert value to string, or default value if value has no string representation
-func ValueToStringOrDefault(value Value, def Value) TypedResult[string] {
-	return ERROR_T[string]("TODO")
 }
 
 // Return index-th string character as StringValue

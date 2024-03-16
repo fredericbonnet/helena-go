@@ -31,16 +31,7 @@ var _ = Describe("Helena argument handling", func() {
 		parser = &core.Parser{}
 	}
 
-	type exampleSpec struct {
-		script string
-		result core.Value
-	}
-	example := func(spec exampleSpec) {
-		value := evaluate(spec.script)
-		if spec.result != nil {
-			Expect(value).To(Equal(spec.result))
-		}
-	}
+	example := specifyExample(func(spec exampleSpec) core.Result { return execute(spec.script) })
 
 	BeforeEach(init)
 

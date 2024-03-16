@@ -168,21 +168,24 @@ func buildArgument(value core.Value) core.TypedResult[Argument] {
 	}
 }
 
-// export function buildUsage(args: Argument[], skip = 0) {
-//   const parts = [];
-//   for (let i = skip; i < args.length; i++) {
-//     const arg = args[i];
-//     switch (arg.type) {
-//       case "required":
-//         parts.push(arg.name);
-//         break;
-//       case "optional":
-//         parts.push(`?${arg.name}?`);
-//         break;
-//       case "remainder":
-//         parts.push(`?${arg.name == "*" ? "arg" : arg.name} ...?`);
-//         break;
-//     }
-//   }
-//   return parts.join(" ");
-// }
+func BuildUsage(args []Argument, skip uint) string {
+	result := ""
+	for i, arg := range args[skip:] {
+		if i != 0 {
+			result += " "
+		}
+		switch arg.Type {
+		case ArgumentType_REQUIRED:
+			result += arg.Name
+		case ArgumentType_OPTIONAL:
+			result += `?` + arg.Name + `?`
+		case ArgumentType_REMAINDER:
+			if arg.Name == "*" {
+				result += `?arg ...?`
+			} else {
+				result += `?` + arg.Name + ` ...?`
+			}
+		}
+	}
+	return result
+}

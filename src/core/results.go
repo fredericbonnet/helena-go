@@ -118,22 +118,22 @@ func CONTINUE(value Value) Result {
 //   value,
 // });
 
-// export const RESULT_CODE_NAME = (code: ResultCode | CustomResultCode) => {
-//   switch (code) {
-//     case ResultCode.OK:
-//       return "ok";
-//     case ResultCode.RETURN:
-//       return "return";
-//     case ResultCode.YIELD:
-//       return "yield";
-//     case ResultCode.ERROR:
-//       return "error";
-//     case ResultCode.BREAK:
-//       return "break";
-//     case ResultCode.CONTINUE:
-//       return "continue";
-//     default:
-//       return (code as CustomResultCode).name;
-//   }
-// };
-// /* eslint-enable jsdoc/require-jsdoc */
+func RESULT_CODE_NAME(code ResultCode /*| CustomResultCode*/) string {
+	switch code {
+	case ResultCode_OK:
+		return "ok"
+	case ResultCode_RETURN:
+		return "return"
+	case ResultCode_YIELD:
+		return "yield"
+	case ResultCode_ERROR:
+		return "error"
+	case ResultCode_BREAK:
+		return "break"
+	case ResultCode_CONTINUE:
+		return "continue"
+	default:
+		//   return (code as CustomResultCode).name;
+		panic("TODO")
+	}
+}

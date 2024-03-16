@@ -69,10 +69,10 @@ func ArgspecValueFromValue(value core.Value) core.TypedResult[ArgspecValue] {
 	v := NewArgspecValue(NewArgspec(args))
 	return core.OK_T(v, v)
 }
+func (value ArgspecValue) Usage(skip uint) string {
+	return BuildUsage(value.Argspec.Args, skip)
+}
 
-//   usage(skip = 0): string {
-//     return buildUsage(this.argspec.args, skip);
-//   }
 //   checkArity(values: Value[], skip: number) {
 //     return (
 //       values.length - skip >= this.argspec.nbRequired &&
@@ -81,56 +81,63 @@ func ArgspecValueFromValue(value core.Value) core.TypedResult[ArgspecValue] {
 //           this.argspec.nbRequired + this.argspec.nbOptional)
 //     );
 //   }
-//   applyArguments(
-//     scope: Scope,
-//     values: Value[],
-//     skip: number,
-//     setArgument: (name: string, value: Value) => Result
-//   ): Result {
-//     const nonRequired = values.length - skip - this.argspec.nbRequired;
-//     let optionals = Math.min(this.argspec.nbOptional, nonRequired);
-//     const remainders = nonRequired - optionals;
-//     let i = skip;
-//     for (const arg of this.argspec.args) {
-//       let value: Value;
-//       switch (arg.type) {
-//         case "required":
-//           value = values[i++];
-//           break;
-//         case "optional":
-//           if (optionals > 0) {
-//             optionals--;
-//             value = values[i++];
-//           } else if (arg.default) {
-//             if (arg.default.type == ValueType.SCRIPT) {
-//               const body = arg.default as ScriptValue;
-//               const result = scope.executeScriptValue(body);
-//               // TODO handle YIELD?
-//               if (result.code != ResultCode.OK) return result;
-//               value = result.value;
-//             } else {
-//               value = arg.default;
-//             }
-//           } else continue; // Skip missing optional
-//           break;
-//         case "remainder":
-//           value = TUPLE(values.slice(i, i + remainders));
-//           i += remainders;
-//           break;
-//       }
-//       if (arg.guard) {
-//         const process = scope.prepareTupleValue(TUPLE([arg.guard, value]));
-//         const result = process.run();
-//         // TODO handle YIELD?
-//         if (result.code != ResultCode.OK) return result;
-//         value = result.value;
-//       }
-//       const result = setArgument(arg.name, value);
-//       // TODO handle YIELD?
-//       if (result.code != ResultCode.OK) return result;
-//     }
-//     return OK(NIL);
-//   }
+func (value ArgspecValue) ApplyArguments(
+	scope *Scope,
+	values []core.Value,
+	skip uint,
+	setArgument func(name string, value core.Value) core.Result,
+) core.Result {
+	nonRequired := uint(len(values)) - skip - value.Argspec.NbRequired
+	optionals := min(value.Argspec.NbOptional, nonRequired)
+	remainders := nonRequired - optionals
+	i := skip
+	for _, arg := range value.Argspec.Args {
+		var value core.Value
+		switch arg.Type {
+		case ArgumentType_REQUIRED:
+			value = values[i]
+			i++
+		case ArgumentType_OPTIONAL:
+			if optionals > 0 {
+				optionals--
+				value = values[i]
+				i++
+			} else if arg.Default != nil {
+				if arg.Default.Type() == core.ValueType_SCRIPT {
+					body := arg.Default.(core.ScriptValue)
+					result := scope.ExecuteScriptValue(body)
+					// TODO handle YIELD?
+					if result.Code != core.ResultCode_OK {
+						return result
+					}
+					value = result.Value
+				} else {
+					value = arg.Default
+				}
+			} else {
+				continue // Skip missing optional
+			}
+		case ArgumentType_REMAINDER:
+			value = core.TUPLE(values[i : i+remainders])
+			i += remainders
+		}
+		if arg.Guard != nil {
+			process := scope.PrepareTupleValue(core.TUPLE([]core.Value{arg.Guard, value}).(core.TupleValue))
+			result := process.Run()
+			// TODO handle YIELD?
+			if result.Code != core.ResultCode_OK {
+				return result
+			}
+			value = result.Value
+		}
+		result := setArgument(arg.Name, value)
+		// TODO handle YIELD?
+		if result.Code != core.ResultCode_OK {
+			return result
+		}
+	}
+	return core.OK(core.NIL)
+}
 
 //   setArguments(values: Value[], scope: Scope): Result {
 //     if (!this.checkArity(values, 0))
@@ -169,7 +176,7 @@ func (argspecCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) 
 //   execute(args) {
 //     if (len(args) != 2) return ARITY_ERROR(ARGSPEC_USAGE_SIGNATURE);
 //     const { data: value, ...result } = ArgspecValue.fromValue(args[1]);
-//     if (result.code != ResultCode.OK) return result;
+//     if (result.code != core.ResultCode_OK) return result;
 //     return OK(STR(value.usage()));
 //   },
 //   help(args) {
@@ -183,9 +190,9 @@ func (argspecCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) 
 //   execute(args, scope: Scope) {
 //     if (len(args) != 3) return ARITY_ERROR(ARGSPEC_SET_SIGNATURE);
 //     const { data: value, ...result } = ArgspecValue.fromValue(args[1]);
-//     if (result.code != ResultCode.OK) return result;
+//     if (result.code != core.ResultCode_OK) return result;
 //     const { data: values, ...result2 } = valueToArray(args[2]);
-//     if (result2.code != ResultCode.OK) return result2;
+//     if (result2.code != core.ResultCode_OK) return result2;
 //     return value.setArguments(values, scope);
 //   },
 //   help(args) {

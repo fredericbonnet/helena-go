@@ -50,7 +50,7 @@ func InitCommands(
 
 	//   scope.registerNamedCommand("scope", scopeCmd);
 	//   scope.registerNamedCommand("namespace", namespaceCmd);
-	//   scope.registerNamedCommand("ensemble", ensembleCmd);
+	scope.RegisterNamedCommand("ensemble", ensembleCmd{})
 
 	//   registerModuleCommands(
 	//     scope,
