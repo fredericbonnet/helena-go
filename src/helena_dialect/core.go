@@ -154,6 +154,7 @@ func NewScope(
 	} else {
 		scope.Context = newScopeContext(nil)
 	}
+	scope.locals = map[string]core.Value{}
 	scope.compiler = core.Compiler{}
 	scope.executor = core.Executor{
 		VariableResolver: variableResolver{scope},
@@ -245,16 +246,21 @@ func (scope *Scope) ResolveNamedCommand(name string) core.Command {
 	return nil
 }
 
-//   setNamedLocal(name: string, value: Value) {
-//     this.locals.set(name, value);
-//   }
-//   destructureLocal(constant: Value, value: Value, check: boolean) core.Result {
-//     const { data: name, code } = core.ValueToString(constant);
-//     if (code != core.ResultCode_OK) return core.ERROR("invalid local name");
-//     if (check) return core.OK(NIL);
-//     this.setNamedLocal(name, value);
-//     return core.OK(NIL);
-//   }
+func (scope *Scope) SetNamedLocal(name string, value core.Value) {
+	scope.locals[name] = value
+}
+func (scope *Scope) DestructureLocal(constant core.Value, value core.Value, check bool) core.Result {
+	result := core.ValueToString(constant)
+	if result.Code != core.ResultCode_OK {
+		return core.ERROR("invalid local name")
+	}
+	name := result.Data
+	if check {
+		core.OK(core.NIL)
+	}
+	scope.SetNamedLocal(name, value)
+	return core.OK(core.NIL)
+}
 func (scope *Scope) SetNamedConstant(name string, value core.Value) core.Result {
 	result := scope.checkNamedConstant(name)
 	if result.Code != core.ResultCode_OK {

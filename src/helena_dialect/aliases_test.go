@@ -73,12 +73,12 @@ var _ = Describe("Helena aliases", func() {
 		})
 
 		Describe("Command calls", func() {
-			// It("should call the aliased command", func() {
-			// 	evaluate("macro mac {} {set var val}")
-			// 	evaluate("alias cmd mac")
-			// 	evaluate("cmd")
-			// 	Expect(evaluate("get var")).To(Equal(STR("val")))
-			// })
+			It("should call the aliased command", func() {
+				evaluate("macro mac {} {set var val}")
+				evaluate("alias cmd mac")
+				evaluate("cmd")
+				Expect(evaluate("get var")).To(Equal(STR("val")))
+			})
 			It("should pass arguments to aliased commands", func() {
 				evaluate("alias cmd (set var)")
 				Expect(execute("cmd val")).To(Equal(OK(STR("val"))))
@@ -167,54 +167,54 @@ var _ = Describe("Helena aliases", func() {
 
 			Describe("Control flow", func() {
 				Describe("`return`", func() {
-					// It("should interrupt a macro alias with `RETURN` code", func() {
-					// 	evaluate("macro mac {} {return val1; idem val2}")
-					// 	evaluate("alias cmd mac")
-					// 	Expect(execute("cmd")).To(Equal(RETURN(STR("val1"))))
-					// })
+					It("should interrupt a macro alias with `RETURN` code", func() {
+						evaluate("macro mac {} {return val1; idem val2}")
+						evaluate("alias cmd mac")
+						Expect(execute("cmd")).To(Equal(RETURN(STR("val1"))))
+					})
 					It("should interrupt a tuple alias with `RETURN` code", func() {
 						evaluate("alias cmd (return val)")
 						Expect(execute("cmd")).To(Equal(RETURN(STR("val"))))
 					})
 				})
 				Describe("`tailcall`", func() {
-					// It("should interrupt a macro alias with `RETURN` code", func() {
-					// 	evaluate("macro mac {} {tailcall {idem val1}; idem val2}")
-					// 	evaluate("alias cmd mac")
-					// 	Expect(execute("cmd")).To(Equal(RETURN(STR("val1"))))
-					// })
+					It("should interrupt a macro alias with `RETURN` code", func() {
+						evaluate("macro mac {} {tailcall {idem val1}; idem val2}")
+						evaluate("alias cmd mac")
+						Expect(execute("cmd")).To(Equal(RETURN(STR("val1"))))
+					})
 					It("should interrupt a tuple alias with `RETURN` code", func() {
 						evaluate("alias cmd (tailcall {idem val})")
 						Expect(execute("cmd")).To(Equal(RETURN(STR("val"))))
 					})
 				})
 				Describe("`yield`", func() {
-					// It("should interrupt a macro alias with `YIELD` code", func() {
-					// 	evaluate("macro mac {} {yield val1; idem val2}")
-					// 	evaluate("alias cmd mac")
-					// 	result := execute("cmd")
-					// 	Expect(result.Code).To(Equal(core.ResultCode_YIELD))
-					// 	Expect(result.Value).To(Equal(STR("val1")))
-					// })
+					It("should interrupt a macro alias with `YIELD` code", func() {
+						evaluate("macro mac {} {yield val1; idem val2}")
+						evaluate("alias cmd mac")
+						result := execute("cmd")
+						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+						Expect(result.Value).To(Equal(STR("val1")))
+					})
 					It("should interrupt a tuple alias with `YIELD` code", func() {
 						evaluate("alias cmd (yield val1)")
 						result := execute("cmd")
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("val1")))
 					})
-					// It("should provide a resumable state for macro alias", func() {
-					// 	evaluate("macro mac {} {idem _[yield val1]_}")
-					// 	evaluate("alias cmd mac")
-					// 	process := rootScope.PrepareScript(*parse("cmd"))
+					It("should provide a resumable state for macro alias", func() {
+						evaluate("macro mac {} {idem _[yield val1]_}")
+						evaluate("alias cmd mac")
+						process := rootScope.PrepareScript(*parse("cmd"))
 
-					// 	result := process.Run()
-					// 	Expect(result.Code).To(Equal(core.ResultCode_YIELD))
-					// 	Expect(result.Value).To(Equal(STR("val1")))
+						result := process.Run()
+						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+						Expect(result.Value).To(Equal(STR("val1")))
 
-					// 	process.YieldBack(STR("val2"))
-					// 	result = process.Run()
-					// 	Expect(result).To(Equal(OK(STR("_val2_"))))
-					// })
+						process.YieldBack(STR("val2"))
+						result = process.Run()
+						Expect(result).To(Equal(OK(STR("_val2_"))))
+					})
 					It("should provide a resumable state for tuple alias", func() {
 						evaluate("alias cmd (yield val1)")
 						process := rootScope.PrepareScript(*parse("cmd"))
@@ -230,33 +230,33 @@ var _ = Describe("Helena aliases", func() {
 					})
 				})
 				Describe("`error`", func() {
-					// It("should interrupt a macro alias with `ERROR` code", func() {
-					// 	evaluate("macro mac {} {error msg; idem val}")
-					// 	evaluate("alias cmd mac")
-					// 	Expect(execute("cmd")).To(Equal(ERROR("msg")))
-					// })
+					It("should interrupt a macro alias with `ERROR` code", func() {
+						evaluate("macro mac {} {error msg; idem val}")
+						evaluate("alias cmd mac")
+						Expect(execute("cmd")).To(Equal(ERROR("msg")))
+					})
 					It("should interrupt a tuple alias with `ERROR` code", func() {
 						evaluate("alias cmd (error msg)")
 						Expect(execute("cmd")).To(Equal(ERROR("msg")))
 					})
 				})
 				Describe("`break`", func() {
-					// It("should interrupt a macro alias with `BREAK` code", func() {
-					// 	evaluate("macro mac {} {break; idem val}")
-					// 	evaluate("alias cmd mac")
-					// 	Expect(execute("cmd")).To(Equal(BREAK(NIL)))
-					// })
+					It("should interrupt a macro alias with `BREAK` code", func() {
+						evaluate("macro mac {} {break; idem val}")
+						evaluate("alias cmd mac")
+						Expect(execute("cmd")).To(Equal(BREAK(NIL)))
+					})
 					It("should interrupt a tuple alias with `BREAK` code", func() {
 						evaluate("alias cmd (break)")
 						Expect(execute("cmd")).To(Equal(BREAK(NIL)))
 					})
 				})
 				Describe("`continue`", func() {
-					// It("should interrupt a macro alias with `CONTINUE` code", func() {
-					// 	evaluate("macro mac {} {continue; idem val}")
-					// 	evaluate("alias cmd mac")
-					// 	Expect(execute("cmd")).To(Equal(CONTINUE(NIL)))
-					// })
+					It("should interrupt a macro alias with `CONTINUE` code", func() {
+						evaluate("macro mac {} {continue; idem val}")
+						evaluate("alias cmd mac")
+						Expect(execute("cmd")).To(Equal(CONTINUE(NIL)))
+					})
 					It("should interrupt a tuple alias with `CONTINUE` code", func() {
 						evaluate("alias cmd (continue)")
 						Expect(execute("cmd")).To(Equal(CONTINUE(NIL)))

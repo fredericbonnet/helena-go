@@ -48,8 +48,8 @@ func InitCommands(
 	//   registerScriptCommands(scope);
 	registerArgspecCommands(scope)
 
-	//   scope.registerNamedCommand("scope", scopeCmd);
-	//   scope.registerNamedCommand("namespace", namespaceCmd);
+	//   scope.RegisterNamedCommand("scope", scopeCmd);
+	//   scope.RegisterNamedCommand("namespace", namespaceCmd);
 	scope.RegisterNamedCommand("ensemble", ensembleCmd{})
 
 	//   registerModuleCommands(
@@ -58,9 +58,9 @@ func InitCommands(
 	//     rootDir ?? process.cwd()
 	//   );
 
-	//   scope.registerNamedCommand("macro", macroCmd);
-	//   scope.registerNamedCommand("closure", closureCmd);
-	//   scope.registerNamedCommand("proc", procCmd);
-	//   scope.registerNamedCommand("coroutine", coroutineCmd);
+	scope.RegisterNamedCommand("macro", macroCmd{})
+	//   scope.RegisterNamedCommand("closure", closureCmd);
+	//   scope.RegisterNamedCommand("proc", procCmd);
+	//   scope.RegisterNamedCommand("coroutine", coroutineCmd);
 	scope.RegisterNamedCommand("alias", aliasCmd{})
 }

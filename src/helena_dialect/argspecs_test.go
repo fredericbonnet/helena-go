@@ -774,87 +774,68 @@ var _ = Describe("Helena argument handling", func() {
 					},
 				})
 			})
-			// Specify("Argument type guard", func() {
-			// 	example([]exampleSpec{
-			// 		{
-			// 			script: "macro usage ( (argspec a) ) {argspec $a usage}",
-			// 		},
-			// 		{
-			// 			script: "usage {a b ?c *}",
-			// 			result: STR("a b ?c? ?arg ...?"),
-			// 		},
-			// 		{
-			// 			script: "usage invalidValue",
-			// 			result: ERROR("invalid argument list"),
-			// 		},
-			// 	})
-			// })
+			Specify("Argument type guard", func() {
+				example([]exampleSpec{
+					{
+						script: "macro usage ( (argspec a) ) {argspec $a usage}",
+					},
+					{
+						script: "usage {a b ?c *}",
+						result: STR("a b ?c? ?arg ...?"),
+					},
+					{
+						script: "usage invalidValue",
+						result: ERROR("invalid argument list"),
+					},
+				})
+			})
 		})
 
 		Describe("Ensemble command", func() {
 			It("should return its ensemble metacommand when called with no argument", func() {
 				Expect(evaluate("argspec").Type()).To(Equal(core.ValueType_COMMAND))
 			})
-			//       It("should be extensible", func() {
-			//         /**
-			//          * Creating a command in the `argspec` ensemble scope will add it to its
-			//          * subcommands.
-			//          */
-			//         evaluate(`
-			//           [argspec] eval {
-			//             macro foo {value} {idem bar}
-			//           }
-			//         `);
-			//         Expect(evaluate("argspec (a b c) foo")).To(Equal(STR("bar"));
-			//       });
-			//       It("should support help for custom subcommands", func() {
-			//         /**
-			//          * Like all ensemble commands, `argspec` have built-in support for
-			//          * `help` on all subcommands that support it.
-			//          */
-			//         evaluate(`
-			//           [argspec] eval {
-			//             macro foo {value a b} {idem bar}
-			//           }
-			//         `);
-			//         Expect(evaluate("help argspec (a b c) foo")).To(Equal(
-			//           STR("argspec value foo a b")
-			//         );
-			//         Expect(execute("help argspec (a b c) foo 1 2 3")).To(Equal(
-			//           ERROR('wrong # args: should be "argspec value foo a b"')
-			//         );
-			//       });
+			It("should be extensible", func() {
+				evaluate(`
+					[argspec] eval {
+						macro foo {value} {idem bar}
+					}
+				`)
+				Expect(evaluate("argspec (a b c) foo")).To(Equal(STR("bar")))
+			})
+			It("should support help for custom subcommands", func() {
+				evaluate(`
+					[argspec] eval {
+						macro foo {value a b} {idem bar}
+					}
+				`)
+				Expect(evaluate("help argspec (a b c) foo")).To(Equal(
+					STR("argspec value foo a b"),
+				))
+				Expect(execute("help argspec (a b c) foo 1 2 3")).To(Equal(
+					ERROR(`wrong # args: should be "argspec value foo a b"`),
+				))
+			})
 
-			//       Describe("Examples", func() {
-			//         It("Adding a `help` subcommand", func(){example(exampleSpec[
-			//           {
-			//             doc: func() {
-			//               /**
-			//                * Here we create a `help` alias to the existing `usage` within
-			//                * the `argspec` ensemble, returning the `usage` with a prefix
-			//                * string:
-			//                */
-			//             },
-			//             script: `
-			//               [argspec] eval {
-			//                 macro help {value prefix} {
-			//                   idem "$prefix [argspec $value usage]"
-			//                 }
-			//               }
-			//             `,
-			//           },
-			//           {
-			//             doc: func() {
-			//               /**
-			//                * We can then use `help` just like the predefined `argspec`
-			//                * subcommands:
-			//                */
-			//             },
-			//             script: "argspec {a b ?c *} help foo",
-			//             result: STR("foo a b ?c? ?arg ...?"),
-			//           },
-			//         ]);
-			//       });
+			Describe("Examples", func() {
+				Specify("Adding a `help` subcommand", func() {
+					example([]exampleSpec{
+						{
+							script: `
+								[argspec] eval {
+									macro help {value prefix} {
+										idem "$prefix [argspec $value usage]"
+									}
+								}
+							`,
+						},
+						{
+							script: "argspec {a b ?c *} help foo",
+							result: STR("foo a b ?c? ?arg ...?"),
+						},
+					})
+				})
+			})
 		})
 	})
 })
