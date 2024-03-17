@@ -2,23 +2,6 @@ package helena_dialect
 
 import "helena/core"
 
-// /* eslint-disable jsdoc/require-jsdoc */ // TODO
-// import { Result, OK, ERROR, ResultCode } from "../core/results";
-// import { Command } from "../core/command";
-// import {
-//   Value,
-//   ValueType,
-//   ScriptValue,
-//   NIL,
-//   STR,
-//   TUPLE,
-//   LIST,
-// } from "../core/values";
-// import { Argument, ARITY_ERROR, buildArguments, buildUsage } from "./arguments";
-// import { Scope } from "./core";
-// import { valueToArray } from "./lists";
-// import { EnsembleCommand } from "./ensembles";
-
 type Argspec struct {
 	Args         []Argument
 	NbRequired   uint
@@ -72,15 +55,11 @@ func ArgspecValueFromValue(value core.Value) core.TypedResult[ArgspecValue] {
 func (value ArgspecValue) Usage(skip uint) string {
 	return BuildUsage(value.Argspec.Args, skip)
 }
-
-//   checkArity(values: Value[], skip: number) {
-//     return (
-//       values.length - skip >= this.argspec.nbRequired &&
-//       (this.argspec.hasRemainder ||
-//         values.length - skip <=
-//           this.argspec.nbRequired + this.argspec.nbOptional)
-//     );
-//   }
+func (value ArgspecValue) CheckArity(values []core.Value, skip uint) bool {
+	return (uint(len(values))-skip >= value.Argspec.NbRequired &&
+		(value.Argspec.HasRemainder ||
+			uint(len(values))-skip <= value.Argspec.NbRequired+value.Argspec.NbOptional))
+}
 func (value ArgspecValue) ApplyArguments(
 	scope *Scope,
 	values []core.Value,
@@ -139,71 +118,90 @@ func (value ArgspecValue) ApplyArguments(
 	return core.OK(core.NIL)
 }
 
-//   setArguments(values: Value[], scope: Scope): Result {
-//     if (!this.checkArity(values, 0))
-//       return ERROR(`wrong # values: should be "${this.usage()}"`);
-//     return this.applyArguments(scope, values, 0, (name, value) =>
-//       scope.setNamedVariable(name, value)
-//     );
-//   }
-// }
+func (value ArgspecValue) SetArguments(values []core.Value, scope *Scope) core.Result {
+	if !value.CheckArity(values, 0) {
+		return core.ERROR(`wrong # values: should be "` + value.Usage(0) + `"`)
+	}
+	return value.ApplyArguments(scope, values, 0, func(name string, value core.Value) core.Result {
+		return scope.SetNamedVariable(name, value)
+	})
+}
 
 type argspecCommand struct {
-	scope *Scope
-	//   ensemble: EnsembleCommand;
+	scope    *Scope
+	ensemble *EnsembleCommand
 }
 
 func newArgspecCommand(scope *Scope) argspecCommand {
 	subscope := NewScope(scope, false)
-	//     const { data: argspec } = ArgspecValue.fromValue(LIST([STR("value")]));
-	//     this.ensemble = new EnsembleCommand(this.scope, argspec);
-	return argspecCommand{subscope}
+	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	ensemble := NewEnsembleCommand(subscope, argspec)
+	return argspecCommand{subscope, ensemble}
 }
 func (argspec argspecCommand) Execute(args []core.Value, context any) core.Result {
+	scope := context.(*Scope)
 	if len(args) == 2 {
 		return ArgspecValueFromValue(args[1]).AsResult()
 	}
-	//     return this.ensemble.execute(args, scope);
-	return core.ERROR("TODO1")
+	return argspec.ensemble.Execute(args, scope)
 }
-func (argspecCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
-	//     return this.ensemble.help(args);
-	return core.ERROR("TODO2")
+func (argspec argspecCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
+	return argspec.ensemble.Help(args, options, context)
 }
 
-// const ARGSPEC_USAGE_SIGNATURE = "argspec value usage";
-// const argspecUsageCmd: Command = {
-//   execute(args) {
-//     if (len(args) != 2) return ARITY_ERROR(ARGSPEC_USAGE_SIGNATURE);
-//     const { data: value, ...result } = ArgspecValue.fromValue(args[1]);
-//     if (result.code != core.ResultCode_OK) return result;
-//     return OK(STR(value.usage()));
-//   },
-//   help(args) {
-//     if (len(args) > 2) return ARITY_ERROR(ARGSPEC_USAGE_SIGNATURE);
-//     return OK(STR(ARGSPEC_USAGE_SIGNATURE));
-//   },
-// };
+const ARGSPEC_USAGE_SIGNATURE = "argspec value usage"
 
-// const ARGSPEC_SET_SIGNATURE = "argspec value set values";
-// const argspecSetCmd: Command = {
-//   execute(args, scope: Scope) {
-//     if (len(args) != 3) return ARITY_ERROR(ARGSPEC_SET_SIGNATURE);
-//     const { data: value, ...result } = ArgspecValue.fromValue(args[1]);
-//     if (result.code != core.ResultCode_OK) return result;
-//     const { data: values, ...result2 } = valueToArray(args[2]);
-//     if (result2.code != core.ResultCode_OK) return result2;
-//     return value.setArguments(values, scope);
-//   },
-//   help(args) {
-//     if (len(args) > 2) return ARITY_ERROR(ARGSPEC_SET_SIGNATURE);
-//     return OK(STR(ARGSPEC_SET_SIGNATURE));
-//   },
-// };
+type argspecUsageCmd struct{}
+
+func (argspecUsageCmd) Execute(args []core.Value, _ any) core.Result {
+	if len(args) != 2 {
+		return ARITY_ERROR(ARGSPEC_USAGE_SIGNATURE)
+	}
+	result := ArgspecValueFromValue(args[1])
+	if result.Code != core.ResultCode_OK {
+		return result.AsResult()
+	}
+	value := result.Data
+	return core.OK(core.STR(value.Usage(0)))
+}
+func (argspecUsageCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+	if len(args) > 2 {
+		return ARITY_ERROR(ARGSPEC_USAGE_SIGNATURE)
+	}
+	return core.OK(core.STR(ARGSPEC_USAGE_SIGNATURE))
+}
+
+const ARGSPEC_SET_SIGNATURE = "argspec value set values"
+
+type argspecSetCmd struct{}
+
+func (argspecSetCmd) Execute(args []core.Value, context any) core.Result {
+	scope := context.(*Scope)
+	if len(args) != 3 {
+		return ARITY_ERROR(ARGSPEC_SET_SIGNATURE)
+	}
+	result := ArgspecValueFromValue(args[1])
+	if result.Code != core.ResultCode_OK {
+		return result.AsResult()
+	}
+	value := result.Data
+	result2 := ValueToArray(args[2])
+	if result2.Code != core.ResultCode_OK {
+		return result2.AsResult()
+	}
+	values := result2.Data
+	return value.SetArguments(values, scope)
+}
+func (argspecSetCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+	if len(args) > 2 {
+		return ARITY_ERROR(ARGSPEC_SET_SIGNATURE)
+	}
+	return core.OK(core.STR(ARGSPEC_SET_SIGNATURE))
+}
 
 func registerArgspecCommands(scope *Scope) {
 	command := newArgspecCommand(scope)
 	scope.RegisterNamedCommand("argspec", command)
-	//   command.scope.registerNamedCommand("usage", argspecUsageCmd);
-	//   command.scope.registerNamedCommand("set", argspecSetCmd);
+	command.scope.RegisterNamedCommand("usage", argspecUsageCmd{})
+	command.scope.RegisterNamedCommand("set", argspecSetCmd{})
 }
