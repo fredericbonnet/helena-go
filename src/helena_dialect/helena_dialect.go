@@ -59,7 +59,7 @@ func InitCommands(
 	//   );
 
 	scope.RegisterNamedCommand("macro", macroCmd{})
-	//   scope.RegisterNamedCommand("closure", closureCmd);
+	scope.RegisterNamedCommand("closure", closureCmd{})
 	//   scope.RegisterNamedCommand("proc", procCmd);
 	//   scope.RegisterNamedCommand("coroutine", coroutineCmd);
 	scope.RegisterNamedCommand("alias", aliasCmd{})

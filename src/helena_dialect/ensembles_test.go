@@ -96,12 +96,12 @@ var _ = Describe("Helena ensembles", func() {
 		})
 
 		Describe("`body`", func() {
-			//       It("should be executed", func() {
-			//         evaluate("closure cmd {} {let var val}");
-			//         Expect(rootScope.Context.Constants["var"]).To(BeNil());
-			//         evaluate("ensemble {} {cmd}");
-			//         Expect(rootScope.Context.Constants["var"]).To(Equal(STR("val"));
-			//       });
+			It("should be executed", func() {
+				evaluate("closure cmd {} {let var val}")
+				Expect(rootScope.Context.Constants["var"]).To(BeNil())
+				evaluate("ensemble {} {cmd}")
+				Expect(rootScope.Context.Constants["var"]).To(Equal(STR("val")))
+			})
 			It("should access global commands", func() {
 				Expect(execute("ensemble {} {idem val}").Code).To(Equal(core.ResultCode_OK))
 			})
@@ -127,12 +127,12 @@ var _ = Describe("Helena ensembles", func() {
 			Describe("Control flow", func() {
 				Describe("`return`", func() {
 					It("should interrupt the body with `OK` code", func() {
-						// evaluate("closure cmd1 {} {set var val1}")
-						// evaluate("closure cmd2 {} {set var val2}")
-						// Expect(execute("ensemble {} {cmd1; return; cmd2}").Code).To(Equal(
-						// 	core.ResultCode_OK,
-						// ))
-						// Expect(evaluate("get var")).To(Equal(STR("val1")))
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						Expect(execute("ensemble {} {cmd1; return; cmd2}").Code).To(Equal(
+							core.ResultCode_OK,
+						))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should still define the named command", func() {
 						evaluate("ensemble cmd {} {return}")
@@ -144,12 +144,12 @@ var _ = Describe("Helena ensembles", func() {
 				})
 				Describe("`tailcall`", func() {
 					It("should interrupt the body with `OK` code", func() {
-						// evaluate("closure cmd1 {} {set var val1}")
-						// evaluate("closure cmd2 {} {set var val2}")
-						// Expect(
-						// 	execute("ensemble {} {cmd1; tailcall {}; cmd2}").Code,
-						// ).To(Equal(core.ResultCode_OK))
-						// Expect(evaluate("get var")).To(Equal(STR("val1")))
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						Expect(
+							execute("ensemble {} {cmd1; tailcall {}; cmd2}").Code,
+						).To(Equal(core.ResultCode_OK))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should still define the named command", func() {
 						evaluate("ensemble cmd {} {tailcall {}}")
@@ -163,30 +163,30 @@ var _ = Describe("Helena ensembles", func() {
 				})
 				Describe("`yield`", func() {
 					It("should interrupt the body with `YIELD` code", func() {
-						// evaluate("closure cmd1 {} {set var val1}");
-						// evaluate("closure cmd2 {} {set var val2}");
-						// Expect(execute("ensemble cmd {} {cmd1; yield; cmd2}").Code).To(Equal(
-						//   core.ResultCode_YIELD
-						// );
-						// Expect(evaluate("get var")).To(Equal(STR("val1"));
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						Expect(execute("ensemble cmd {} {cmd1; yield; cmd2}").Code).To(Equal(
+							core.ResultCode_YIELD,
+						))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should provide a resumable state", func() {
-						//             evaluate("closure cmd1 {} {set var val1}");
-						//             evaluate("closure cmd2 {val} {set var $val}");
-						//             const process = rootScope.prepareScript(
-						//               parse("ensemble cmd {} {cmd1; cmd2 _[yield val2]_}")
-						//             );
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {val} {set var $val}")
+						process := rootScope.PrepareScript(
+							*parse("ensemble cmd {} {cmd1; cmd2 _[yield val2]_}"),
+						)
 
-						//             let result = process.run();
-						//             Expect(result.Code).To(Equal(core.ResultCode_YIELD);
-						//             Expect(result.value).To(Equal(STR("val2"));
-						//             Expect(result.data).to.exist;
+						result := process.Run()
+						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+						Expect(result.Value).To(Equal(STR("val2")))
+						Expect(result.Data).NotTo(BeNil())
 
-						//             process.yieldBack(STR("val3"));
-						//             result = process.run();
-						//             Expect(result.Code).To(Equal(core.ResultCode_OK);
-						//             Expect(result.value.type).To(Equal(core.ValueType_COMMAND);
-						//             Expect(evaluate("get var")).To(Equal(STR("_val3_"));
+						process.YieldBack(STR("val3"))
+						result = process.Run()
+						Expect(result.Code).To(Equal(core.ResultCode_OK))
+						Expect(result.Value.Type()).To(Equal(core.ValueType_COMMAND))
+						Expect(evaluate("get var")).To(Equal(STR("_val3_")))
 					})
 					It("should delay the definition of ensemble command until resumed", func() {
 						process := rootScope.PrepareScript(
@@ -204,12 +204,12 @@ var _ = Describe("Helena ensembles", func() {
 				})
 				Describe("`error`", func() {
 					It("should interrupt the body with `ERROR` code", func() {
-						// evaluate("closure cmd1 {} {set var val1}")
-						// evaluate("closure cmd2 {} {set var val2}")
-						// Expect(execute("ensemble {} {cmd1; error msg; cmd2}")).To(Equal(
-						// 	ERROR("msg"),
-						// ))
-						// Expect(evaluate("get var")).To(Equal(STR("val1")))
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						Expect(execute("ensemble {} {cmd1; error msg; cmd2}")).To(Equal(
+							ERROR("msg"),
+						))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should not define the ensemble command", func() {
 						evaluate("ensemble cmd {} {error msg}")
@@ -218,12 +218,12 @@ var _ = Describe("Helena ensembles", func() {
 				})
 				Describe("`break`", func() {
 					It("should interrupt the body with `ERROR` code", func() {
-						// evaluate("closure cmd1 {} {set var val1}");
-						// evaluate("closure cmd2 {} {set var val2}");
-						// Expect(execute("ensemble {} {cmd1; break; cmd2}")).To(Equal(
-						//   ERROR("unexpected break")
-						// );
-						// Expect(evaluate("get var")).To(Equal(STR("val1"));
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						Expect(execute("ensemble {} {cmd1; break; cmd2}")).To(Equal(
+							ERROR("unexpected break"),
+						))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should not define the ensemble command", func() {
 						evaluate("ensemble cmd {} {break}")
@@ -232,12 +232,12 @@ var _ = Describe("Helena ensembles", func() {
 				})
 				Describe("`continue`", func() {
 					It("should interrupt the body with `ERROR` code", func() {
-						// evaluate("closure cmd1 {} {set var val1}");
-						// evaluate("closure cmd2 {} {set var val2}");
-						// Expect(execute("ensemble {} {cmd1; continue; cmd2}")).To(Equal(
-						//   ERROR("unexpected continue")
-						// );
-						// Expect(evaluate("get var")).To(Equal(STR("val1"));
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						Expect(execute("ensemble {} {cmd1; continue; cmd2}")).To(Equal(
+							ERROR("unexpected continue"),
+						))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should not define the ensemble command", func() {
 						evaluate("ensemble cmd {} {continue}")
@@ -290,97 +290,97 @@ var _ = Describe("Helena ensembles", func() {
 						Expect(evaluate("[cmd] eval {get cst}")).To(Equal(STR("val")))
 					})
 					It("should evaluate closures in their scope", func() {
-						//             evaluate("closure cls {} {let cst val}");
-						//             evaluate("ensemble cmd {} {}");
-						//             evaluate("[cmd] eval {cls}");
-						//             Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val"));
-						//             Expect(execute("[cmd] eval {get cst}").Code).To(Equal(
-						//               core.ResultCode_ERROR
-						//             );
+						evaluate("closure cls {} {let cst val}")
+						evaluate("ensemble cmd {} {}")
+						evaluate("[cmd] eval {cls}")
+						Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val")))
+						Expect(execute("[cmd] eval {get cst}").Code).To(Equal(
+							core.ResultCode_ERROR,
+						))
 					})
 
 					Describe("Control flow", func() {
 						Describe("`return`", func() {
-							//               It("should interrupt the body with `RETURN` code", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {} {set var val2}");
-							//                 evaluate("ensemble cmd {} {}");
-							//                 Expect(execute("[cmd] eval {cmd1; return val3; cmd2}")).To(Equal(
-							//                   RETURN(STR("val3"))
-							//                 );
-							//                 Expect(evaluate("get var")).To(Equal(STR("val1"));
-							//               });
+							It("should interrupt the body with `RETURN` code", func() {
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate("ensemble cmd {} {}")
+								Expect(execute("[cmd] eval {cmd1; return val3; cmd2}")).To(Equal(
+									RETURN(STR("val3")),
+								))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
+							})
 						})
 						Describe("`tailcall`", func() {
-							//               It("should interrupt the body with `RETURN` code", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {} {set var val2}");
-							//                 evaluate("ensemble cmd {} {}");
-							//                 Expect(
-							//                   execute("[cmd] eval {cmd1; tailcall {idem val3}; cmd2}")
-							//                 ).To(Equal(RETURN(STR("val3")));
-							//                 Expect(evaluate("get var")).To(Equal(STR("val1"));
-							//               });
+							It("should interrupt the body with `RETURN` code", func() {
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate("ensemble cmd {} {}")
+								Expect(
+									execute("[cmd] eval {cmd1; tailcall {idem val3}; cmd2}"),
+								).To(Equal(RETURN(STR("val3"))))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
+							})
 						})
 						Describe("`yield`", func() {
-							//               It("should interrupt the body with `YIELD` code", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {} {set var val2}");
-							//                 evaluate("ensemble cmd {} {}");
-							//                 Expect(execute("[cmd] eval {cmd1; yield; cmd2}").Code).To(Equal(
-							//                   core.ResultCode_YIELD
-							//                 );
-							//                 Expect(evaluate("get var")).To(Equal(STR("val1"));
-							//               });
-							//               It("should provide a resumable state", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {val} {set var $val}");
-							//                 evaluate("ensemble cmd {} {}");
-							//                 const process = rootScope.prepareScript(
-							//                   parse("[cmd] eval {cmd1; cmd2 _[yield val2]_}")
-							//                 );
+							It("should interrupt the body with `YIELD` code", func() {
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate("ensemble cmd {} {}")
+								Expect(execute("[cmd] eval {cmd1; yield; cmd2}").Code).To(Equal(
+									core.ResultCode_YIELD,
+								))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
+							})
+							It("should provide a resumable state", func() {
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {val} {set var $val}")
+								evaluate("ensemble cmd {} {}")
+								process := rootScope.PrepareScript(
+									*parse("[cmd] eval {cmd1; cmd2 _[yield val2]_}"),
+								)
 
-							//                 let result = process.run();
-							//                 Expect(result.Code).To(Equal(core.ResultCode_YIELD);
-							//                 Expect(result.value).To(Equal(STR("val2"));
+								result := process.Run()
+								Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+								Expect(result.Value).To(Equal(STR("val2")))
 
-							//                 process.yieldBack(STR("val3"));
-							//                 result = process.run();
-							//                 Expect(result).To(Equal(OK(STR("_val3_")));
-							//                 Expect(evaluate("get var")).To(Equal(STR("_val3_"));
-							//               });
+								process.YieldBack(STR("val3"))
+								result = process.Run()
+								Expect(result).To(Equal(OK(STR("_val3_"))))
+								Expect(evaluate("get var")).To(Equal(STR("_val3_")))
+							})
 						})
 						Describe("`error`", func() {
 							It("should interrupt the body with `ERROR` code", func() {
-								// evaluate("closure cmd1 {} {set var val1}")
-								// evaluate("closure cmd2 {} {set var val2}")
-								// evaluate("ensemble cmd {} {}")
-								// Expect(execute("[cmd] eval {cmd1; error msg; cmd2}")).To(Equal(
-								// 	ERROR("msg"),
-								// ))
-								// Expect(evaluate("get var")).To(Equal(STR("val1")))
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate("ensemble cmd {} {}")
+								Expect(execute("[cmd] eval {cmd1; error msg; cmd2}")).To(Equal(
+									ERROR("msg"),
+								))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
 							})
 						})
 						Describe("`break`", func() {
 							It("should interrupt the body with `BREAK` code", func() {
-								// evaluate("closure cmd1 {} {set var val1}")
-								// evaluate("closure cmd2 {} {set var val2}")
-								// evaluate("ensemble cmd {} {}")
-								// Expect(execute("[cmd] eval {cmd1; break; cmd2}")).To(Equal(
-								// 	BREAK(nil),
-								// ))
-								// Expect(evaluate("get var")).To(Equal(STR("val1")))
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate("ensemble cmd {} {}")
+								Expect(execute("[cmd] eval {cmd1; break; cmd2}")).To(Equal(
+									BREAK(NIL),
+								))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
 							})
 						})
 						Describe("`continue`", func() {
 							It("should interrupt the body with `CONTINUE` code", func() {
-								// evaluate("closure cmd1 {} {set var val1}")
-								// evaluate("closure cmd2 {} {set var val2}")
-								// evaluate("ensemble cmd {} {}")
-								// Expect(execute("[cmd] eval {cmd1; continue; cmd2}")).To(Equal(
-								// 	CONTINUE(nil),
-								// ))
-								// Expect(evaluate("get var")).To(Equal(STR("val1")))
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate("ensemble cmd {} {}")
+								Expect(execute("[cmd] eval {cmd1; continue; cmd2}")).To(Equal(
+									CONTINUE(NIL),
+								))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
 							})
 						})
 					})
@@ -415,91 +415,91 @@ var _ = Describe("Helena ensembles", func() {
 						// Expect(evaluate("[scp] eval {get cst}")).To(Equal(STR("val")))
 					})
 					It("should evaluate ensemble closures in ensemble scope", func() {
-						// evaluate("ensemble cmd {} {closure cls {} {let cst val}}")
-						// evaluate("[cmd] call cls")
-						// Expect(rootScope.Context.Constants["cst"]).To(BeNil())
-						// Expect(evaluate("[cmd] eval {get cst}")).To(Equal(STR("val")))
+						evaluate("ensemble cmd {} {closure cls {} {let cst val}}")
+						evaluate("[cmd] call cls")
+						Expect(rootScope.Context.Constants["cst"]).To(BeNil())
+						Expect(evaluate("[cmd] eval {get cst}")).To(Equal(STR("val")))
 					})
 
 					Describe("Control flow", func() {
 						Describe("`return`", func() {
 							It("should interrupt the body with `RETURN` code", func() {
-								// evaluate("closure cmd1 {} {set var val1}")
-								// evaluate("closure cmd2 {} {set var val2}")
-								// evaluate(
-								// 	"ensemble cmd {} {macro mac {} {cmd1; return val3; cmd2}}",
-								// )
-								// Expect(execute("[cmd] call mac")).To(Equal(RETURN(STR("val3"))))
-								// Expect(evaluate("get var")).To(Equal(STR("val1")))
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate(
+									"ensemble cmd {} {macro mac {} {cmd1; return val3; cmd2}}",
+								)
+								Expect(execute("[cmd] call mac")).To(Equal(RETURN(STR("val3"))))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
 							})
 						})
 						Describe("`tailcall`", func() {
-							//               It("should interrupt the body with `RETURN` code", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {} {set var val2}");
-							//                 evaluate(
-							//                   "ensemble cmd {} {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}"
-							//                 );
-							//                 Expect(execute("[cmd] call mac")).To(Equal(RETURN(STR("val3")));
-							//                 Expect(evaluate("get var")).To(Equal(STR("val1"));
-							//               });
+							It("should interrupt the body with `RETURN` code", func() {
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate(
+									"ensemble cmd {} {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}",
+								)
+								Expect(execute("[cmd] call mac")).To(Equal(RETURN(STR("val3"))))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
+							})
 						})
 						Describe("`yield`", func() {
-							//               It("should interrupt the call with `YIELD` code", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {} {set var val2}");
-							//                 evaluate("ensemble cmd {} {macro mac {} {cmd1; yield; cmd2}}");
-							//                 Expect(execute("[cmd] call mac").Code).To(Equal(core.ResultCode_YIELD);
-							//                 Expect(evaluate("get var")).To(Equal(STR("val1"));
-							//               });
-							//               It("should provide a resumable state", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {val} {set var $val}");
-							//                 evaluate(
-							//                   "ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}"
-							//                 );
-							//                 const process = rootScope.prepareScript(parse("[cmd] call p"));
+							It("should interrupt the call with `YIELD` code", func() {
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate("ensemble cmd {} {macro mac {} {cmd1; yield; cmd2}}")
+								Expect(execute("[cmd] call mac").Code).To(Equal(core.ResultCode_YIELD))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
+							})
+							It("should provide a resumable state", func() {
+								// evaluate("closure cmd1 {} {set var val1}")
+								// evaluate("closure cmd2 {val} {set var $val}")
+								// evaluate(
+								// 	"ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}",
+								// )
+								// process := rootScope.PrepareScript(*parse("[cmd] call p"))
 
-							//                 let result = process.run();
-							//                 Expect(result.Code).To(Equal(core.ResultCode_YIELD);
-							//                 Expect(result.value).To(Equal(STR("val2"));
+								// result := process.Run()
+								// Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+								// Expect(result.Value).To(Equal(STR("val2")))
 
-							//                 process.yieldBack(STR("val3"));
-							//                 result = process.run();
-							//                 Expect(result).To(Equal(OK(STR("_val3_")));
-							//                 Expect(evaluate("get var")).To(Equal(STR("_val3_"));
-							//               });
+								// process.YieldBack(STR("val3"))
+								// result = process.Run()
+								// Expect(result).To(Equal(OK(STR("_val3_"))))
+								// Expect(evaluate("get var")).To(Equal(STR("_val3_")))
+							})
 						})
 						Describe("`error`", func() {
-							//               It("should interrupt the body with `ERROR` code", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {} {set var val2}");
-							//                 evaluate(
-							//                   "ensemble cmd {} {macro mac {} {cmd1; error msg; cmd2}}"
-							//                 );
-							//                 Expect(execute("[cmd] call mac")).To(Equal(ERROR("msg"));
-							//                 Expect(evaluate("get var")).To(Equal(STR("val1"));
-							//               });
+							It("should interrupt the body with `ERROR` code", func() {
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate(
+									"ensemble cmd {} {macro mac {} {cmd1; error msg; cmd2}}",
+								)
+								Expect(execute("[cmd] call mac")).To(Equal(ERROR("msg")))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
+							})
 						})
 						Describe("`break`", func() {
-							//               It("should interrupt the body with `BREAK` code", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {} {set var val2}");
-							//                 evaluate("ensemble cmd {} {macro mac {} {cmd1; break; cmd2}}");
-							//                 Expect(execute("[cmd] call mac")).To(Equal(BREAK());
-							//                 Expect(evaluate("get var")).To(Equal(STR("val1"));
-							//               });
+							It("should interrupt the body with `BREAK` code", func() {
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate("ensemble cmd {} {macro mac {} {cmd1; break; cmd2}}")
+								Expect(execute("[cmd] call mac")).To(Equal(BREAK(NIL)))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
+							})
 						})
 						Describe("`continue`", func() {
-							//               It("should interrupt the body with `CONTINUE` code", func() {
-							//                 evaluate("closure cmd1 {} {set var val1}");
-							//                 evaluate("closure cmd2 {} {set var val2}");
-							//                 evaluate(
-							//                   "ensemble cmd {} {macro mac {} {cmd1; continue; cmd2}}"
-							//                 );
-							//                 Expect(execute("[cmd] call mac")).To(Equal(CONTINUE());
-							//                 Expect(evaluate("get var")).To(Equal(STR("val1"));
-							//               });
+							It("should interrupt the body with `CONTINUE` code", func() {
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {} {set var val2}")
+								evaluate(
+									"ensemble cmd {} {macro mac {} {cmd1; continue; cmd2}}",
+								)
+								Expect(execute("[cmd] call mac")).To(Equal(CONTINUE(NIL)))
+								Expect(evaluate("get var")).To(Equal(STR("val1")))
+							})
 						})
 					})
 
@@ -680,25 +680,25 @@ var _ = Describe("Helena ensembles", func() {
 
 			Describe("Help", func() {
 				It("should provide subcommand help", func() {
-					// evaluate(`
-					// 	ensemble cmd {a} {
-					// 		macro opt1 {a b} {}
-					// 		closure opt2 {c d} {}
-					// 	}
-					// `)
-					// Expect(evaluate("help cmd")).To(Equal(
-					// 	STR("cmd a ?subcommand? ?arg ...?"),
-					// ))
-					// Expect(evaluate("help cmd 1")).To(Equal(
-					// 	STR("cmd a ?subcommand? ?arg ...?"),
-					// ))
-					// Expect(evaluate("help cmd 1 subcommands")).To(Equal(
-					// 	STR("cmd a subcommands"),
-					// ))
-					// Expect(evaluate("help cmd 1 opt1")).To(Equal(STR("cmd a opt1 b")))
-					// Expect(evaluate("help cmd 2 opt1 3")).To(Equal(STR("cmd a opt1 b")))
-					// Expect(evaluate("help cmd 4 opt2")).To(Equal(STR("cmd a opt2 d")))
-					// Expect(evaluate("help cmd 5 opt2 6")).To(Equal(STR("cmd a opt2 d")))
+					evaluate(`
+						ensemble cmd {a} {
+							macro opt1 {a b} {}
+							closure opt2 {c d} {}
+						}
+					`)
+					Expect(evaluate("help cmd")).To(Equal(
+						STR("cmd a ?subcommand? ?arg ...?"),
+					))
+					Expect(evaluate("help cmd 1")).To(Equal(
+						STR("cmd a ?subcommand? ?arg ...?"),
+					))
+					Expect(evaluate("help cmd 1 subcommands")).To(Equal(
+						STR("cmd a subcommands"),
+					))
+					Expect(evaluate("help cmd 1 opt1")).To(Equal(STR("cmd a opt1 b")))
+					Expect(evaluate("help cmd 2 opt1 3")).To(Equal(STR("cmd a opt1 b")))
+					Expect(evaluate("help cmd 4 opt2")).To(Equal(STR("cmd a opt2 d")))
+					Expect(evaluate("help cmd 5 opt2 6")).To(Equal(STR("cmd a opt2 d")))
 				})
 				It("should work recursively", func() {
 					evaluate(`
@@ -774,86 +774,79 @@ var _ = Describe("Helena ensembles", func() {
 			})
 
 			Describe("Control flow", func() {
-				//         mochadoc.description(func() {
-				//           /**
-				//            * If a subcommand returns a result code other than `OK` then it
-				//            * should be propagated properly to the caller.
-				//            */
-				//         });
+				Describe("`return`", func() {
+					It("should interrupt the call with `RETURN` code", func() {
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						evaluate(
+							"ensemble cmd {} {macro mac {} {cmd1; return val3; cmd2}}",
+						)
+						Expect(execute("cmd mac")).To(Equal(RETURN(STR("val3"))))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
+					})
+				})
+				Describe("`tailcall`", func() {
+					It("should interrupt the call with `RETURN` code", func() {
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						evaluate(
+							"ensemble cmd {} {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}",
+						)
+						Expect(execute("cmd mac")).To(Equal(RETURN(STR("val3"))))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
+					})
+				})
+				Describe("`yield`", func() {
+					It("should interrupt the call with `YIELD` code", func() {
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						evaluate("ensemble cmd {} {macro mac {} {cmd1; yield; cmd2}}")
+						Expect(execute("cmd mac").Code).To(Equal(core.ResultCode_YIELD))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
+					})
+					It("should provide a resumable state", func() {
+						//             evaluate("closure cmd1 {} {set var val1}");
+						//             evaluate("closure cmd2 {val} {set var $val}");
+						//             evaluate("ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}");
+						//             const process = rootScope.PrepareScript(parse("cmd p"));
 
-				//         Describe("`return`", func() {
-				//           It("should interrupt the call with `RETURN` code", func() {
-				//             evaluate("closure cmd1 {} {set var val1}");
-				//             evaluate("closure cmd2 {} {set var val2}");
-				//             evaluate(
-				//               "ensemble cmd {} {macro mac {} {cmd1; return val3; cmd2}}"
-				//             );
-				//             Expect(execute("cmd mac")).To(Equal(RETURN(STR("val3")));
-				//             Expect(evaluate("get var")).To(Equal(STR("val1"));
-				//           });
-				//         });
-				//         Describe("`tailcall`", func() {
-				//           It("should interrupt the call with `RETURN` code", func() {
-				//             evaluate("closure cmd1 {} {set var val1}");
-				//             evaluate("closure cmd2 {} {set var val2}");
-				//             evaluate(
-				//               "ensemble cmd {} {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}"
-				//             );
-				//             Expect(execute("cmd mac")).To(Equal(RETURN(STR("val3")));
-				//             Expect(evaluate("get var")).To(Equal(STR("val1"));
-				//           });
-				//         });
-				//         Describe("`yield`", func() {
-				//           It("should interrupt the call with `YIELD` code", func() {
-				//             evaluate("closure cmd1 {} {set var val1}");
-				//             evaluate("closure cmd2 {} {set var val2}");
-				//             evaluate("ensemble cmd {} {macro mac {} {cmd1; yield; cmd2}}");
-				//             Expect(execute("cmd mac").Code).To(Equal(core.ResultCode_YIELD);
-				//             Expect(evaluate("get var")).To(Equal(STR("val1"));
-				//           });
-				//           It("should provide a resumable state", func() {
-				//             evaluate("closure cmd1 {} {set var val1}");
-				//             evaluate("closure cmd2 {val} {set var $val}");
-				//             evaluate("ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}");
-				//             const process = rootScope.prepareScript(parse("cmd p"));
+						//              result := process.Run();
+						//             Expect(result.Code).To(Equal(core.ResultCode_YIELD);
+						//             Expect(result.Value).To(Equal(STR("val2"));
 
-				//             let result = process.run();
-				//             Expect(result.Code).To(Equal(core.ResultCode_YIELD);
-				//             Expect(result.value).To(Equal(STR("val2"));
-
-				//             process.yieldBack(STR("val3"));
-				//             result = process.run();
-				//             Expect(result).To(Equal(OK(STR("_val3_")));
-				//             Expect(evaluate("get var")).To(Equal(STR("_val3_"));
-				//           });
-				//         });
-				//         Describe("`error`", func() {
-				//           It("should interrupt the call with `ERROR` code", func() {
-				//             evaluate("closure cmd1 {} {set var val1}");
-				//             evaluate("closure cmd2 {} {set var val2}");
-				//             evaluate("ensemble cmd {} {macro mac {} {cmd1; error msg; cmd2}}");
-				//             Expect(execute("cmd mac")).To(Equal(ERROR("msg"));
-				//             Expect(evaluate("get var")).To(Equal(STR("val1"));
-				//           });
-				//         });
-				//         Describe("`break`", func() {
-				//           It("should interrupt the call with `BREAK` code", func() {
-				//             evaluate("closure cmd1 {} {set var val1}");
-				//             evaluate("closure cmd2 {} {set var val2}");
-				//             evaluate("ensemble cmd {} {macro mac {} {cmd1; break; cmd2}}");
-				//             Expect(execute("cmd mac")).To(Equal(BREAK());
-				//             Expect(evaluate("get var")).To(Equal(STR("val1"));
-				//           });
-				//         });
-				//         Describe("`continue`", func() {
-				//           It("should interrupt the call with `CONTINUE` code", func() {
-				//             evaluate("closure cmd1 {} {set var val1}");
-				//             evaluate("closure cmd2 {} {set var val2}");
-				//             evaluate("ensemble cmd {} {macro mac {} {cmd1; continue; cmd2}}");
-				//             Expect(execute("cmd mac")).To(Equal(CONTINUE());
-				//             Expect(evaluate("get var")).To(Equal(STR("val1"));
-				//           });
-				//         });
+						//             process.YieldBack(STR("val3"));
+						//             result = process.Run();
+						//             Expect(result).To(Equal(OK(STR("_val3_")));
+						//             Expect(evaluate("get var")).To(Equal(STR("_val3_"));
+					})
+				})
+				Describe("`error`", func() {
+					It("should interrupt the call with `ERROR` code", func() {
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						evaluate("ensemble cmd {} {macro mac {} {cmd1; error msg; cmd2}}")
+						Expect(execute("cmd mac")).To(Equal(ERROR("msg")))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
+					})
+				})
+				Describe("`break`", func() {
+					It("should interrupt the call with `BREAK` code", func() {
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						evaluate("ensemble cmd {} {macro mac {} {cmd1; break; cmd2}}")
+						Expect(execute("cmd mac")).To(Equal(BREAK(NIL)))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
+					})
+				})
+				Describe("`continue`", func() {
+					It("should interrupt the call with `CONTINUE` code", func() {
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {} {set var val2}")
+						evaluate("ensemble cmd {} {macro mac {} {cmd1; continue; cmd2}}")
+						Expect(execute("cmd mac")).To(Equal(CONTINUE(NIL)))
+						Expect(evaluate("get var")).To(Equal(STR("val1")))
+					})
+				})
 			})
 
 			Describe("Exceptions", func() {
