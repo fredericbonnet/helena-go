@@ -279,12 +279,12 @@ var _ = Describe("Helena procedures", func() {
 				Expect(rootScope.Context.Commands["cmd2"]).To(BeNil())
 			})
 			It("should evaluate from their parent scope", func() {
-				// evaluate("closure cls {} {set var val}")
-				// evaluate("proc cmd {} {cls}")
-				// Expect(
-				// 	evaluate("[scope {closure cls {} {set var val2}}] eval {cmd}"),
-				// ).To(Equal(STR("val")))
-				// Expect(evaluate("get var")).To(Equal(STR("val")))
+				evaluate("closure cls {} {set var val}")
+				evaluate("proc cmd {} {cls}")
+				Expect(
+					evaluate("[scope {closure cls {} {set var val2}}] eval {cmd}"),
+				).To(Equal(STR("val")))
+				Expect(evaluate("get var")).To(Equal(STR("val")))
 			})
 			It("should access external commands", func() {
 				evaluate("proc cmd {} {idem val}")

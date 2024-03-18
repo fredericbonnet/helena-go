@@ -408,11 +408,11 @@ var _ = Describe("Helena ensembles", func() {
 						Expect(evaluate("[cmd] call mac")).To(Equal(STR("val")))
 					})
 					It("should evaluate macros in the caller scope", func() {
-						// evaluate("ensemble cmd {} {macro mac {} {let cst val}}")
-						// evaluate("[cmd] call mac")
-						// Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val")))
-						// evaluate("scope scp {[cmd] call mac}")
-						// Expect(evaluate("[scp] eval {get cst}")).To(Equal(STR("val")))
+						evaluate("ensemble cmd {} {macro mac {} {let cst val}}")
+						evaluate("[cmd] call mac")
+						Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val")))
+						evaluate("scope scp {[cmd] call mac}")
+						Expect(evaluate("[scp] eval {get cst}")).To(Equal(STR("val")))
 					})
 					It("should evaluate ensemble closures in ensemble scope", func() {
 						evaluate("ensemble cmd {} {closure cls {} {let cst val}}")
@@ -620,11 +620,11 @@ var _ = Describe("Helena ensembles", func() {
 				))
 			})
 			It("should evaluate subcommand in the caller scope", func() {
-				// evaluate("ensemble cmd {} {macro mac {} {let cst val}}")
-				// evaluate("cmd mac")
-				// Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val")))
-				// evaluate("scope scp {cmd mac}")
-				// Expect(evaluate("[scp] eval {get cst}")).To(Equal(STR("val")))
+				evaluate("ensemble cmd {} {macro mac {} {let cst val}}")
+				evaluate("cmd mac")
+				Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val")))
+				evaluate("scope scp {cmd mac}")
+				Expect(evaluate("[scp] eval {get cst}")).To(Equal(STR("val")))
 			})
 			It("should work recursively", func() {
 				evaluate(

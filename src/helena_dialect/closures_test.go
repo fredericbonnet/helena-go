@@ -288,27 +288,27 @@ var _ = Describe("Helena closures", func() {
 					Expect(rootScope.Context.Variables["var"]).To(Equal(STR("val2")))
 					Expect(rootScope.Context.Commands["cmd2"]).NotTo(BeNil())
 				})
-				//         Specify("child scope", func() {
-				//           evaluate(
-				//             "closure cmd {} {let cst val1; set var val2; macro cmd2 {} {idem val3}}"
-				//           );
-				//           evaluate("scope scp {cmd}");
-				//           Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val1"));
-				//           Expect(rootScope.Context.Variables["var"]).To(Equal(STR("val2"));
-				//           Expect(rootScope.Context.Commands["cmd2"]).NotTo(BeNil())
-				//         });
-				//         Specify("scoped closure", func() {
-				//           evaluate(
-				//             "scope scp1 {set cmd [closure {} {let cst val1; set var val2; macro cmd2 {} {idem val3}}]}"
-				//           );
-				//           evaluate("scope scp2 {[[scp1 eval {get cmd}]]}");
-				//           Expect(evaluate("scp1 eval {get cst}")).To(Equal(STR("val1"));
-				//           Expect(evaluate("scp1 eval {get var}")).To(Equal(STR("val2"));
-				//           Expect(evaluate("scp1 eval {cmd2}")).To(Equal(STR("val3"));
-				//           Expect(execute("scp2 eval {get cst}").Code).To(Equal(core.ResultCode_ERROR);
-				//           Expect(execute("scp2 eval {get var}").Code).To(Equal(core.ResultCode_ERROR);
-				//           Expect(execute("scp2 eval {cmd2}").Code).To(Equal(core.ResultCode_ERROR);
-				//         });
+				Specify("child scope", func() {
+					evaluate(
+						"closure cmd {} {let cst val1; set var val2; macro cmd2 {} {idem val3}}",
+					)
+					evaluate("scope scp {cmd}")
+					Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val1")))
+					Expect(rootScope.Context.Variables["var"]).To(Equal(STR("val2")))
+					Expect(rootScope.Context.Commands["cmd2"]).NotTo(BeNil())
+				})
+				Specify("scoped closure", func() {
+					evaluate(
+						"scope scp1 {set cmd [closure {} {let cst val1; set var val2; macro cmd2 {} {idem val3}}]}",
+					)
+					evaluate("scope scp2 {[[scp1 eval {get cmd}]]}")
+					Expect(evaluate("scp1 eval {get cst}")).To(Equal(STR("val1")))
+					Expect(evaluate("scp1 eval {get var}")).To(Equal(STR("val2")))
+					Expect(evaluate("scp1 eval {cmd2}")).To(Equal(STR("val3")))
+					Expect(execute("scp2 eval {get cst}").Code).To(Equal(core.ResultCode_ERROR))
+					Expect(execute("scp2 eval {get var}").Code).To(Equal(core.ResultCode_ERROR))
+					Expect(execute("scp2 eval {cmd2}").Code).To(Equal(core.ResultCode_ERROR))
+				})
 			})
 		})
 
