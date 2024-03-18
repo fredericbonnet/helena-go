@@ -294,10 +294,10 @@ var _ = Describe("Helena basic commands", func() {
 			It("should return the result of the last command evaluated in `body`", func() {
 				Expect(execute("eval {idem val1; idem val2}")).To(Equal(OK(STR("val2"))))
 			})
-			// It("should evaluate `body` in the current scope", func() {
-			// 	evaluate("eval {let var val}")
-			// 	Expect(evaluate("get var")).To(Equal(STR("val")))
-			// })
+			It("should evaluate `body` in the current scope", func() {
+				evaluate("eval {let var val}")
+				Expect(evaluate("get var")).To(Equal(STR("val")))
+			})
 			It("should accept tuple `body` arguments", func() {
 				Expect(evaluate("eval (idem val)")).To(Equal(STR("val")))
 			})
@@ -346,10 +346,10 @@ var _ = Describe("Helena basic commands", func() {
 		Describe("Control flow", func() {
 			Describe("`return`", func() {
 				It("should interrupt the body with `RETURN` code", func() {
-					// Expect(
-					// 	execute("eval {set var val1; return; set var val2}").Code,
-					// ).To(Equal(core.ResultCode_RETURN))
-					// Expect(evaluate("get var")).To(Equal(STR("val1")))
+					Expect(
+						execute("eval {set var val1; return; set var val2}").Code,
+					).To(Equal(core.ResultCode_RETURN))
+					Expect(evaluate("get var")).To(Equal(STR("val1")))
 				})
 				It("should return passed value", func() {
 					Expect(execute("eval {return val}")).To(Equal(RETURN(STR("val"))))
@@ -357,10 +357,10 @@ var _ = Describe("Helena basic commands", func() {
 			})
 			Describe("`tailcall`", func() {
 				It("should interrupt the body with `RETURN` code", func() {
-					// Expect(
-					// 	execute("eval {set var val1; tailcall {}; set var val2}").Code,
-					// ).To(Equal(core.ResultCode_RETURN))
-					// Expect(evaluate("get var")).To(Equal(STR("val1")))
+					Expect(
+						execute("eval {set var val1; tailcall {}; set var val2}").Code,
+					).To(Equal(core.ResultCode_RETURN))
+					Expect(evaluate("get var")).To(Equal(STR("val1")))
 				})
 				It("should return tailcall result", func() {
 					Expect(execute("eval {tailcall {idem val}}")).To(Equal(
@@ -368,53 +368,53 @@ var _ = Describe("Helena basic commands", func() {
 					))
 				})
 			})
-			// Describe("`yield`", func() {
-			// 	It("should interrupt the body with `YIELD` code", func() {
-			// 		Expect(
-			// 			execute("eval {set var val1; yield; set var val2}").Code,
-			// 		).To(Equal(core.ResultCode_YIELD))
-			// 		Expect(evaluate("get var")).To(Equal(STR("val1")))
-			// 	})
-			// 	It("should provide a resumable state", func() {
-			// 		process := rootScope.PrepareScript(
-			// 			*parse("eval {set var val1; set var _[yield val2]_}"),
-			// 		)
+			Describe("`yield`", func() {
+				It("should interrupt the body with `YIELD` code", func() {
+					Expect(
+						execute("eval {set var val1; yield; set var val2}").Code,
+					).To(Equal(core.ResultCode_YIELD))
+					Expect(evaluate("get var")).To(Equal(STR("val1")))
+				})
+				It("should provide a resumable state", func() {
+					process := rootScope.PrepareScript(
+						*parse("eval {set var val1; set var _[yield val2]_}"),
+					)
 
-			// 		result := process.Run()
-			// 		Expect(result.Code).To(Equal(core.ResultCode_YIELD))
-			// 		Expect(result.Value).To(Equal(STR("val2")))
-			// 		Expect(evaluate("get var")).To(Equal(STR("val1")))
+					result := process.Run()
+					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+					Expect(result.Value).To(Equal(STR("val2")))
+					Expect(evaluate("get var")).To(Equal(STR("val1")))
 
-			// 		process.YieldBack(STR("val3"))
-			// 		result = process.Run()
-			// 		Expect(result).To(Equal(OK(STR("_val3_"))))
-			// 		Expect(evaluate("get var")).To(Equal(STR("_val3_")))
-			// 	})
-			// })
-			//       Describe("`error`", func() {
-			//         It("should interrupt the body with `ERROR` code", func() {
-			//           Expect(
-			//             execute("eval {set var val1; error msg; set var val2}")
-			//           ).To(Equal(ERROR("msg"));
-			//           Expect(evaluate("get var")).To(Equal(STR("val1"));
-			//         });
-			//       });
-			//       Describe("`break`", func() {
-			//         It("should interrupt the body with `BREAK` code", func() {
-			//           Expect(execute("eval {set var val1; break; set var val2}")).To(Equal(
-			//             BREAK()
-			//           );
-			//           Expect(evaluate("get var")).To(Equal(STR("val1"));
-			//         });
-			//       });
-			//       Describe("`continue`", func() {
-			//         It("should interrupt the body with `CONTINUE` code", func() {
-			//           Expect(execute("eval {set var val1; continue; set var val2}")).To(Equal(
-			//             CONTINUE()
-			//           );
-			//           Expect(evaluate("get var")).To(Equal(STR("val1"));
-			//         });
-			//       });
+					process.YieldBack(STR("val3"))
+					result = process.Run()
+					Expect(result).To(Equal(OK(STR("_val3_"))))
+					Expect(evaluate("get var")).To(Equal(STR("_val3_")))
+				})
+			})
+			Describe("`error`", func() {
+				It("should interrupt the body with `ERROR` code", func() {
+					Expect(
+						execute("eval {set var val1; error msg; set var val2}"),
+					).To(Equal(ERROR("msg")))
+					Expect(evaluate("get var")).To(Equal(STR("val1")))
+				})
+			})
+			Describe("`break`", func() {
+				It("should interrupt the body with `BREAK` code", func() {
+					Expect(execute("eval {set var val1; break; set var val2}")).To(Equal(
+						BREAK(NIL),
+					))
+					Expect(evaluate("get var")).To(Equal(STR("val1")))
+				})
+			})
+			Describe("`continue`", func() {
+				It("should interrupt the body with `CONTINUE` code", func() {
+					Expect(execute("eval {set var val1; continue; set var val2}")).To(Equal(
+						CONTINUE(NIL),
+					))
+					Expect(evaluate("get var")).To(Equal(STR("val1")))
+				})
+			})
 		})
 	})
 
@@ -437,10 +437,10 @@ var _ = Describe("Helena basic commands", func() {
 						return OK(STR("this is a help string"))
 					},
 				}
-				// rootScope.setNamedConstant("cmd", new CommandValue(command));
+				rootScope.SetNamedConstant("cmd", core.NewCommandValue(command))
 				rootScope.RegisterNamedCommand("cmd", command)
 				Expect(evaluate("help cmd")).To(Equal(STR("this is a help string")))
-				// Expect(evaluate("help $cmd")).To(Equal(STR("this is a help string"));
+				Expect(evaluate("help $cmd")).To(Equal(STR("this is a help string")))
 			})
 		})
 
@@ -464,9 +464,9 @@ var _ = Describe("Helena basic commands", func() {
 						return OK(NIL)
 					},
 				}
-				// rootScope.setNamedConstant("cmd", new CommandValue(command));
+				rootScope.SetNamedConstant("cmd", core.NewCommandValue(command))
 				rootScope.RegisterNamedCommand("cmd", command)
-				// Expect(execute("help $cmd")).To(Equal(ERROR("no help for command"));
+				Expect(execute("help $cmd")).To(Equal(ERROR("no help for command")))
 				Expect(execute("help cmd")).To(Equal(ERROR(`no help for command "cmd"`)))
 			})
 		})
