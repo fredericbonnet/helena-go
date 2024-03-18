@@ -453,21 +453,21 @@ var _ = Describe("Helena ensembles", func() {
 								Expect(evaluate("get var")).To(Equal(STR("val1")))
 							})
 							It("should provide a resumable state", func() {
-								// evaluate("closure cmd1 {} {set var val1}")
-								// evaluate("closure cmd2 {val} {set var $val}")
-								// evaluate(
-								// 	"ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}",
-								// )
-								// process := rootScope.PrepareScript(*parse("[cmd] call p"))
+								evaluate("closure cmd1 {} {set var val1}")
+								evaluate("closure cmd2 {val} {set var $val}")
+								evaluate(
+									"ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}",
+								)
+								process := rootScope.PrepareScript(*parse("[cmd] call p"))
 
-								// result := process.Run()
-								// Expect(result.Code).To(Equal(core.ResultCode_YIELD))
-								// Expect(result.Value).To(Equal(STR("val2")))
+								result := process.Run()
+								Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+								Expect(result.Value).To(Equal(STR("val2")))
 
-								// process.YieldBack(STR("val3"))
-								// result = process.Run()
-								// Expect(result).To(Equal(OK(STR("_val3_"))))
-								// Expect(evaluate("get var")).To(Equal(STR("_val3_")))
+								process.YieldBack(STR("val3"))
+								result = process.Run()
+								Expect(result).To(Equal(OK(STR("_val3_"))))
+								Expect(evaluate("get var")).To(Equal(STR("_val3_")))
 							})
 						})
 						Describe("`error`", func() {
@@ -805,19 +805,19 @@ var _ = Describe("Helena ensembles", func() {
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should provide a resumable state", func() {
-						//             evaluate("closure cmd1 {} {set var val1}");
-						//             evaluate("closure cmd2 {val} {set var $val}");
-						//             evaluate("ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}");
-						//             const process = rootScope.PrepareScript(parse("cmd p"));
+						evaluate("closure cmd1 {} {set var val1}")
+						evaluate("closure cmd2 {val} {set var $val}")
+						evaluate("ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}")
+						process := rootScope.PrepareScript(*parse("cmd p"))
 
-						//              result := process.Run();
-						//             Expect(result.Code).To(Equal(core.ResultCode_YIELD);
-						//             Expect(result.Value).To(Equal(STR("val2"));
+						result := process.Run()
+						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+						Expect(result.Value).To(Equal(STR("val2")))
 
-						//             process.YieldBack(STR("val3"));
-						//             result = process.Run();
-						//             Expect(result).To(Equal(OK(STR("_val3_")));
-						//             Expect(evaluate("get var")).To(Equal(STR("_val3_"));
+						process.YieldBack(STR("val3"))
+						result = process.Run()
+						Expect(result).To(Equal(OK(STR("_val3_"))))
+						Expect(evaluate("get var")).To(Equal(STR("_val3_")))
 					})
 				})
 				Describe("`error`", func() {
