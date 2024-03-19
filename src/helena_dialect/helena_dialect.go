@@ -42,7 +42,7 @@ func InitCommands(
 
 	//   registerNumberCommands(scope);
 	//   registerStringCommands(scope);
-	//   registerListCommands(scope);
+	registerListCommands(scope)
 	//   registerDictCommands(scope);
 	//   registerTupleCommands(scope);
 	//   registerScriptCommands(scope);

@@ -478,26 +478,24 @@ func ValueToValues(value Value) TypedResult[[]Value] {
 
 // Return index-th element in list
 func ListAt(values []Value, index Value) Result {
+	return ListAtOrDefault(values, index, nil)
+}
+
+// Return index-th element in list, or default value for out-of-range index
+func ListAtOrDefault(values []Value, index Value, def Value) Result {
 	result := ValueToInteger(index)
 	if result.Code != ResultCode_OK {
 		return result.AsResult()
 	}
 	i := result.Data
 	if i < 0 || i >= int64(len(values)) {
-		return ERROR(`index out of range "` + fmt.Sprint(i) + `"`)
+		if def != nil {
+			return OK(def)
+		} else {
+			return ERROR(`index out of range "` + fmt.Sprint(i) + `"`)
+		}
 	}
 	return OK(values[i])
-}
-
-// Return index-th element in list, or default value for out-of-range index
-func ListAtOrDefault(value string, index Value, def Value) Result {
-	//     const result = IntegerValue.toInteger(index);
-	//     if (result.Code != ResultCode_OK) return result;
-	//     const i = result.data;)
-	//     if (i < 0 || i >= value.length)
-	//       return def ? OK(def) : ERROR(`index out of range "${i}"`);
-	//     return OK(new StringValue(value[i]));
-	return ERROR("TODO")
 }
 
 func (value ListValue) SelectIndex(index Value) Result {
@@ -761,10 +759,10 @@ func (value QualifiedValue) Select(selector Selector) Result {
 // Convenience functions for primitive value creation
 //
 
-func BOOL(v bool) Value             { return NewBooleanValue(v) }
-func INT(v int64) Value             { return NewIntegerValue(v) }
-func REAL(v float64) Value          { return NewRealValue(v) }
-func STR(v string) Value            { return NewStringValue(v) }
-func LIST(v []Value) Value          { return NewListValue(v) }
-func DICT(v map[string]Value) Value { return NewDictionaryValue(v) }
-func TUPLE(v []Value) Value         { return NewTupleValue(v) }
+func BOOL(v bool) BooleanValue                { return NewBooleanValue(v) }
+func INT(v int64) IntegerValue                { return NewIntegerValue(v) }
+func REAL(v float64) RealValue                { return NewRealValue(v) }
+func STR(v string) StringValue                { return NewStringValue(v) }
+func LIST(v []Value) ListValue                { return NewListValue(v) }
+func DICT(v map[string]Value) DictionaryValue { return NewDictionaryValue(v) }
+func TUPLE(v []Value) TupleValue              { return NewTupleValue(v) }

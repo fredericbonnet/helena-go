@@ -16,7 +16,7 @@ func newEnsembleMetacommand(ensemble *EnsembleCommand) *ensembleMetacommand {
 
 var ensembleMetacommandSubcommands = NewSubcommands([]string{
 	"subcommands",
-	"command",
+	"eval",
 	"call",
 	"argspec",
 })

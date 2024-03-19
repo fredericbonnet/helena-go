@@ -297,14 +297,14 @@ var _ = Describe("Helena numbers", func() {
 		Describe("Subcommands", func() {
 			Describe("Introspection", func() {
 				Describe("`subcommands`", func() {
-					// It("should return list of subcommands", func() {
-					// 	Expect(evaluate("1 subcommands")).To(Equal(
-					// 		evaluate("list (subcommands + - * / == != > >= < <=)"),
-					// 	))
-					// 	Expect(evaluate("1.2 subcommands")).To(Equal(
-					// 		evaluate("list (subcommands + - * / == != > >= < <=)"),
-					// 	))
-					// })
+					It("should return list of subcommands", func() {
+						Expect(evaluate("1 subcommands")).To(Equal(
+							evaluate("list (subcommands + - * / == != > >= < <=)"),
+						))
+						Expect(evaluate("1.2 subcommands")).To(Equal(
+							evaluate("list (subcommands + - * / == != > >= < <=)"),
+						))
+					})
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {

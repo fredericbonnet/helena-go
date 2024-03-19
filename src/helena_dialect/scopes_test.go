@@ -237,9 +237,9 @@ var _ = Describe("Helena scopes", func() {
 		Describe("Subcommands", func() {
 			Describe("`subcommands`", func() {
 				It("should return list of subcommands", func() {
-					// Expect(evaluate("[scope {}] subcommands")).To(Equal(
-					// 	evaluate("list (subcommands eval call)"),
-					// ))
+					Expect(evaluate("[scope {}] subcommands")).To(Equal(
+						evaluate("list (subcommands eval call)"),
+					))
 				})
 
 				Describe("Exceptions", func() {

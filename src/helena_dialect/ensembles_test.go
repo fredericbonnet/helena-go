@@ -260,9 +260,9 @@ var _ = Describe("Helena ensembles", func() {
 			Describe("Subcommands", func() {
 				Describe("`subcommands`", func() {
 					It("should return list of subcommands", func() {
-						// Expect(evaluate("[ensemble {} {}] subcommands")).To(Equal(
-						// 	evaluate("list (subcommands eval call argspec)"),
-						// ))
+						Expect(evaluate("[ensemble {} {}] subcommands")).To(Equal(
+							evaluate("list (subcommands eval call argspec)"),
+						))
 					})
 
 					Describe("Exceptions", func() {
@@ -641,23 +641,23 @@ var _ = Describe("Helena ensembles", func() {
 						evaluate("ensemble cmd1 {} {}")
 						evaluate("ensemble cmd2 {a b} {}")
 					})
-					//           It("should return list of subcommands", func() {
-					//             Expect(evaluate("cmd1 subcommands")).To(Equal(
-					//               evaluate("list (subcommands)")
-					//             );
-					//             evaluate("[cmd1] eval {macro mac1 {} {}}");
-					//             Expect(evaluate("cmd1 subcommands")).To(Equal(
-					//               evaluate("list (subcommands mac1)")
-					//             );
+					It("should return list of subcommands", func() {
+						Expect(evaluate("cmd1 subcommands")).To(Equal(
+							evaluate("list (subcommands)"),
+						))
+						evaluate("[cmd1] eval {macro mac1 {} {}}")
+						Expect(evaluate("cmd1 subcommands")).To(Equal(
+							evaluate("list (subcommands mac1)"),
+						))
 
-					//             Expect(evaluate("cmd2 a b subcommands")).To(Equal(
-					//               evaluate("list (subcommands)")
-					//             );
-					//             evaluate("[cmd2] eval {macro mac2 {} {}}");
-					//             Expect(evaluate("cmd2 a b subcommands")).To(Equal(
-					//               evaluate("list (subcommands mac2)")
-					//             );
-					//           });
+						Expect(evaluate("cmd2 a b subcommands")).To(Equal(
+							evaluate("list (subcommands)"),
+						))
+						evaluate("[cmd2] eval {macro mac2 {} {}}")
+						Expect(evaluate("cmd2 a b subcommands")).To(Equal(
+							evaluate("list (subcommands mac2)"),
+						))
+					})
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {

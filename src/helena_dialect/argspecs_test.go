@@ -51,12 +51,12 @@ var _ = Describe("Helena argument handling", func() {
 					script: "argspec (a b c)",
 				})
 			})
-			// It("should convert lists to argspecs", func() {
-			// 	example(exampleSpec{
-			// 		script: "argspec [list {a b c}]",
-			// 		result: evaluate("argspec (a b c)"),
-			// 	})
-			// })
+			It("should convert lists to argspecs", func() {
+				example(exampleSpec{
+					script: "argspec [list {a b c}]",
+					result: evaluate("argspec (a b c)"),
+				})
+			})
 
 			Describe("Exceptions", func() {
 				Specify("invalid values", func() {
@@ -494,34 +494,34 @@ var _ = Describe("Helena argument handling", func() {
 				Describe("set", func() {
 					Describe("simple command", func() {
 						Specify("required", func() {
-							// evaluate("set args [argspec ( (list a) )]")
-							// Expect(execute("argspec $args set ((1 2 3))")).To(Equal(OK(NIL)))
-							// Expect(evaluate("get a")).To(Equal(evaluate("list (1 2 3)")))
-							// Expect(execute("argspec $args set (value)")).To(Equal(
-							// 	ERROR("invalid list"),
-							// ))
+							evaluate("set args [argspec ( (list a) )]")
+							Expect(execute("argspec $args set ((1 2 3))")).To(Equal(OK(NIL)))
+							Expect(evaluate("get a")).To(Equal(evaluate("list (1 2 3)")))
+							Expect(execute("argspec $args set (value)")).To(Equal(
+								ERROR("invalid list"),
+							))
 						})
 						Specify("optional", func() {
-							// evaluate("set args [argspec ( (list ?a) )]")
-							// Expect(execute("argspec $args set ()")).To(Equal(OK(NIL)))
-							// Expect(execute("get a")).To(Equal(
-							// 	ERROR(`cannot get "a": no such variable`),
-							// ))
-							// Expect(execute("argspec $args set ((1 2 3))")).To(Equal(OK(NIL)))
-							// Expect(evaluate("get a")).To(Equal(evaluate("list (1 2 3)")))
-							// Expect(execute("argspec $args set (value)")).To(Equal(
-							// 	ERROR("invalid list"),
-							// ))
+							evaluate("set args [argspec ( (list ?a) )]")
+							Expect(execute("argspec $args set ()")).To(Equal(OK(NIL)))
+							Expect(execute("get a")).To(Equal(
+								ERROR(`cannot get "a": no such variable`),
+							))
+							Expect(execute("argspec $args set ((1 2 3))")).To(Equal(OK(NIL)))
+							Expect(evaluate("get a")).To(Equal(evaluate("list (1 2 3)")))
+							Expect(execute("argspec $args set (value)")).To(Equal(
+								ERROR("invalid list"),
+							))
 						})
 						Specify("default", func() {
-							// evaluate("set args [argspec ( (list ?a ()) )]")
-							// Expect(execute("argspec $args set ()")).To(Equal(OK(NIL)))
-							// Expect(evaluate("get a")).To(Equal(evaluate("list ()")))
-							// Expect(execute("argspec $args set ((1 2 3))")).To(Equal(OK(NIL)))
-							// Expect(evaluate("get a")).To(Equal(evaluate("list (1 2 3)")))
-							// Expect(execute("argspec $args set (value)")).To(Equal(
-							// 	ERROR("invalid list"),
-							// ))
+							evaluate("set args [argspec ( (list ?a ()) )]")
+							Expect(execute("argspec $args set ()")).To(Equal(OK(NIL)))
+							Expect(evaluate("get a")).To(Equal(evaluate("list ()")))
+							Expect(execute("argspec $args set ((1 2 3))")).To(Equal(OK(NIL)))
+							Expect(evaluate("get a")).To(Equal(evaluate("list (1 2 3)")))
+							Expect(execute("argspec $args set (value)")).To(Equal(
+								ERROR("invalid list"),
+							))
 						})
 					})
 					Describe("tuple prefix", func() {
@@ -628,11 +628,12 @@ var _ = Describe("Helena argument handling", func() {
 					))
 				})
 
-				//         It("should return list of subcommands", func() {
-				//           Expect(evaluate("argspec {} subcommands")).To(Equal(
-				//             evaluate("list (subcommands usage set)")
-				//           );
-				//         });
+				It("should return list of subcommands", func() {
+					// Expect(evaluate("argspec {} subcommands")).To(Equal(
+					// 	TODO specify order?
+					// 	evaluate("list (subcommands usage set)"),
+					// ))
+				})
 
 				Describe("Exceptions", func() {
 					Specify("wrong arity", func() {

@@ -101,7 +101,7 @@ func (value ArgspecValue) ApplyArguments(
 			i += remainders
 		}
 		if arg.Guard != nil {
-			process := scope.PrepareTupleValue(core.TUPLE([]core.Value{arg.Guard, value}).(core.TupleValue))
+			process := scope.PrepareTupleValue(core.TUPLE([]core.Value{arg.Guard, value}))
 			result := process.Run()
 			// TODO handle YIELD?
 			if result.Code != core.ResultCode_OK {

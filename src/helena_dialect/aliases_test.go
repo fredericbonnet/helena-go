@@ -31,7 +31,7 @@ var _ = Describe("Helena aliases", func() {
 		parser = &core.Parser{}
 	}
 
-	//   const example = specifyExample(({ script }) => execute(script));
+	example := specifyExample(func(spec exampleSpec) core.Result { return execute(spec.script) })
 
 	BeforeEach(init)
 
@@ -118,51 +118,34 @@ var _ = Describe("Helena aliases", func() {
 					Expect(evaluate("get var")).To(Equal(STR("val")))
 				})
 
-				//   Describe("Examples", func() {
-				//     example("Currying", {
-				//       doc: func() {
-				//         /**
-				//          * Thanks to leading tuple auto-expansion, it is very simple to
-				//          * create curried commands by bundling a command name and its
-				//          * arguments into a tuple. Here we create a new command `double`
-				//          * by currying the prefix multiplication operator `*` with 2:
-				//          */
-				//       },
-				//       script: `
-				//         alias double (* 2)
-				//         double 3
-				//       `,
-				//       result: INT(6),
-				//     });
-				//     example("Encapsulation", [
-				//       {
-				//         doc: func() {
-				//           /**
-				//            * Here we create a new command `mylist` by encapsulating a
-				//            * list value passed to the `list` command; we then can call
-				//            * `list` subcommands without having to provide the value:
-				//            */
-				//         },
-				//         script: `
-				//           alias mylist (list (1 2 3))
-				//           mylist length
-				//         `,
-				//         result: INT(3),
-				//       },
-				//       {
-				//         doc: func() {
-				//           /**
-				//            * A nice side effect of how `list` works is that calling the
-				//            * alias with no argument will return the encapsulated value:
-				//            */
-				//         },
-				//         script: `
-				//           mylist
-				//         `,
-				//         result: LIST([STR("1"), STR("2"), STR("3")]),
-				//       },
-				//     ]);
-				//   });
+				Describe("Examples", func() {
+					Specify("Currying", func() {
+						example(exampleSpec{
+							script: `
+								alias double (* 2)
+								double 3
+							`,
+							result: INT(6),
+						})
+					})
+					Specify("Encapsulation", func() {
+						example([]exampleSpec{
+							{
+								script: `
+									alias mylist (list (1 2 3))
+									mylist length
+								`,
+								result: INT(3),
+							},
+							{
+								script: `
+									mylist
+								`,
+								result: LIST([]core.Value{STR("1"), STR("2"), STR("3")}),
+							},
+						})
+					})
+				})
 			})
 
 			Describe("Control flow", func() {
@@ -277,42 +260,33 @@ var _ = Describe("Helena aliases", func() {
 				Expect(evaluate("get var")).To(Equal(STR("val")))
 			})
 
-			// Describe("Examples", func() {
-			//   example("Calling alias through its wrapped metacommand", [
-			//     {
-			//       doc: func() {
-			//         /**
-			//          * Here we alias the command `list` and call it through the
-			//          * alias metacommand:
-			//          */
-			//       },
-			//       script: `
-			//         set cmd [alias foo list]
-			//         [$cmd] (1 2 3)
-			//       `,
-			//       result: LIST([STR("1"), STR("2"), STR("3")]),
-			//     },
-			//     {
-			//       doc: func() {
-			//         /**
-			//          * This behaves the same as calling the alias directly:
-			//          */
-			//       },
-			//       script: `
-			//         foo (1 2 3)
-			//       `,
-			//       result: LIST([STR("1"), STR("2"), STR("3")]),
-			//     },
-			//   ]);
-			// });
+			Describe("Examples", func() {
+				Specify("Calling alias through its wrapped metacommand", func() {
+					example([]exampleSpec{
+						{
+							script: `
+								set cmd [alias foo list]
+								[$cmd] (1 2 3)
+							`,
+							result: LIST([]core.Value{STR("1"), STR("2"), STR("3")}),
+						},
+						{
+							script: `
+								foo (1 2 3)
+							`,
+							result: LIST([]core.Value{STR("1"), STR("2"), STR("3")}),
+						},
+					})
+				})
+			})
 
 			Describe("Subcommands", func() {
 				Describe("`subcommands`", func() {
-					// It("should return list of subcommands", func() {
-					// 	Expect(evaluate("[alias cmd idem] subcommands")).To(Equal(
-					// 		evaluate("list (subcommands command)"),
-					// 	))
-					// })
+					It("should return list of subcommands", func() {
+						Expect(evaluate("[alias cmd idem] subcommands")).To(Equal(
+							evaluate("list (subcommands command)"),
+						))
+					})
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
@@ -324,19 +298,15 @@ var _ = Describe("Helena aliases", func() {
 				})
 
 				Describe("`command`", func() {
-					// example("should return the aliased command", {
-					//   doc: func() {
-					//     /**
-					//      * This will return the value of the `command` argument at alias
-					//      * creation time.
-					//      */
-					//   },
-					//   script: `
-					//     set cmd [alias cmd (idem val)]
-					//     $cmd command
-					//   `,
-					//   result: TUPLE([STR("idem"), STR("val")]),
-					// });
+					Specify("should return the aliased command", func() {
+						example(exampleSpec{
+							script: `
+								set cmd [alias cmd (idem val)]
+								$cmd command
+							`,
+							result: TUPLE([]core.Value{STR("idem"), STR("val")}),
+						})
+					})
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {

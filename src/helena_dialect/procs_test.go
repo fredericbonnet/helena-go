@@ -122,9 +122,9 @@ var _ = Describe("Helena procedures", func() {
 			Describe("Subcommands", func() {
 				Describe("`subcommands`", func() {
 					It("should return list of subcommands", func() {
-						//    Expect(evaluate("[proc {} {}] subcommands")).To(Equal(
-						// 	 evaluate("list (subcommands argspec)"),
-						//    ))
+						Expect(evaluate("[proc {} {}] subcommands")).To(Equal(
+							evaluate("list (subcommands argspec)"),
+						))
 					})
 
 					Describe("Exceptions", func() {
@@ -239,10 +239,6 @@ var _ = Describe("Helena procedures", func() {
 
 			Describe("Exceptions", func() {
 				Specify("wrong arity", func() {
-					/**
-					 * The procedure will return an error message with usage when given
-					 * the wrong number of arguments.
-					 */
 					evaluate("proc cmd {a} {}")
 					Expect(execute("cmd")).To(Equal(
 						ERROR(`wrong # args: should be "cmd a"`),
