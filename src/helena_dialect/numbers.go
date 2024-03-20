@@ -153,43 +153,53 @@ func floatToValue(f float64) core.Value {
 	}
 }
 
-// class IntCommand implements Command {
-//   scope: Scope;
-//   ensemble: EnsembleCommand;
-//   constructor(scope: Scope) {
-//     this.scope = new Scope(scope);
-//     const { data: argspec } = ArgspecValue.fromValue(LIST([STR("value")]));
-//     this.ensemble = new EnsembleCommand(this.scope, argspec);
-//   }
-//   execute(args: Value[], scope: Scope): Result {
-//     if (len(args) == 2) return IntegerValue.fromValue(args[1]);
-//     return this.ensemble.execute(args, scope);
-//   }
-//   help(args) {
-//     return this.ensemble.help(args);
-//   }
-// }
+type intCommand struct {
+	scope    *Scope
+	ensemble *EnsembleCommand
+}
 
-// class RealCommand implements Command {
-//   scope: Scope;
-//   ensemble: EnsembleCommand;
-//   constructor(scope: Scope) {
-//     this.scope = new Scope(scope);
-//     const { data: argspec } = ArgspecValue.fromValue(LIST([STR("value")]));
-//     this.ensemble = new EnsembleCommand(this.scope, argspec);
-//   }
-//   execute(args: Value[], scope: Scope): Result {
-//     if (len(args) == 2) return RealValue.fromValue(args[1]);
-//     return this.ensemble.execute(args, scope);
-//   }
-//   help(args) {
-//     return this.ensemble.help(args);
-//   }
-// }
+func newIntCommand(scope *Scope) *intCommand {
+	cmd := &intCommand{}
+	cmd.scope = NewScope(scope, false)
+	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	cmd.ensemble = NewEnsembleCommand(cmd.scope, argspec)
+	return cmd
+}
+func (cmd *intCommand) Execute(args []core.Value, context any) core.Result {
+	if len(args) == 2 {
+		return core.IntegerValueFromValue(args[1]).AsResult()
+	}
+	return cmd.ensemble.Execute(args, context)
+}
+func (cmd *intCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
+	return cmd.ensemble.Help(args, options, context)
+}
 
-// export function registerNumberCommands(scope: Scope) {
-//   const intCommand = new IntCommand(scope);
-//   scope.registerNamedCommand("int", intCommand);
-//   const realCommand = new RealCommand(scope);
-//   scope.registerNamedCommand("real", realCommand);
-// }
+type realCommand struct {
+	scope    *Scope
+	ensemble *EnsembleCommand
+}
+
+func newRealCommand(scope *Scope) *realCommand {
+	cmd := &realCommand{}
+	cmd.scope = NewScope(scope, false)
+	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	cmd.ensemble = NewEnsembleCommand(cmd.scope, argspec)
+	return cmd
+}
+func (cmd *realCommand) Execute(args []core.Value, context any) core.Result {
+	if len(args) == 2 {
+		return core.RealValueFromValue(args[1]).AsResult()
+	}
+	return cmd.ensemble.Execute(args, context)
+}
+func (cmd *realCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
+	return cmd.ensemble.Help(args, options, context)
+}
+
+func registerNumberCommands(scope *Scope) {
+	intCommand := newIntCommand(scope)
+	scope.RegisterNamedCommand("int", intCommand)
+	realCommand := newRealCommand(scope)
+	scope.RegisterNamedCommand("real", realCommand)
+}

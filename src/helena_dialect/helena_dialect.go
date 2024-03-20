@@ -40,7 +40,7 @@ func InitCommands(
 	//   registerLogicCommands(scope);
 	//   registerControlCommands(scope);
 
-	//   registerNumberCommands(scope);
+	registerNumberCommands(scope)
 	//   registerStringCommands(scope);
 	registerListCommands(scope)
 	//   registerDictCommands(scope);
