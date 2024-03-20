@@ -401,27 +401,25 @@ func valueToString(value Value, def *string) TypedResult[string] {
 
 // Return index-th string character as StringValue
 func StringAt(value string, index Value) Result {
+	return StringAtOrDefault(value, index, nil)
+}
+
+// Return index-th string character as StringValue, or default value for
+// out-of-range index
+func StringAtOrDefault(value string, index Value, def Value) Result {
 	result := ValueToInteger(index)
 	if result.Code != ResultCode_OK {
 		return result.AsResult()
 	}
 	i := result.Data
 	if i < 0 || i >= int64(len(value)) {
-		return ERROR(`index out of range "` + fmt.Sprint(i) + `"`)
+		if def != nil {
+			return OK(def)
+		} else {
+			return ERROR(`index out of range "` + fmt.Sprint(i) + `"`)
+		}
 	}
 	return OK(StringValue{string(value[i])})
-}
-
-// Return index-th string character as StringValue, or default value for
-// out-of-range index
-func StringAtOrDefault(value string, index Value, def Value) Result {
-	//     const result = IntegerValue.toInteger(index);
-	//     if (result.Code != ResultCode_OK) return result;
-	//     const i = result.data;)
-	//     if (i < 0 || i >= value.length)
-	//       return def ? OK(def) : ERROR(`index out of range "${i}"`);
-	//     return OK(new StringValue(value[i]));
-	return ERROR("TODO")
 }
 
 func (value StringValue) Display(_ DisplayFunction) string {

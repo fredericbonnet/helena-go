@@ -41,7 +41,7 @@ func InitCommands(
 	//   registerControlCommands(scope);
 
 	registerNumberCommands(scope)
-	//   registerStringCommands(scope);
+	registerStringCommands(scope)
 	registerListCommands(scope)
 	//   registerDictCommands(scope);
 	//   registerTupleCommands(scope);

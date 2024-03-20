@@ -575,10 +575,10 @@ var _ = Describe("Helena ensembles", func() {
 				Expect(evaluate("cmd foo bar")).To(Equal(TUPLE([]core.Value{STR("foo"), STR("bar")})))
 			})
 			It("should evaluate argument guards", func() {
-				// evaluate("ensemble cmd {(int a) (list b)} {}")
-				// Expect(evaluate("cmd 1 (foo bar)")).To(Equal(
-				// 	TUPLE([]core.Value{INT(1), LIST([]core.Value{STR("foo"), STR("bar")})}),
-				// ))
+				evaluate("ensemble cmd {(int a) (list b)} {}")
+				Expect(evaluate("cmd 1 (foo bar)")).To(Equal(
+					TUPLE([]core.Value{INT(1), LIST([]core.Value{STR("foo"), STR("bar")})}),
+				))
 			})
 		})
 
@@ -590,9 +590,9 @@ var _ = Describe("Helena ensembles", func() {
 				))
 			})
 			Specify("failed guards", func() {
-				// evaluate("ensemble cmd {(int a) (list b)} {}");
-				// Expect(execute("cmd a ()")).To(Equal(ERROR('invalid integer "a"'));
-				// Expect(execute("cmd 1 a")).To(Equal(ERROR("invalid list"));
+				evaluate("ensemble cmd {(int a) (list b)} {}")
+				Expect(execute("cmd a ()")).To(Equal(ERROR(`invalid integer "a"`)))
+				Expect(execute("cmd 1 a")).To(Equal(ERROR("invalid list")))
 			})
 		})
 
@@ -606,12 +606,12 @@ var _ = Describe("Helena ensembles", func() {
 				Expect(evaluate("cmd foo bar opt")).To(Equal(STR("foobar")))
 			})
 			It("should apply guards to passed ensemble arguments", func() {
-				// evaluate(
-				// 	"ensemble cmd {(int a) (list b)} {macro opt {a b} {idem ($a $b)}}",
-				// )
-				// Expect(evaluate("cmd 1 (foo bar) opt")).To(Equal(
-				// 	TUPLE([]core.Value{INT(1), LIST([]core.Value{STR("foo"), STR("bar")})}),
-				// ))
+				evaluate(
+					"ensemble cmd {(int a) (list b)} {macro opt {a b} {idem ($a $b)}}",
+				)
+				Expect(evaluate("cmd 1 (foo bar) opt")).To(Equal(
+					TUPLE([]core.Value{INT(1), LIST([]core.Value{STR("foo"), STR("bar")})}),
+				))
 			})
 			It("should pass remaining arguments to ensemble subcommand", func() {
 				evaluate("ensemble cmd {a b} {macro opt {a b c d} {idem $a$b$c$d}}")
