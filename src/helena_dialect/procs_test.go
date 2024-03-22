@@ -324,10 +324,10 @@ var _ = Describe("Helena procedures", func() {
 				Expect(evaluate("cmd value")).To(Equal(FALSE))
 			})
 			It("should evaluate in the proc parent scope", func() {
-				// evaluate("macro guard {result} {idem root}")
-				// evaluate("proc cmd {} (guard {true})")
-				// evaluate("scope scp {macro guard {result} {idem scp}}")
-				// Expect(evaluate("scp eval {cmd}")).To(Equal(STR("root")))
+				evaluate("macro guard {result} {idem root}")
+				evaluate("proc cmd {} (guard {true})")
+				evaluate("scope scp {macro guard {result} {idem scp}}")
+				Expect(evaluate("scp eval {cmd}")).To(Equal(STR("root")))
 			})
 			Describe("Exceptions", func() {
 				Specify("empty body specifier", func() {

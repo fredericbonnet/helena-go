@@ -347,10 +347,10 @@ var _ = Describe("Helena macros", func() {
 				Expect(evaluate("cmd value")).To(Equal(FALSE))
 			})
 			It("should evaluate in the caller scope", func() {
-				// evaluate("macro guard {result} {idem root}")
-				// evaluate("macro cmd {} (guard {true})")
-				// evaluate("scope scp {macro guard {result} {idem scp}}")
-				// Expect(evaluate("scp eval {cmd}")).To(Equal(STR("scp")))
+				evaluate("macro guard {result} {idem root}")
+				evaluate("macro cmd {} (guard {true})")
+				evaluate("scope scp {macro guard {result} {idem scp}}")
+				Expect(evaluate("scp eval {cmd}")).To(Equal(STR("scp")))
 			})
 
 			Describe("Exceptions", func() {

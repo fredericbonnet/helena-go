@@ -331,10 +331,10 @@ var _ = Describe("Helena closures", func() {
 				Expect(evaluate("cmd value")).To(Equal(FALSE))
 			})
 			It("should evaluate in the closure parent scope", func() {
-				// evaluate("macro guard {result} {idem root}")
-				// evaluate("closure cmd {} (guard {true})")
-				// evaluate("scope scp {macro guard {result} {idem scp}}")
-				// Expect(evaluate("scp eval {cmd}")).To(Equal(STR("root")))
+				evaluate("macro guard {result} {idem root}")
+				evaluate("closure cmd {} (guard {true})")
+				evaluate("scope scp {macro guard {result} {idem scp}}")
+				Expect(evaluate("scp eval {cmd}")).To(Equal(STR("root")))
 			})
 
 			Describe("Exceptions", func() {
