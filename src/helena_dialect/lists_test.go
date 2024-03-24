@@ -761,30 +761,30 @@ var _ = Describe("Helena lists", func() {
 						},
 					})
 				})
-				// Specify("Using `foreach` to implement a `includes` subcommand", func() {
-				// 	example([]exampleSpec{
-				// 		{
-				// 			script: `
-				// 				[list] eval {
-				// 					proc includes {haystack needle} {
-				// 						list $haystack foreach element {
-				// 							if [string $needle == $element] {return [true]}
-				// 						}
-				// 						return [false]
-				// 					}
-				// 				}
-				// 			`,
-				// 		},
-				// 		{
-				// 			script: "list (a b c) includes b",
-				// 			result: TRUE,
-				// 		},
-				// 		{
-				// 			script: "list (a b c) includes d",
-				// 			result: FALSE,
-				// 		},
-				// 	})
-				// })
+				Specify("Using `foreach` to implement a `includes` subcommand", func() {
+					example([]exampleSpec{
+						{
+							script: `
+								[list] eval {
+									proc includes {haystack needle} {
+										list $haystack foreach element {
+											if [string $needle == $element] {return [true]}
+										}
+										return [false]
+									}
+								}
+							`,
+						},
+						{
+							script: "list (a b c) includes b",
+							result: TRUE,
+						},
+						{
+							script: "list (a b c) includes d",
+							result: FALSE,
+						},
+					})
+				})
 			})
 		})
 	})
