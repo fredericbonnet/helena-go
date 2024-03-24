@@ -1074,48 +1074,48 @@ var _ = Describe("Helena control flow commands", func() {
 
 		Describe("without handler", func() {
 			Specify("`OK` code should return `(ok value)` tuple", func() {
-				// Expect(execute("catch {}")).To(Equal(execute("tuple (ok [])")))
-				// Expect(execute("catch {idem value}")).To(Equal(
-				// 	execute("tuple (ok value)"),
-				// ))
+				Expect(execute("catch {}")).To(Equal(execute("tuple (ok [])")))
+				Expect(execute("catch {idem value}")).To(Equal(
+					execute("tuple (ok value)"),
+				))
 			})
 			Specify("`RETURN` code should return `(return value)` tuple", func() {
-				// Expect(execute("catch {return}")).To(Equal(execute("tuple (return [])")))
-				// Expect(execute("catch {return value}")).To(Equal(
-				// 	execute("tuple (return value)"),
-				// ))
+				Expect(execute("catch {return}")).To(Equal(execute("tuple (return [])")))
+				Expect(execute("catch {return value}")).To(Equal(
+					execute("tuple (return value)"),
+				))
 			})
 			Specify("`YIELD` code should return `(yield value)` tuple", func() {
-				// Expect(execute("catch {yield}")).To(Equal(execute("tuple (yield [])")))
-				// Expect(execute("catch {yield}")).To(Equal(execute("tuple (yield [])")))
-				// Expect(execute("catch {yield value}")).To(Equal(
-				// 	execute("tuple (yield value)"),
-				// ))
+				Expect(execute("catch {yield}")).To(Equal(execute("tuple (yield [])")))
+				Expect(execute("catch {yield}")).To(Equal(execute("tuple (yield [])")))
+				Expect(execute("catch {yield value}")).To(Equal(
+					execute("tuple (yield value)"),
+				))
 			})
 			Specify("`ERROR` code should return `(error message)` tuple", func() {
-				// Expect(execute("catch {error value}")).To(Equal(
-				// 	execute("tuple (error value)"),
-				// ))
-				// Expect(execute("catch {error value}")).To(Equal(
-				// 	execute("tuple (error value)"),
-				// ))
+				Expect(execute("catch {error value}")).To(Equal(
+					execute("tuple (error value)"),
+				))
+				Expect(execute("catch {error value}")).To(Equal(
+					execute("tuple (error value)"),
+				))
 			})
 			Specify("`BREAK` code should return `(break)` tuple", func() {
-				// Expect(execute("catch {break}")).To(Equal(execute("tuple (break)")))
+				Expect(execute("catch {break}")).To(Equal(execute("tuple (break)")))
 			})
 			Specify("`CONTINUE` code should return `(continue)` tuple", func() {
-				// Expect(execute("catch {continue}")).To(Equal(execute("tuple (continue)")))
+				Expect(execute("catch {continue}")).To(Equal(execute("tuple (continue)")))
 			})
 			Specify("arbitrary errors", func() {
-				// Expect(execute("catch {idem}")).To(Equal(
-				// 	execute(`tuple (error "wrong # args: should be \\"idem value\\"")`),
-				// ))
-				// Expect(execute("catch {get var}")).To(Equal(
-				// 	execute(`tuple (error "cannot get \\"var\\": no such variable")`),
-				// ))
-				// Expect(execute("catch {cmd a b}")).To(Equal(
-				// 	execute(`tuple (error "cannot resolve command \\"cmd\\"")`),
-				// ))
+				Expect(execute("catch {idem}")).To(Equal(
+					execute(`tuple (error "wrong # args: should be \"idem value\"")`),
+				))
+				Expect(execute("catch {get var}")).To(Equal(
+					execute(`tuple (error "cannot get \"var\": no such variable")`),
+				))
+				Expect(execute("catch {cmd a b}")).To(Equal(
+					execute(`tuple (error "cannot resolve command \"cmd\"")`),
+				))
 			})
 		})
 
