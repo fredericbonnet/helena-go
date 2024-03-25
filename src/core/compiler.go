@@ -109,11 +109,11 @@ func (compiler Compiler) CompileSentence(sentence Sentence) *Program {
 }
 func (compiler Compiler) emitSentence(program *Program, sentence Sentence) {
 	for _, word := range sentence.Words {
-		// if (word instanceof Word) {
-		compiler.emitWord(program, word)
-		// } else {
-		//   compiler.emitConstant(program, word);
-		// }
+		if word.Value == nil {
+			compiler.emitWord(program, word.Word)
+		} else {
+			compiler.emitConstant(program, word.Value)
+		}
 	}
 }
 

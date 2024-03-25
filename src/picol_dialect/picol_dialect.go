@@ -541,15 +541,15 @@ func valueToArray(value core.Value) core.TypedResult[[]core.Value] {
 			values := []core.Value{}
 			for _, sentence := range value.(core.ScriptValue).Script.Sentences {
 				for _, word := range sentence.Words {
-					//   if (word instanceof Word) {
-					result := evaluator.EvaluateWord(word)
-					if result.Code != core.ResultCode_OK {
-						return core.ResultAs[[]core.Value](result)
+					if word.Value == nil {
+						result := evaluator.EvaluateWord(word.Word)
+						if result.Code != core.ResultCode_OK {
+							return core.ResultAs[[]core.Value](result)
+						}
+						values = append(values, result.Value)
+					} else {
+						values = append(values, word.Value)
 					}
-					values = append(values, result.Value)
-					//   } else {
-					//     values.push(word);
-					//   }
 				}
 			}
 			return core.OK_T(core.NIL, values)

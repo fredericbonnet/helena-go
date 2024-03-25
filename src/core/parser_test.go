@@ -83,8 +83,8 @@ func toTree(script *Script) []MS {
 	for i, sentence := range script.Sentences {
 		words := make([]MW, len(sentence.Words))
 		for j, word := range sentence.Words {
-			morphemes := make([]MM, len(word.Morphemes))
-			for k, morpheme := range word.Morphemes {
+			morphemes := make([]MM, len(word.Word.Morphemes))
+			for k, morpheme := range word.Word.Morphemes {
 				morphemes[k] = mapMorpheme(morpheme)
 			}
 			words[j] = morphemes
@@ -271,9 +271,7 @@ var _ = Describe("Parser", func() {
 			})
 			Describe("string value", func() {
 				getBlock := func(script *Script, wordIndex uint) BlockMorpheme {
-					// (script.sentences[0].words[wordIndex] as Word)
-					//   .morphemes[0] as BlockMorpheme;
-					return script.Sentences[0].Words[wordIndex].Morphemes[0].(BlockMorpheme)
+					return script.Sentences[0].Words[wordIndex].Word.Morphemes[0].(BlockMorpheme)
 				}
 				Specify("empty", func() {
 					script := parse("{}")

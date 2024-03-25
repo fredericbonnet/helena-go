@@ -69,9 +69,9 @@ type sentenceNode struct {
 
 func (node sentenceNode) toSentence() Sentence {
 	sentence := Sentence{}
-	sentence.Words = make([]Word, len(node.words))
+	sentence.Words = make([]WordOrValue, len(node.words))
 	for i, word := range node.words {
-		sentence.Words[i] = word.toWord()
+		sentence.Words[i].Word = word.toWord()
 	}
 	return sentence
 }

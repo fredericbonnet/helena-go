@@ -77,7 +77,7 @@ var _ = Describe("CompilingEvaluator", func() {
 	}
 	firstSentence := func(script *Script) Sentence { return script.Sentences[0] }
 	firstWord := func(script *Script) Word {
-		return firstSentence(script).Words[0]
+		return firstSentence(script).Words[0].Word
 	}
 
 	BeforeEach(func() {

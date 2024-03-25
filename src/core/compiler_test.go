@@ -23,11 +23,11 @@ var _ = Describe("Compilation and execution", func() {
 	}
 	compileFirstWord := func(script *Script) *Program {
 		word := script.Sentences[0].Words[0]
-		//     if (word instanceof Word) {
-		return compiler.CompileWord(word)
-		//     } else {
-		// return compiler.CompileConstant(word)
-		//     }
+		if word.Value == nil {
+			return compiler.CompileWord(word.Word)
+		} else {
+			return compiler.CompileConstant(word.Value)
+		}
 	}
 
 	//   const executionModes = [
@@ -181,9 +181,7 @@ var _ = Describe("Compilation and execution", func() {
 					Specify("complex case", func() {
 						source := ` this [cmd] $var1 "complex" ${var2}(key) `
 						script := parse(`{` + source + `}`)
-						// const block = (script.sentences[0].words[0] as Word)
-						//   .morphemes[0] as BlockMorpheme;
-						block := script.Sentences[0].Words[0].Morphemes[0].(BlockMorpheme)
+						block := script.Sentences[0].Words[0].Word.Morphemes[0].(BlockMorpheme)
 						value := NewScriptValue(block.Subscript, source)
 						program := compileFirstWord(script)
 						Expect(program.OpCodes).To(Equal([]OpCode{OpCode_PUSH_CONSTANT}))

@@ -52,8 +52,7 @@ var _ = Describe("SyntaxChecker", func() {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
 	firstWord := func(script *Script) Word {
-		// return script.sentences[0].words[0] as Word;
-		return script.Sentences[0].Words[0]
+		return script.Sentences[0].Words[0].Word
 	}
 
 	BeforeEach(func() {

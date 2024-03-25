@@ -38,8 +38,11 @@ type Script struct {
 //
 type Sentence struct {
 	// Words that compose the sentence
-	// Words: (Word | Value)[] = [];
-	Words []Word
+	Words []WordOrValue
+}
+type WordOrValue struct {
+	Word  Word
+	Value Value
 }
 
 //
