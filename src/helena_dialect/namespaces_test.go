@@ -8,7 +8,7 @@ import (
 	. "helena/helena_dialect"
 )
 
-var _ = Describe("Helena ensembles", func() {
+var _ = Describe("Helena namespaces", func() {
 	var rootScope *Scope
 
 	var tokenizer core.Tokenizer
@@ -31,67 +31,50 @@ var _ = Describe("Helena ensembles", func() {
 		parser = &core.Parser{}
 	}
 
-	example := specifyExample(func(spec exampleSpec) core.Result { return execute(spec.script) })
-
 	BeforeEach(init)
 
-	Describe("ensemble", func() {
+	Describe("namespace", func() {
 		Describe("Specifications", func() {
 			Specify("usage", func() {
-				Expect(evaluate("help ensemble")).To(Equal(
-					STR("ensemble ?name? argspec body"),
+				Expect(evaluate("help namespace")).To(Equal(STR("namespace ?name? body")))
+				Expect(evaluate("help namespace {}")).To(Equal(
+					STR("namespace ?name? body"),
 				))
-				Expect(evaluate("help ensemble {}")).To(Equal(
-					STR("ensemble ?name? argspec body"),
-				))
-				Expect(evaluate("help ensemble cmd {}")).To(Equal(
-					STR("ensemble ?name? argspec body"),
+				Expect(evaluate("help namespace cmd {}")).To(Equal(
+					STR("namespace ?name? body"),
 				))
 			})
 
 			It("should define a new command", func() {
-				evaluate("ensemble cmd {} {}")
+				evaluate("namespace cmd {}")
 				Expect(rootScope.Context.Commands["cmd"]).NotTo(BeNil())
 			})
 			It("should replace existing commands", func() {
-				evaluate("ensemble cmd {} {}")
-				Expect(execute("ensemble cmd {} {}").Code).To(Equal(core.ResultCode_OK))
+				evaluate("namespace cmd {}")
+				Expect(execute("namespace cmd {}").Code).To(Equal(core.ResultCode_OK))
 			})
 		})
 
 		Describe("Exceptions", func() {
 			Specify("wrong arity", func() {
-				Expect(execute("ensemble a")).To(Equal(
-					ERROR(`wrong # args: should be "ensemble ?name? argspec body"`),
+				Expect(execute("namespace")).To(Equal(
+					ERROR(`wrong # args: should be "namespace ?name? body"`),
 				))
-				Expect(execute("ensemble a b c d")).To(Equal(
-					ERROR(`wrong # args: should be "ensemble ?name? argspec body"`),
+				Expect(execute("namespace a b c")).To(Equal(
+					ERROR(`wrong # args: should be "namespace ?name? body"`),
 				))
-				Expect(execute("help ensemble a b c d")).To(Equal(
-					ERROR(`wrong # args: should be "ensemble ?name? argspec body"`),
-				))
-			})
-			Specify("invalid `argspec`", func() {
-				Expect(execute("ensemble a {}")).To(Equal(ERROR("invalid argument list")))
-			})
-			Specify("variadic arguments", func() {
-				Expect(execute("ensemble {?a} {}")).To(Equal(
-					ERROR("ensemble arguments cannot be variadic"),
-				))
-				Expect(execute("ensemble {*a} {}")).To(Equal(
-					ERROR("ensemble arguments cannot be variadic"),
+				Expect(execute("help namespace a b c")).To(Equal(
+					ERROR(`wrong # args: should be "namespace ?name? body"`),
 				))
 			})
 			Specify("invalid `name`", func() {
-				Expect(execute("ensemble [] {} {}")).To(Equal(
+				Expect(execute("namespace [] {}")).To(Equal(
 					ERROR("invalid command name"),
 				))
 			})
 			Specify("non-script body", func() {
-				Expect(execute("ensemble {} a")).To(Equal(ERROR("body must be a script")))
-				Expect(execute("ensemble a {} b")).To(Equal(
-					ERROR("body must be a script"),
-				))
+				Expect(execute("namespace a")).To(Equal(ERROR("body must be a script")))
+				Expect(execute("namespace a b")).To(Equal(ERROR("body must be a script")))
 			})
 		})
 
@@ -99,25 +82,25 @@ var _ = Describe("Helena ensembles", func() {
 			It("should be executed", func() {
 				evaluate("closure cmd {} {let var val}")
 				Expect(rootScope.Context.Constants["var"]).To(BeNil())
-				evaluate("ensemble {} {cmd}")
+				evaluate("namespace {cmd}")
 				Expect(rootScope.Context.Constants["var"]).To(Equal(STR("val")))
 			})
 			It("should access global commands", func() {
-				Expect(execute("ensemble {} {idem val}").Code).To(Equal(core.ResultCode_OK))
+				Expect(execute("namespace {idem val}").Code).To(Equal(core.ResultCode_OK))
 			})
 			It("should not access global variables", func() {
 				evaluate("set var val")
-				Expect(execute("ensemble {} {get var}").Code).To(Equal(core.ResultCode_ERROR))
+				Expect(execute("namespace {get var}").Code).To(Equal(core.ResultCode_ERROR))
 			})
 			It("should not set global variables", func() {
 				evaluate("set var val")
-				evaluate("ensemble {} {set var val2; let cst val3}")
+				evaluate("namespace {set var val2; let cst val3}")
 				Expect(rootScope.Context.Variables["var"]).To(Equal(STR("val")))
 				Expect(rootScope.Context.Constants["cst"]).To(BeNil())
 			})
-			It("should set ensemble variables", func() {
+			It("should set namespace variables", func() {
 				evaluate("set var val")
-				evaluate("ensemble cmd {} {set var val2; let cst val3}")
+				evaluate("namespace cmd {set var val2; let cst val3}")
 				Expect(rootScope.Context.Variables["var"]).To(Equal(STR("val")))
 				Expect(rootScope.Context.Constants["cst"]).To(BeNil())
 				Expect(evaluate("[cmd] eval {get var}")).To(Equal(STR("val2")))
@@ -129,34 +112,34 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the body with `OK` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						Expect(execute("ensemble {} {cmd1; return; cmd2}").Code).To(Equal(
+						Expect(execute("namespace {cmd1; return; cmd2}").Code).To(Equal(
 							core.ResultCode_OK,
 						))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should still define the named command", func() {
-						evaluate("ensemble cmd {} {return}")
+						evaluate("namespace cmd {return}")
 						Expect(rootScope.Context.Commands["cmd"]).NotTo(BeNil())
 					})
 					It("should return passed value instead of the command object", func() {
-						Expect(execute("ensemble {} {return val}")).To(Equal(OK(STR("val"))))
+						Expect(execute("namespace {return val}")).To(Equal(OK(STR("val"))))
 					})
 				})
 				Describe("`tailcall`", func() {
 					It("should interrupt the body with `OK` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						Expect(
-							execute("ensemble {} {cmd1; tailcall {}; cmd2}").Code,
-						).To(Equal(core.ResultCode_OK))
+						Expect(execute("namespace {cmd1; tailcall {}; cmd2}").Code).To(Equal(
+							core.ResultCode_OK,
+						))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should still define the named command", func() {
-						evaluate("ensemble cmd {} {tailcall {}}")
+						evaluate("namespace cmd {tailcall {}}")
 						Expect(rootScope.Context.Commands["cmd"]).NotTo(BeNil())
 					})
 					It("should return passed value instead of the command object", func() {
-						Expect(execute("ensemble {} {tailcall {idem val}}")).To(Equal(
+						Expect(execute("namespace {tailcall {idem val}}")).To(Equal(
 							OK(STR("val")),
 						))
 					})
@@ -165,7 +148,7 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the body with `YIELD` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						Expect(execute("ensemble cmd {} {cmd1; yield; cmd2}").Code).To(Equal(
+						Expect(execute("namespace cmd {cmd1; yield; cmd2}").Code).To(Equal(
 							core.ResultCode_YIELD,
 						))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
@@ -174,7 +157,7 @@ var _ = Describe("Helena ensembles", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {val} {set var $val}")
 						process := rootScope.PrepareScript(
-							*parse("ensemble cmd {} {cmd1; cmd2 _[yield val2]_}"),
+							*parse("namespace cmd {cmd1; cmd2 _[yield val2]_}"),
 						)
 
 						result := process.Run()
@@ -188,9 +171,9 @@ var _ = Describe("Helena ensembles", func() {
 						Expect(result.Value.Type()).To(Equal(core.ValueType_COMMAND))
 						Expect(evaluate("get var")).To(Equal(STR("_val3_")))
 					})
-					It("should delay the definition of ensemble command until resumed", func() {
+					It("should delay the definition of namespace command until resumed", func() {
 						process := rootScope.PrepareScript(
-							*parse("ensemble cmd {} {yield}"),
+							*parse("namespace cmd {yield}"),
 						)
 
 						result := process.Run()
@@ -206,13 +189,13 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the body with `ERROR` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						Expect(execute("ensemble {} {cmd1; error msg; cmd2}")).To(Equal(
+						Expect(execute("namespace {cmd1; error msg; cmd2}")).To(Equal(
 							ERROR("msg"),
 						))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
-					It("should not define the ensemble command", func() {
-						evaluate("ensemble cmd {} {error msg}")
+					It("should not define the namespace command", func() {
+						evaluate("namespace cmd {error msg}")
 						Expect(rootScope.Context.Commands["cmd"]).To(BeNil())
 					})
 				})
@@ -220,13 +203,13 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the body with `ERROR` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						Expect(execute("ensemble {} {cmd1; break; cmd2}")).To(Equal(
+						Expect(execute("namespace {cmd1; break; cmd2}")).To(Equal(
 							ERROR("unexpected break"),
 						))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
-					It("should not define the ensemble command", func() {
-						evaluate("ensemble cmd {} {break}")
+					It("should not define the namespace command", func() {
+						evaluate("namespace cmd {break}")
 						Expect(rootScope.Context.Commands["cmd"]).To(BeNil())
 					})
 				})
@@ -234,13 +217,13 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the body with `ERROR` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						Expect(execute("ensemble {} {cmd1; continue; cmd2}")).To(Equal(
+						Expect(execute("namespace {cmd1; continue; cmd2}")).To(Equal(
 							ERROR("unexpected continue"),
 						))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
-					It("should not define the ensemble command", func() {
-						evaluate("ensemble cmd {} {continue}")
+					It("should not define the namespace command", func() {
+						evaluate("namespace cmd {continue}")
 						Expect(rootScope.Context.Commands["cmd"]).To(BeNil())
 					})
 				})
@@ -249,49 +232,49 @@ var _ = Describe("Helena ensembles", func() {
 
 		Describe("Metacommand", func() {
 			It("should return a metacommand", func() {
-				Expect(evaluate("ensemble {} {}").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("ensemble cmd {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+				Expect(evaluate("namespace {}").Type()).To(Equal(core.ValueType_COMMAND))
+				Expect(evaluate("namespace cmd {}").Type()).To(Equal(core.ValueType_COMMAND))
 			})
 			Specify("the metacommand should return itself", func() {
-				value := evaluate("set cmd [ensemble {} {}]")
+				value := evaluate("set cmd [namespace {}]")
 				Expect(evaluate("$cmd")).To(Equal(value))
 			})
 
 			Describe("Subcommands", func() {
 				Describe("`subcommands`", func() {
 					It("should return list of subcommands", func() {
-						Expect(evaluate("[ensemble {} {}] subcommands")).To(Equal(
-							evaluate("list (subcommands eval call argspec)"),
+						Expect(evaluate("[namespace {}] subcommands")).To(Equal(
+							evaluate("list (subcommands eval call import)"),
 						))
 					})
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
-							Expect(execute("[ensemble {} {}] subcommands a")).To(Equal(
-								ERROR(`wrong # args: should be "<ensemble> subcommands"`),
+							Expect(execute("[namespace {}] subcommands a")).To(Equal(
+								ERROR(`wrong # args: should be "<namespace> subcommands"`),
 							))
 						})
 					})
 				})
 
 				Describe("`eval`", func() {
-					It("should evaluate body in ensemble scope", func() {
-						evaluate("ensemble cmd {} {let cst val}")
+					It("should evaluate body in namespace scope", func() {
+						evaluate("namespace cmd {let cst val}")
 						Expect(evaluate("[cmd] eval {get cst}")).To(Equal(STR("val")))
 					})
 					It("should accept tuple bodies", func() {
-						evaluate("ensemble cmd {} {let cst val}")
+						evaluate("namespace cmd {let cst val}")
 						Expect(evaluate("[cmd] eval (get cst)")).To(Equal(STR("val")))
 					})
-					It("should evaluate macros in ensemble scope", func() {
-						evaluate("ensemble cmd {} {macro mac {} {let cst val}}")
+					It("should evaluate macros in namespace scope", func() {
+						evaluate("namespace cmd {macro mac {} {let cst val}}")
 						evaluate("[cmd] eval {mac}")
 						Expect(rootScope.Context.Constants["cst"]).To(BeNil())
 						Expect(evaluate("[cmd] eval {get cst}")).To(Equal(STR("val")))
 					})
 					It("should evaluate closures in their scope", func() {
 						evaluate("closure cls {} {let cst val}")
-						evaluate("ensemble cmd {} {}")
+						evaluate("namespace cmd {}")
 						evaluate("[cmd] eval {cls}")
 						Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val")))
 						Expect(execute("[cmd] eval {get cst}").Code).To(Equal(
@@ -304,7 +287,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should interrupt the body with `RETURN` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
-								evaluate("ensemble cmd {} {}")
+								evaluate("namespace cmd {}")
 								Expect(execute("[cmd] eval {cmd1; return val3; cmd2}")).To(Equal(
 									RETURN(STR("val3")),
 								))
@@ -315,7 +298,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should interrupt the body with `RETURN` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
-								evaluate("ensemble cmd {} {}")
+								evaluate("namespace cmd {}")
 								Expect(
 									execute("[cmd] eval {cmd1; tailcall {idem val3}; cmd2}"),
 								).To(Equal(RETURN(STR("val3"))))
@@ -326,7 +309,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should interrupt the body with `YIELD` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
-								evaluate("ensemble cmd {} {}")
+								evaluate("namespace cmd {}")
 								Expect(execute("[cmd] eval {cmd1; yield; cmd2}").Code).To(Equal(
 									core.ResultCode_YIELD,
 								))
@@ -335,7 +318,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should provide a resumable state", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {val} {set var $val}")
-								evaluate("ensemble cmd {} {}")
+								evaluate("namespace cmd {}")
 								process := rootScope.PrepareScript(
 									*parse("[cmd] eval {cmd1; cmd2 _[yield val2]_}"),
 								)
@@ -354,7 +337,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should interrupt the body with `ERROR` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
-								evaluate("ensemble cmd {} {}")
+								evaluate("namespace cmd {}")
 								Expect(execute("[cmd] eval {cmd1; error msg; cmd2}")).To(Equal(
 									ERROR("msg"),
 								))
@@ -365,7 +348,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should interrupt the body with `BREAK` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
-								evaluate("ensemble cmd {} {}")
+								evaluate("namespace cmd {}")
 								Expect(execute("[cmd] eval {cmd1; break; cmd2}")).To(Equal(
 									BREAK(NIL),
 								))
@@ -376,7 +359,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should interrupt the body with `CONTINUE` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
-								evaluate("ensemble cmd {} {}")
+								evaluate("namespace cmd {}")
 								Expect(execute("[cmd] eval {cmd1; continue; cmd2}")).To(Equal(
 									CONTINUE(NIL),
 								))
@@ -387,15 +370,15 @@ var _ = Describe("Helena ensembles", func() {
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
-							Expect(execute("[ensemble {} {}] eval")).To(Equal(
-								ERROR(`wrong # args: should be "<ensemble> eval body"`),
+							Expect(execute("[namespace {}] eval")).To(Equal(
+								ERROR(`wrong # args: should be "<namespace> eval body"`),
 							))
-							Expect(execute("[ensemble {} {}] eval a b")).To(Equal(
-								ERROR(`wrong # args: should be "<ensemble> eval body"`),
+							Expect(execute("[namespace {}] eval a b")).To(Equal(
+								ERROR(`wrong # args: should be "<namespace> eval body"`),
 							))
 						})
 						Specify("invalid body", func() {
-							Expect(execute("[ensemble {} {}] eval 1")).To(Equal(
+							Expect(execute("[namespace {}] eval 1")).To(Equal(
 								ERROR("body must be a script or tuple"),
 							))
 						})
@@ -403,19 +386,18 @@ var _ = Describe("Helena ensembles", func() {
 				})
 
 				Describe("`call`", func() {
-					It("should call ensemble commands", func() {
-						evaluate("ensemble cmd {} {macro mac {} {idem val}}")
+					It("should call namespace commands", func() {
+						evaluate("namespace cmd {macro mac {} {idem val}}")
 						Expect(evaluate("[cmd] call mac")).To(Equal(STR("val")))
 					})
-					It("should evaluate macros in the caller scope", func() {
-						evaluate("ensemble cmd {} {macro mac {} {let cst val}}")
+					It("should evaluate macros in namespace", func() {
+						evaluate("namespace cmd {macro mac {} {let cst val}}")
 						evaluate("[cmd] call mac")
-						Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val")))
-						evaluate("scope scp {[cmd] call mac}")
-						Expect(evaluate("[scp] eval {get cst}")).To(Equal(STR("val")))
+						Expect(rootScope.Context.Constants["cst"]).To(BeNil())
+						Expect(evaluate("[cmd] eval {get cst}")).To(Equal(STR("val")))
 					})
-					It("should evaluate ensemble closures in ensemble scope", func() {
-						evaluate("ensemble cmd {} {closure cls {} {let cst val}}")
+					It("should evaluate namespace closures in namespace", func() {
+						evaluate("namespace cmd {closure cls {} {let cst val}}")
 						evaluate("[cmd] call cls")
 						Expect(rootScope.Context.Constants["cst"]).To(BeNil())
 						Expect(evaluate("[cmd] eval {get cst}")).To(Equal(STR("val")))
@@ -427,7 +409,7 @@ var _ = Describe("Helena ensembles", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
 								evaluate(
-									"ensemble cmd {} {macro mac {} {cmd1; return val3; cmd2}}",
+									"namespace cmd {macro mac {} {cmd1; return val3; cmd2}}",
 								)
 								Expect(execute("[cmd] call mac")).To(Equal(RETURN(STR("val3"))))
 								Expect(evaluate("get var")).To(Equal(STR("val1")))
@@ -438,7 +420,7 @@ var _ = Describe("Helena ensembles", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
 								evaluate(
-									"ensemble cmd {} {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}",
+									"namespace cmd {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}",
 								)
 								Expect(execute("[cmd] call mac")).To(Equal(RETURN(STR("val3"))))
 								Expect(evaluate("get var")).To(Equal(STR("val1")))
@@ -448,7 +430,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should interrupt the call with `YIELD` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
-								evaluate("ensemble cmd {} {macro mac {} {cmd1; yield; cmd2}}")
+								evaluate("namespace cmd {macro mac {} {cmd1; yield; cmd2}}")
 								Expect(execute("[cmd] call mac").Code).To(Equal(core.ResultCode_YIELD))
 								Expect(evaluate("get var")).To(Equal(STR("val1")))
 							})
@@ -456,7 +438,7 @@ var _ = Describe("Helena ensembles", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {val} {set var $val}")
 								evaluate(
-									"ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}",
+									"namespace cmd {proc p {} {cmd1; cmd2 _[yield val2]_}}",
 								)
 								process := rootScope.PrepareScript(*parse("[cmd] call p"))
 
@@ -475,7 +457,7 @@ var _ = Describe("Helena ensembles", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
 								evaluate(
-									"ensemble cmd {} {macro mac {} {cmd1; error msg; cmd2}}",
+									"namespace cmd {macro mac {} {cmd1; error msg; cmd2}}",
 								)
 								Expect(execute("[cmd] call mac")).To(Equal(ERROR("msg")))
 								Expect(evaluate("get var")).To(Equal(STR("val1")))
@@ -485,7 +467,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should interrupt the body with `BREAK` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
-								evaluate("ensemble cmd {} {macro mac {} {cmd1; break; cmd2}}")
+								evaluate("namespace cmd {macro mac {} {cmd1; break; cmd2}}")
 								Expect(execute("[cmd] call mac")).To(Equal(BREAK(NIL)))
 								Expect(evaluate("get var")).To(Equal(STR("val1")))
 							})
@@ -494,9 +476,7 @@ var _ = Describe("Helena ensembles", func() {
 							It("should interrupt the body with `CONTINUE` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
 								evaluate("closure cmd2 {} {set var val2}")
-								evaluate(
-									"ensemble cmd {} {macro mac {} {cmd1; continue; cmd2}}",
-								)
+								evaluate("namespace cmd {macro mac {} {cmd1; continue; cmd2}}")
 								Expect(execute("[cmd] call mac")).To(Equal(CONTINUE(NIL)))
 								Expect(evaluate("get var")).To(Equal(STR("val1")))
 							})
@@ -505,44 +485,107 @@ var _ = Describe("Helena ensembles", func() {
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
-							Expect(execute("[ensemble {} {}] call")).To(Equal(
+							Expect(execute("[namespace {}] call")).To(Equal(
 								ERROR(
-									`wrong # args: should be "<ensemble> call cmdname ?arg ...?"`,
+									`wrong # args: should be "<namespace> call cmdname ?arg ...?"`,
 								),
 							))
 						})
 						Specify("unknown command", func() {
-							Expect(execute("[ensemble {} {}] call unknownCommand")).To(Equal(
+							Expect(execute("[namespace {}] call unknownCommand")).To(Equal(
 								ERROR(`unknown command "unknownCommand"`),
 							))
 						})
 						Specify("out-of-scope command", func() {
 							Expect(
-								execute("macro cmd {} {}; [ensemble {} {}] call cmd"),
+								execute("macro cmd {} {}; [namespace {}] call cmd"),
 							).To(Equal(ERROR(`unknown command "cmd"`)))
 						})
 						Specify("invalid command name", func() {
-							Expect(execute("[ensemble {} {}] call []")).To(Equal(
+							Expect(execute("[namespace {}] call []")).To(Equal(
 								ERROR("invalid command name"),
 							))
 						})
 					})
 				})
 
-				Describe("`argspec`", func() {
-					It("should return the ensemble's argspec", func() {
-						example(exampleSpec{
-							script: `
-								[ensemble {a b} {}] argspec
-							`,
-							result: evaluate("argspec {a b}"),
-						})
+				Describe("`import`", func() {
+					It("should declare imported commands in the calling scope", func() {
+						evaluate(`namespace ns {macro cmd {} {idem value}}`)
+						evaluate("[ns] import cmd")
+						Expect(evaluate("cmd")).To(Equal(STR("value")))
+					})
+					It("should return nil", func() {
+						evaluate(`namespace ns {macro cmd {} {idem value}}`)
+						Expect(execute("[ns] import cmd")).To(Equal(OK(NIL)))
+					})
+					It("should replace existing commands", func() {
+						evaluate("closure cmd {} {idem val1} ")
+						Expect(evaluate("cmd")).To(Equal(STR("val1")))
+						evaluate(`namespace ns {macro cmd {} {idem val2}}`)
+						evaluate("[ns] import cmd")
+						Expect(evaluate("cmd")).To(Equal(STR("val2")))
+					})
+					It("should evaluate macros in the caller scope", func() {
+						evaluate(`namespace ns {macro cmd {} {set var val}}`)
+						evaluate("[ns] import cmd")
+						evaluate("cmd")
+						Expect(evaluate("get var")).To(Equal(STR("val")))
+					})
+					It("should evaluate closures in their scope", func() {
+						evaluate(`namespace ns {set var val; closure cmd {} {get var}}`)
+						evaluate("[ns] import cmd")
+						Expect(evaluate("cmd")).To(Equal(STR("val")))
+						Expect(execute("get var").Code).To(Equal(core.ResultCode_ERROR))
+					})
+					It("should resolve imported commands at call time", func() {
+						evaluate(`
+							namespace ns {
+								closure cmd {} {idem val1}
+								closure redefine {} {
+									closure cmd {} {idem val2}
+								}
+							}
+						`)
+						Expect(evaluate("[ns] import cmd; cmd")).To(Equal(STR("val1")))
+						evaluate("ns redefine")
+						Expect(evaluate("cmd")).To(Equal(STR("val1")))
+						Expect(evaluate("[ns] import cmd; cmd")).To(Equal(STR("val2")))
+					})
+					It("should accept an optional alias name", func() {
+						evaluate("macro cmd {} {idem original}")
+						evaluate(`namespace ns {macro cmd {} {idem imported}}`)
+						evaluate("[ns] import cmd cmd2")
+						Expect(evaluate("cmd")).To(Equal(STR("original")))
+						Expect(evaluate("cmd2")).To(Equal(STR("imported")))
 					})
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
-							Expect(execute("[ensemble {} {}] argspec a")).To(Equal(
-								ERROR(`wrong # args: should be "<ensemble> argspec"`),
+							Expect(execute("[namespace {}] import")).To(Equal(
+								ERROR(
+									`wrong # args: should be "<namespace> import name ?alias?"`,
+								),
+							))
+							Expect(execute("[namespace {}] import a b c")).To(Equal(
+								ERROR(
+									`wrong # args: should be "<namespace> import name ?alias?"`,
+								),
+							))
+						})
+						Specify("unresolved command", func() {
+							Expect(execute("[namespace {}] import a")).To(Equal(
+								ERROR(`cannot resolve imported command "a"`),
+							))
+						})
+						Specify("invalid import name", func() {
+							Expect(execute("[namespace {}] import []")).To(Equal(
+								ERROR("invalid import name"),
+							))
+						})
+						Specify("invalid alias name", func() {
+							Expect(execute("[namespace {}] import a []")).To(Equal(
+								ERROR("invalid alias name"),
 							))
 						})
 					})
@@ -550,12 +593,12 @@ var _ = Describe("Helena ensembles", func() {
 
 				Describe("Exceptions", func() {
 					Specify("unknown subcommand", func() {
-						Expect(execute("[ensemble {} {}] unknownSubcommand")).To(Equal(
+						Expect(execute("[namespace {}] unknownSubcommand")).To(Equal(
 							ERROR(`unknown subcommand "unknownSubcommand"`),
 						))
 					})
 					Specify("invalid subcommand name", func() {
-						Expect(execute("[ensemble {} {}] []")).To(Equal(
+						Expect(execute("[namespace {}] []")).To(Equal(
 							ERROR("invalid subcommand name"),
 						))
 					})
@@ -564,114 +607,55 @@ var _ = Describe("Helena ensembles", func() {
 		})
 	})
 
-	Describe("Ensemble commands", func() {
+	Describe("Namespace commands", func() {
 		Describe("Specifications", func() {
-			It("should return its ensemble metacommand when called with no argument", func() {
-				value := evaluate("ensemble cmd {} {}")
+			It("should return its namespace metacommand when called with no argument", func() {
+				value := evaluate("namespace cmd {}")
 				Expect(evaluate("cmd")).To(Equal(value))
 			})
-			It("should return the provided arguments tuple when called with no subcommand", func() {
-				evaluate("ensemble cmd {a b} {macro opt {a b} {idem val}}")
-				Expect(evaluate("cmd foo bar")).To(Equal(TUPLE([]core.Value{STR("foo"), STR("bar")})))
-			})
-			It("should evaluate argument guards", func() {
-				evaluate("ensemble cmd {(int a) (list b)} {}")
-				Expect(evaluate("cmd 1 (foo bar)")).To(Equal(
-					TUPLE([]core.Value{INT(1), LIST([]core.Value{STR("foo"), STR("bar")})}),
-				))
-			})
 		})
 
-		Describe("Exceptions", func() {
-			Specify("wrong arity", func() {
-				evaluate("ensemble cmd {a b} {}")
-				Expect(execute("cmd a")).To(Equal(
-					ERROR(`wrong # args: should be "cmd a b ?subcommand? ?arg ...?"`),
-				))
+		Describe("Namespace subcommands", func() {
+			Specify("first argument should be namespace subcommand name", func() {
+				evaluate("namespace cmd {macro opt {} {idem val}}")
+				Expect(evaluate("cmd opt")).To(Equal(STR("val")))
 			})
-			Specify("failed guards", func() {
-				evaluate("ensemble cmd {(int a) (list b)} {}")
-				Expect(execute("cmd a ()")).To(Equal(ERROR(`invalid integer "a"`)))
-				Expect(execute("cmd 1 a")).To(Equal(ERROR("invalid list")))
+			It("should pass remaining arguments to namespace subcommand", func() {
+				evaluate("namespace cmd {macro opt {arg} {idem $arg}}")
+				Expect(evaluate("cmd opt val")).To(Equal(STR("val")))
 			})
-		})
-
-		Describe("Ensemble subcommands", func() {
-			Specify("first argument after ensemble arguments should be ensemble subcommand name", func() {
-				evaluate("ensemble cmd {a b} {macro opt {a b} {idem val}}")
-				Expect(evaluate("cmd foo bar opt")).To(Equal(STR("val")))
-			})
-			It("should pass ensemble arguments to ensemble subcommand", func() {
-				evaluate("ensemble cmd {a b} {macro opt {a b} {idem $a$b}}")
-				Expect(evaluate("cmd foo bar opt")).To(Equal(STR("foobar")))
-			})
-			It("should apply guards to passed ensemble arguments", func() {
-				evaluate(
-					"ensemble cmd {(int a) (list b)} {macro opt {a b} {idem ($a $b)}}",
-				)
-				Expect(evaluate("cmd 1 (foo bar) opt")).To(Equal(
-					TUPLE([]core.Value{INT(1), LIST([]core.Value{STR("foo"), STR("bar")})}),
-				))
-			})
-			It("should pass remaining arguments to ensemble subcommand", func() {
-				evaluate("ensemble cmd {a b} {macro opt {a b c d} {idem $a$b$c$d}}")
-				Expect(evaluate("cmd foo bar opt baz sprong")).To(Equal(
-					STR("foobarbazsprong"),
-				))
-			})
-			It("should evaluate subcommand in the caller scope", func() {
-				evaluate("ensemble cmd {} {macro mac {} {let cst val}}")
+			It("should evaluate subcommand in namespace scope", func() {
+				evaluate("namespace cmd {macro mac {} {let cst val}}")
 				evaluate("cmd mac")
-				Expect(rootScope.Context.Constants["cst"]).To(Equal(STR("val")))
-				evaluate("scope scp {cmd mac}")
-				Expect(evaluate("[scp] eval {get cst}")).To(Equal(STR("val")))
+				Expect(rootScope.Context.Constants["cst"]).To(BeNil())
+				Expect(evaluate("[cmd] eval {get cst}")).To(Equal(STR("val")))
 			})
 			It("should work recursively", func() {
-				evaluate(
-					"ensemble en1 {a b} {ensemble en2 {a b c d} {macro opt {a b c d e f} {idem $a$b$c$d$e$f}}}",
-				)
-				Expect(evaluate("en1 foo bar en2 baz sprong opt val1 val2")).To(Equal(
-					STR("foobarbazsprongval1val2"),
-				))
+				evaluate("namespace ns1 {namespace ns2 {macro opt {} {idem val}}}")
+				Expect(evaluate("ns1 ns2 opt")).To(Equal(STR("val")))
 			})
 
 			Describe("Introspection", func() {
 				Describe("`subcommands`", func() {
-					BeforeEach(func() {
-						evaluate("ensemble cmd1 {} {}")
-						evaluate("ensemble cmd2 {a b} {}")
-					})
 					It("should return list of subcommands", func() {
-						Expect(evaluate("cmd1 subcommands")).To(Equal(
+						evaluate("namespace cmd {}")
+						Expect(evaluate("cmd subcommands")).To(Equal(
 							evaluate("list (subcommands)"),
 						))
-						evaluate("[cmd1] eval {macro mac1 {} {}}")
-						Expect(evaluate("cmd1 subcommands")).To(Equal(
-							evaluate("list (subcommands mac1)"),
-						))
-
-						Expect(evaluate("cmd2 a b subcommands")).To(Equal(
-							evaluate("list (subcommands)"),
-						))
-						evaluate("[cmd2] eval {macro mac2 {} {}}")
-						Expect(evaluate("cmd2 a b subcommands")).To(Equal(
-							evaluate("list (subcommands mac2)"),
+						evaluate("[cmd] eval {macro mac {} {}}")
+						Expect(evaluate("cmd subcommands")).To(Equal(
+							evaluate("list (subcommands mac)"),
 						))
 					})
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
-							Expect(execute("cmd1 subcommands a")).To(Equal(
-								ERROR(`wrong # args: should be "cmd1 subcommands"`),
+							evaluate("namespace cmd {}")
+							Expect(execute("cmd subcommands a")).To(Equal(
+								ERROR(`wrong # args: should be "cmd subcommands"`),
 							))
-							Expect(execute("help cmd1 subcommands a")).To(Equal(
-								ERROR(`wrong # args: should be "cmd1 subcommands"`),
-							))
-							Expect(execute("cmd2 a b subcommands c")).To(Equal(
-								ERROR(`wrong # args: should be "cmd2 a b subcommands"`),
-							))
-							Expect(execute("help cmd2 a b subcommands c")).To(Equal(
-								ERROR(`wrong # args: should be "cmd2 a b subcommands"`),
+							Expect(execute("help cmd subcommands a")).To(Equal(
+								ERROR(`wrong # args: should be "cmd subcommands"`),
 							))
 						})
 					})
@@ -681,82 +665,72 @@ var _ = Describe("Helena ensembles", func() {
 			Describe("Help", func() {
 				It("should provide subcommand help", func() {
 					evaluate(`
-						ensemble cmd {a} {
-							macro opt1 {a b} {}
-							closure opt2 {c d} {}
+						namespace cmd {
+							macro opt1 {a} {}
+							closure opt2 {b} {}
 						}
 					`)
 					Expect(evaluate("help cmd")).To(Equal(
-						STR("cmd a ?subcommand? ?arg ...?"),
+						STR("cmd ?subcommand? ?arg ...?"),
 					))
-					Expect(evaluate("help cmd 1")).To(Equal(
-						STR("cmd a ?subcommand? ?arg ...?"),
+					Expect(evaluate("help cmd subcommands")).To(Equal(
+						STR("cmd subcommands"),
 					))
-					Expect(evaluate("help cmd 1 subcommands")).To(Equal(
-						STR("cmd a subcommands"),
-					))
-					Expect(evaluate("help cmd 1 opt1")).To(Equal(STR("cmd a opt1 b")))
-					Expect(evaluate("help cmd 2 opt1 3")).To(Equal(STR("cmd a opt1 b")))
-					Expect(evaluate("help cmd 4 opt2")).To(Equal(STR("cmd a opt2 d")))
-					Expect(evaluate("help cmd 5 opt2 6")).To(Equal(STR("cmd a opt2 d")))
+					Expect(evaluate("help cmd opt1")).To(Equal(STR("cmd opt1 a")))
+					Expect(evaluate("help cmd opt1 1")).To(Equal(STR("cmd opt1 a")))
+					Expect(evaluate("help cmd opt2")).To(Equal(STR("cmd opt2 b")))
+					Expect(evaluate("help cmd opt2 2")).To(Equal(STR("cmd opt2 b")))
 				})
 				It("should work recursively", func() {
 					evaluate(`
-						ensemble cmd {a} {
-							ensemble sub {a b} {
-								macro opt {a b c} {}
+						namespace cmd {
+							namespace sub {
+								macro opt {a} {}
 							}
 						}
 					`)
-					Expect(evaluate("help cmd 1 sub")).To(Equal(
-						STR("cmd a sub b ?subcommand? ?arg ...?"),
+					Expect(evaluate("help cmd sub")).To(Equal(
+						STR("cmd sub ?subcommand? ?arg ...?"),
 					))
-					Expect(evaluate("help cmd 1 sub 2")).To(Equal(
-						STR("cmd a sub b ?subcommand? ?arg ...?"),
+					Expect(evaluate("help cmd sub subcommands")).To(Equal(
+						STR("cmd sub subcommands"),
 					))
-					Expect(evaluate("help cmd 1 sub 2 subcommands")).To(Equal(
-						STR("cmd a sub b subcommands"),
-					))
-					Expect(evaluate("help cmd 1 sub 2 opt")).To(Equal(
-						STR("cmd a sub b opt c"),
-					))
-					Expect(evaluate("help cmd 1 sub 2 opt 3")).To(Equal(
-						STR("cmd a sub b opt c"),
-					))
+					Expect(evaluate("help cmd sub opt")).To(Equal(STR("cmd sub opt a")))
+					Expect(evaluate("help cmd sub opt 1")).To(Equal(STR("cmd sub opt a")))
 				})
 
 				Describe("Exceptions", func() {
 					Specify("wrong arity", func() {
 						evaluate(`
-							ensemble cmd {a} {
-								macro opt {a b} {}
-								ensemble sub {a b} {
-									macro opt {a b c} {}
-								}
+						namespace cmd {
+							macro opt {a} {}
+							namespace sub {
+								macro opt {b} {}
 							}
+						}
 						`)
-						Expect(execute("help cmd 1 subcommands 2")).To(Equal(
-							ERROR(`wrong # args: should be "cmd a subcommands"`),
+						Expect(execute("help cmd subcommands 1")).To(Equal(
+							ERROR(`wrong # args: should be "cmd subcommands"`),
 						))
-						Expect(execute("help cmd 1 opt 2 3")).To(Equal(
-							ERROR(`wrong # args: should be "cmd a opt b"`),
+						Expect(execute("help cmd opt 1 2")).To(Equal(
+							ERROR(`wrong # args: should be "cmd opt a"`),
 						))
-						Expect(execute("help cmd 1 sub 2 subcommands 3")).To(Equal(
-							ERROR(`wrong # args: should be "cmd a sub b subcommands"`),
+						Expect(execute("help cmd sub subcommands 1")).To(Equal(
+							ERROR(`wrong # args: should be "cmd sub subcommands"`),
 						))
-						Expect(execute("help cmd 1 sub 2 opt 3 4")).To(Equal(
-							ERROR(`wrong # args: should be "cmd a sub b opt c"`),
+						Expect(execute("help cmd sub opt 1 2")).To(Equal(
+							ERROR(`wrong # args: should be "cmd sub opt b"`),
 						))
 					})
 					Specify("invalid `subcommand`", func() {
-						evaluate("ensemble cmd {a} {}")
-						Expect(execute("help cmd 1 []")).To(Equal(
+						evaluate("namespace cmd {}")
+						Expect(execute("help cmd []")).To(Equal(
 							ERROR("invalid subcommand name"),
 						))
 					})
 					Specify("unknown subcommand", func() {
-						evaluate("ensemble cmd {a} {}")
-						Expect(execute("help cmd 1 unknownSubcommand")).To(Equal(
+						evaluate("namespace cmd {}")
+						Expect(execute("help cmd unknownSubcommand")).To(Equal(
 							ERROR(`unknown subcommand "unknownSubcommand"`),
 						))
 					})
@@ -764,8 +738,8 @@ var _ = Describe("Helena ensembles", func() {
 						rootScope.RegisterNamedCommand("foo", simpleCommand{
 							func(_ []core.Value, _ any) core.Result { return OK(NIL) },
 						})
-						evaluate("ensemble cmd {a} {alias opt foo}")
-						Expect(execute("help cmd 1 opt")).To(Equal(
+						evaluate("namespace cmd {alias opt foo}")
+						Expect(execute("help cmd opt")).To(Equal(
 							ERROR(`no help for subcommand "opt"`),
 						))
 					})
@@ -777,9 +751,7 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the call with `RETURN` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						evaluate(
-							"ensemble cmd {} {macro mac {} {cmd1; return val3; cmd2}}",
-						)
+						evaluate("namespace cmd {macro mac {} {cmd1; return val3; cmd2}}")
 						Expect(execute("cmd mac")).To(Equal(RETURN(STR("val3"))))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
@@ -789,7 +761,7 @@ var _ = Describe("Helena ensembles", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
 						evaluate(
-							"ensemble cmd {} {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}",
+							"namespace cmd {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}",
 						)
 						Expect(execute("cmd mac")).To(Equal(RETURN(STR("val3"))))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
@@ -799,14 +771,14 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the call with `YIELD` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						evaluate("ensemble cmd {} {macro mac {} {cmd1; yield; cmd2}}")
+						evaluate("namespace cmd {macro mac {} {cmd1; yield; cmd2}}")
 						Expect(execute("cmd mac").Code).To(Equal(core.ResultCode_YIELD))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
 					It("should provide a resumable state", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {val} {set var $val}")
-						evaluate("ensemble cmd {} {proc p {} {cmd1; cmd2 _[yield val2]_}}")
+						evaluate("namespace cmd {proc p {} {cmd1; cmd2 _[yield val2]_}}")
 						process := rootScope.PrepareScript(*parse("cmd p"))
 
 						result := process.Run()
@@ -823,7 +795,7 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the call with `ERROR` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						evaluate("ensemble cmd {} {macro mac {} {cmd1; error msg; cmd2}}")
+						evaluate("namespace cmd {macro mac {} {cmd1; error msg; cmd2}}")
 						Expect(execute("cmd mac")).To(Equal(ERROR("msg")))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
@@ -832,7 +804,7 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the call with `BREAK` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						evaluate("ensemble cmd {} {macro mac {} {cmd1; break; cmd2}}")
+						evaluate("namespace cmd {macro mac {} {cmd1; break; cmd2}}")
 						Expect(execute("cmd mac")).To(Equal(BREAK(NIL)))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
@@ -841,7 +813,7 @@ var _ = Describe("Helena ensembles", func() {
 					It("should interrupt the call with `CONTINUE` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {} {set var val2}")
-						evaluate("ensemble cmd {} {macro mac {} {cmd1; continue; cmd2}}")
+						evaluate("namespace cmd {macro mac {} {cmd1; continue; cmd2}}")
 						Expect(execute("cmd mac")).To(Equal(CONTINUE(NIL)))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))
 					})
@@ -850,18 +822,58 @@ var _ = Describe("Helena ensembles", func() {
 
 			Describe("Exceptions", func() {
 				Specify("unknown subcommand", func() {
-					evaluate("ensemble cmd {} {}")
+					evaluate("namespace cmd {}")
 					Expect(execute("cmd unknownCommand")).To(Equal(
 						ERROR(`unknown subcommand "unknownCommand"`),
 					))
 				})
 				Specify("out-of-scope subcommand", func() {
-					evaluate("macro mac {} {}; ensemble cmd {} {}")
+					evaluate("macro mac {} {}; namespace cmd {}")
 					Expect(execute("cmd mac")).To(Equal(ERROR(`unknown subcommand "mac"`)))
 				})
 				Specify("invalid subcommand name", func() {
-					evaluate("ensemble cmd {} {}")
+					evaluate("namespace cmd {}")
 					Expect(execute("cmd []")).To(Equal(ERROR("invalid subcommand name")))
+				})
+			})
+		})
+
+		Describe("Namespace variables", func() {
+			It("should map to value keys", func() {
+				evaluate("set ns [namespace cmd {let cst val1; set var val2}]")
+				Expect(evaluate("idem $[cmd](cst)")).To(Equal(STR("val1")))
+				Expect(evaluate("idem $[cmd](var)")).To(Equal(STR("val2")))
+				Expect(evaluate("idem $ns(cst)")).To(Equal(STR("val1")))
+				Expect(evaluate("idem $ns(var)")).To(Equal(STR("val2")))
+				evaluate("$ns eval {set var2 val3}")
+				Expect(evaluate("idem $ns(var2)")).To(Equal(STR("val3")))
+			})
+			It("should work recursively", func() {
+				evaluate(
+					"set ns1 [namespace {set ns2 [namespace {let cst val1; set var val2}]}]",
+				)
+				Expect(evaluate("idem $ns1(ns2)(cst)")).To(Equal(STR("val1")))
+				Expect(evaluate("idem $ns1(ns2)(var)")).To(Equal(STR("val2")))
+				Expect(evaluate("idem $ns1(ns2 cst)")).To(Equal(STR("val1")))
+				Expect(evaluate("idem $ns1(ns2 var)")).To(Equal(STR("val2")))
+			})
+
+			Describe("Exceptions", func() {
+				Specify("unknown variables", func() {
+					evaluate("namespace cmd {}")
+					Expect(execute("$[cmd](unknownVariable)")).To(Equal(
+						ERROR(`cannot get "unknownVariable": no such variable`),
+					))
+				})
+				Specify("out-of-scope variable", func() {
+					evaluate("let cst var; namespace cmd {}")
+					Expect(execute("$[cmd](cst)")).To(Equal(
+						ERROR(`cannot get "cst": no such variable`),
+					))
+				})
+				Specify("invalid variable name", func() {
+					evaluate("namespace cmd {}")
+					Expect(execute("$[cmd]([])")).To(Equal(ERROR("invalid variable name")))
 				})
 			})
 		})

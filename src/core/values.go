@@ -640,18 +640,27 @@ func (value ScriptValue) Display(fn DisplayFunction) string {
 //
 // Command values encapsulate commands. They cannot be created directly from
 // source.
-type CommandValue struct {
+type CommandValue interface {
+	Value
+
 	// Encapsulated command
-	Command Command
+	Command() Command
+}
+type commandValue struct {
+	command Command
 }
 
-func (value CommandValue) Type() ValueType {
+func (value commandValue) Type() ValueType {
 	return ValueType_COMMAND
 }
 
 // Constructor with command to encapsulate
 func NewCommandValue(command Command) CommandValue {
-	return CommandValue{command}
+	return commandValue{command}
+}
+
+func (value commandValue) Command() Command {
+	return value.command
 }
 
 // Qualified value

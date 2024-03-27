@@ -222,7 +222,7 @@ func (scope *Scope) ResolveCommand(value core.Value) core.Command {
 		return expandPrefixCmd
 	}
 	if value.Type() == core.ValueType_COMMAND {
-		return value.(core.CommandValue).Command
+		return value.(core.CommandValue).Command()
 	}
 	if core.ValueIsNumber(value) {
 		return numberCmd

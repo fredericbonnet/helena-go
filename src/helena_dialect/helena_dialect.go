@@ -49,7 +49,7 @@ func InitCommands(
 	registerArgspecCommands(scope)
 
 	scope.RegisterNamedCommand("scope", scopeCmd{})
-	//   scope.RegisterNamedCommand("namespace", namespaceCmd);
+	scope.RegisterNamedCommand("namespace", namespaceCmd{})
 	scope.RegisterNamedCommand("ensemble", ensembleCmd{})
 
 	//   registerModuleCommands(
