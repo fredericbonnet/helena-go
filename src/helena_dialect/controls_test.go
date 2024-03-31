@@ -2032,29 +2032,31 @@ var _ = Describe("Helena control flow commands", func() {
 		})
 	})
 
-	XDescribe("pass", func() {
+	Describe("pass", func() {
 		Describe("Specifications", func() {
 			Specify("usage", func() {
 				Expect(evaluate("help pass")).To(Equal(STR("pass")))
 			})
 
 			Specify("result code should be the custom code `pass`", func() {
-				// Expect(execute("pass").Code).To(Equal({ name: "pass" }))
+				Expect(core.RESULT_CODE_NAME(execute("pass"))).To(Equal("pass"))
 			})
 			Specify("`catch` should return `(pass)` tuple", func() {
-				// Expect(execute("catch {pass}")).To(Equal(execute("tuple (pass)")))
+				Expect(execute("catch {pass}")).To(Equal(execute("tuple (pass)")))
 			})
 			Specify("`catch` handlers should not handle it", func() {
-				// Expect(
-				//   execute(`
-				//           catch {pass} \\
-				//             return value {unreachable} \\
-				//             yield value {unreachable} \\
-				//             error message {unreachable} \\
-				//             break {unreachable} \\
-				//             continue {unreachable} \\
-				//         `).Code,
-				// ).To(Equal({ name: "pass" }))
+				Expect(
+					core.RESULT_CODE_NAME(
+						execute(`
+							catch {pass} \
+								return value {unreachable} \
+								yield value {unreachable} \
+								error message {unreachable} \
+								break {unreachable} \
+								continue {unreachable} \
+						`),
+					),
+				).To(Equal("pass"))
 			})
 			Describe("should interrupt `catch` handlers and let original result pass through", func() {
 				Specify("`RETURN`", func() {

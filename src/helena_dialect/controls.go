@@ -602,15 +602,15 @@ func (cmd catchCmd) run(state *catchState, scope *Scope) core.Result {
 				if state.result.Code == core.ResultCode_YIELD {
 					return core.YIELD_STATE(state.result.Value, state)
 				}
-				// if state.result.Code == passResultCode {
-				// 	if state.bodyResult.Code == core.ResultCode_YIELD {
-				// 		state.step = catchStateStep_inBody
-				// 		return core.YIELD_STATE(state.bodyResult.Value, state)
-				// 	}
-				// 	state.result = state.bodyResult
-				// 	state.step = catchStateStep_beforeFinally
-				// 	continue
-				// }
+				if core.IsCustomResult(state.result, passResultCode) {
+					if state.bodyResult.Code == core.ResultCode_YIELD {
+						state.step = catchStateStep_inBody
+						return core.YIELD_STATE(state.bodyResult.Value, state)
+					}
+					state.result = state.bodyResult
+					state.step = catchStateStep_beforeFinally
+					continue
+				}
 				if state.result.Code != core.ResultCode_OK {
 					return state.result
 				}
@@ -641,7 +641,6 @@ func (cmd catchCmd) run(state *catchState, scope *Scope) core.Result {
 	}
 }
 func (catchCmd) findHandlerIndex(
-	// code: ResultCode | CustomResultCode,
 	code core.ResultCode,
 	args []core.Value,
 ) int {
@@ -742,23 +741,29 @@ func (catchCmd) checkArgs(args []core.Value) core.Result {
 	return ARITY_ERROR(CATCH_SIGNATURE)
 }
 
-// const PASS_SIGNATURE = "pass";
-// const passResultCode: CustomResultCode = { name: "pass" };
-// const passCmd: Command = {
-//   execute(args) {
-//     if (len(args) != 1) return ARITY_ERROR(PASS_SIGNATURE);
-//     return CUSTOM_RESULT(passResultCode);
-//   },
-//   help(args) {
-//     if (len(args) != 1) return ARITY_ERROR(PASS_SIGNATURE);
-//     return OK(STR(PASS_SIGNATURE));
-//   },
-// };
+const PASS_SIGNATURE = "pass"
+
+var passResultCode = core.CustomResultCode{Name: "pass"}
+
+type passCmd struct{}
+
+func (passCmd) Execute(args []core.Value, _ any) core.Result {
+	if len(args) != 1 {
+		return ARITY_ERROR(PASS_SIGNATURE)
+	}
+	return core.CUSTOM_RESULT(passResultCode, core.NIL)
+}
+func (passCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+	if len(args) != 1 {
+		return ARITY_ERROR(PASS_SIGNATURE)
+	}
+	return core.OK(core.STR(PASS_SIGNATURE))
+}
 
 func registerControlCommands(scope *Scope) {
 	scope.RegisterNamedCommand("while", whileCmd{})
 	scope.RegisterNamedCommand("if", ifCmd{})
 	scope.RegisterNamedCommand("when", whenCmd{})
 	scope.RegisterNamedCommand("catch", catchCmd{})
-	// scope.RegisterNamedCommand("pass", passCmd);
+	scope.RegisterNamedCommand("pass", passCmd{})
 }
