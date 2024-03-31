@@ -24,22 +24,12 @@ const (
 	ValueType_SCRIPT
 	ValueType_COMMAND
 	ValueType_QUALIFIED
+	ValueType_CUSTOM
 )
-
-//
-// /** Helena custom value types */
-// export interface CustomValueType {
-//   /** Custom value name */
-//   readonly name: string;
-// }
-//
 
 // Helena value
 type Value interface {
-	// Displayable
-
 	// Type identifier
-	// readonly type: ValueType | CustomValueType;
 	Type() ValueType
 }
 
@@ -90,7 +80,10 @@ func SelectGeneric(value Value, selector GenericSelector) Result {
 	}
 }
 
+//
 // Nil value
+//
+
 type NilValue struct {
 }
 
@@ -104,7 +97,10 @@ func (value NilValue) Display(_ DisplayFunction) string {
 // Singleton nil value
 var NIL = NilValue{}
 
+//
 // Boolean value
+//
+
 type BooleanValue struct {
 	// Encapsulated value
 	Value bool
@@ -256,7 +252,10 @@ func (value IntegerValue) Display(_ DisplayFunction) string {
 	return fmt.Sprint(value.Value)
 }
 
+//
 // Real value
+//
+
 type RealValue struct {
 	// Encapsulated value
 	Value float64
@@ -333,7 +332,10 @@ func (value RealValue) Display(_ DisplayFunction) string {
 	return fmt.Sprint(value.Value)
 }
 
+//
 // String value
+//
+
 type StringValue struct {
 	// Encapsulated value
 	Value string
@@ -430,9 +432,12 @@ func (value StringValue) SelectIndex(index Value) Result {
 	return StringAt(value.Value, index)
 }
 
+//
 // List value
 //
 // Lists are linear collections of other values
+//
+
 type ListValue struct {
 	// Encapsulated values
 	Values []Value
@@ -500,9 +505,12 @@ func (value ListValue) SelectIndex(index Value) Result {
 	return ListAt(value.Values, index)
 }
 
+//
 // Dictionary value
 //
 // Dictionaries are key-value collections with string keys
+//
+
 type DictionaryValue struct {
 	// Encapsulated key-value map
 	Map map[string]Value
@@ -530,10 +538,13 @@ func (value DictionaryValue) SelectKey(key Value) Result {
 	return OK(v)
 }
 
+//
 // Tuple value
 //
 // Tuples are syntactic constructs in Helena. Selectors apply recursively to
 // their elements.
+//
+
 type TupleValue struct {
 	// Encapsulated values
 	Values []Value
@@ -601,9 +612,12 @@ func (value TupleValue) Display(fn DisplayFunction) string {
 	return "(" + DisplayList(value.Values, fn) + ")"
 }
 
+//
 // Script value
 //
 // Script values hold Helena ASTs. They are typically used to represent blocks.
+//
+
 type ScriptValue struct {
 	// Encapsulated script
 	Script Script
@@ -636,10 +650,13 @@ func (value ScriptValue) Display(fn DisplayFunction) string {
 	return "{" + *value.Source + "}"
 }
 
+//
 // Command value
 //
 // Command values encapsulate commands. They cannot be created directly from
 // source.
+//
+
 type CommandValue interface {
 	Value
 
@@ -663,10 +680,13 @@ func (value commandValue) Command() Command {
 	return value.command
 }
 
+//
 // Qualified value
 //
 // Qualified values are syntactic constructs in Helena. Selectors build a new
 // qualified value with the selector appended.
+//
+
 type QualifiedValue struct {
 	// Source
 	Source Value
@@ -734,33 +754,40 @@ func (value QualifiedValue) Select(selector Selector) Result {
 	return OK(NewQualifiedValue(value.Source, selectors))
 }
 
-// /*
-//  * Type predicates
-//  *
-//  * See https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates
-//  */
+// Custom value type
+type CustomValueType struct {
+	// Custom value name
+	Name string
+}
 
-// /**
-//  * Type predicate for Value
-//  *
-//  * @param value - Object to test
-//  * @returns       Whether value is a Value
-//  */
-// export function isValue(value: Displayable): value is Value {
-//   return !!value["type"];
-// }
+//
+// Custom values
+//
 
-// /**
-//  * Type predicate for CustomValueType
-//  *
-//  * @param type - Type to test
-//  * @returns      Whether type is a CustomValueType
-//  */
-// export function isCustomValueType(
-//   type: ValueType | CustomValueType
-// ): type is CustomValueType {
-//   return !!type["name"];
-// }
+type CustomValue interface {
+	Value
+
+	// Custom type info
+	CustomType() CustomValueType
+}
+
+//
+// Type predicates
+//
+
+// Report whether value is a Value
+func IsValue(value any) bool {
+	_, ok := value.(Value)
+	return ok
+}
+
+// Report whether value is a custom value of the given type
+func IsCustomValue(
+	value Value,
+	customType CustomValueType,
+) bool {
+	return value.Type() == ValueType_CUSTOM && value.(CustomValue).CustomType() == customType
+}
 
 //
 // Convenience functions for primitive value creation

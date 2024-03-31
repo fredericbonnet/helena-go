@@ -26,15 +26,16 @@ import "helena/core"
 // } from "../core/values";
 // import { numberCmd } from "./numbers";
 
-// const deferredValueType: CustomValueType = { name: "deferred" };
 type DeferredValue struct {
-	// type = deferredValueType;
 	Scope   *Scope
 	Program *core.Program
 }
 
 func (DeferredValue) Type() core.ValueType {
-	return -1
+	return core.ValueType_CUSTOM
+}
+func (DeferredValue) CustomType() core.CustomValueType {
+	return core.CustomValueType{Name: "deferred"}
 }
 func CreateDeferredValue(code core.ResultCode, value core.Value, scope *Scope) core.Result {
 	var program *core.Program

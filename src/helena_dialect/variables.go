@@ -2,13 +2,6 @@ package helena_dialect
 
 import "helena/core"
 
-// /* eslint-disable jsdoc/require-jsdoc */ // TODO
-// import { Command } from "../core/command";
-// import { ERROR, OK, Result, ResultCode } from "../core/results";
-// import { BOOL, NIL, STR, TupleValue, Value, ValueType } from "../core/values";
-// import { ARITY_ERROR } from "./arguments";
-// import { destructureValue, Scope } from "./core";
-
 const LET_SIGNATURE = "let constname value"
 
 type letCmd struct{}

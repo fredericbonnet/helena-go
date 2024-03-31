@@ -30,12 +30,14 @@ func (argspec Argspec) IsVariadic() bool {
 }
 
 type ArgspecValue struct {
-	//   readonly type = { name: "argspec" };
 	Argspec Argspec
 }
 
 func (ArgspecValue) Type() core.ValueType {
-	return -1
+	return core.ValueType_CUSTOM
+}
+func (ArgspecValue) CustomType() core.CustomValueType {
+	return core.CustomValueType{Name: "argspec"}
 }
 func NewArgspecValue(argspec Argspec) ArgspecValue {
 	return ArgspecValue{argspec}
