@@ -14,18 +14,18 @@ const (
 	ResultCode_ERROR
 	ResultCode_BREAK
 	ResultCode_CONTINUE
+	ResultCode_CUSTOM
 )
 
-// /** Helena custom result code */
-// export interface CustomResultCode {
-//   /** Custom code name */
-//   name: string;
-// }
+// Helena custom result code
+type CustomResultCode struct {
+	// Custom code name
+	Name string
+}
 
 // Helena result
 type TypedResult[T any] struct {
 	// Result code
-	// readonly code: ResultCode | CustomResultCode;
 	Code ResultCode
 
 	// Result value
@@ -110,16 +110,19 @@ func CONTINUE(value Value) Result {
 	}
 }
 
-// export const CUSTOM_RESULT = (
-//   code: CustomResultCode,
-//   value: Value = NIL
-// ): Result => ({
-//   code,
-//   value,
-// });
+func CUSTOM_RESULT(
+	code CustomResultCode,
+	value Value,
+) Result {
+	return Result{
+		Code:  ResultCode_CUSTOM,
+		Value: value,
+		Data:  code,
+	}
+}
 
-func RESULT_CODE_NAME(code ResultCode /*| CustomResultCode*/) string {
-	switch code {
+func RESULT_CODE_NAME(result Result) string {
+	switch result.Code {
 	case ResultCode_OK:
 		return "ok"
 	case ResultCode_RETURN:
@@ -132,8 +135,18 @@ func RESULT_CODE_NAME(code ResultCode /*| CustomResultCode*/) string {
 		return "break"
 	case ResultCode_CONTINUE:
 		return "continue"
+	case ResultCode_CUSTOM:
+		return result.Data.(CustomResultCode).Name
+
 	default:
-		//   return (code as CustomResultCode).name;
-		panic("TODO")
+		panic("CANTHAPPEN")
 	}
+}
+
+// Report whether result code is a custom code of the given type
+func IsCustomResult(
+	result Result,
+	customType CustomResultCode,
+) bool {
+	return result.Code == ResultCode_CUSTOM && result.Data.(CustomResultCode) == customType
 }

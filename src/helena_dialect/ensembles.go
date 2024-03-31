@@ -271,6 +271,6 @@ func executeEnsembleBody(state *EnsembleBodyState) core.Result {
 	case core.ResultCode_ERROR:
 		return result
 	default:
-		return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result.Code))
+		return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
 	}
 }

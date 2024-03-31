@@ -21,9 +21,10 @@ func newMockValue() mockValue {
 }
 
 func (value mockValue) Type() ValueType {
-	//TODO
-	//   type = { name: "mock" };
-	return ValueType_NIL
+	return ValueType_CUSTOM
+}
+func (value mockValue) CustomType() CustomValueType {
+	return CustomValueType{Name: "mock"}
 }
 
 func (value mockValue) SelectIndex(index Value) Result {
@@ -44,9 +45,10 @@ func (value mockValue) SelectRules(rules []Value) Result {
 type unselectableValue struct{}
 
 func (value unselectableValue) Type() ValueType {
-	//TODO
-	//   type = { name: "unselectable" };
-	return ValueType_NIL
+	return ValueType_CUSTOM
+}
+func (value unselectableValue) CustomType() CustomValueType {
+	return CustomValueType{Name: "unselectable"}
 }
 
 var _ = Describe("selectors", func() {

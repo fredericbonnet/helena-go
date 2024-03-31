@@ -518,7 +518,7 @@ func (cmd catchCmd) Execute(args []core.Value, context any) core.Result {
 			return core.ERROR("body must be a script")
 		}
 		result := scope.ExecuteScriptValue(body.(core.ScriptValue))
-		codeName := core.STR(core.RESULT_CODE_NAME(result.Code))
+		codeName := core.STR(core.RESULT_CODE_NAME(result))
 		switch result.Code {
 		case core.ResultCode_OK,
 			core.ResultCode_RETURN,
@@ -526,7 +526,7 @@ func (cmd catchCmd) Execute(args []core.Value, context any) core.Result {
 			core.ResultCode_ERROR:
 			return core.OK(core.TUPLE([]core.Value{codeName, result.Value}))
 		default:
-			return core.OK(core.TUPLE([]core.Value{core.STR(core.RESULT_CODE_NAME(result.Code))}))
+			return core.OK(core.TUPLE([]core.Value{core.STR(core.RESULT_CODE_NAME(result))}))
 		}
 	}
 	return cmd.run(&catchState{step: catchStateStep_beforeBody, args: args}, scope)
