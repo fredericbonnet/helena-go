@@ -31,6 +31,8 @@ var ERROR = core.ERROR
 var BREAK = core.BREAK
 var CONTINUE = core.CONTINUE
 
+func asString(value core.Value) string { return core.ValueToString(value).Data }
+
 type simpleCommand struct {
 	execute func(args []core.Value, context any) core.Result
 }
