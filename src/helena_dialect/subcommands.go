@@ -2,6 +2,11 @@ package helena_dialect
 
 import "helena/core"
 
+func INVALID_SUBCOMMAND_ERROR() core.Result { return core.ERROR("invalid subcommand name") }
+func UNKNOWN_SUBCOMMAND_ERROR(name string) core.Result {
+	return core.ERROR(`unknown subcommand "` + name + `"`)
+}
+
 type Subcommands struct {
 	List core.Value
 }
@@ -23,11 +28,11 @@ func (subcommands Subcommands) Dispatch(
 ) core.Result {
 	result := core.ValueToString(subcommand)
 	if result.Code != core.ResultCode_OK {
-		return core.ERROR("invalid subcommand name")
+		return INVALID_SUBCOMMAND_ERROR()
 	}
 	name := result.Data
 	if handlers[name] == nil {
-		return core.ERROR(`unknown subcommand "` + name + `"`)
+		return UNKNOWN_SUBCOMMAND_ERROR(name)
 	}
 	return handlers[name]()
 }

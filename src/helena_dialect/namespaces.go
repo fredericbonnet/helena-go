@@ -128,7 +128,7 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 	}
 	result := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return core.ERROR("invalid subcommand name")
+		return INVALID_SUBCOMMAND_ERROR()
 	}
 	subcommand := result.Data
 	if subcommand == "subcommands" {
@@ -144,7 +144,7 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 		return core.OK(core.LIST(list))
 	}
 	if !namespace.scope.HasLocalCommand(subcommand) {
-		return core.ERROR(`unknown subcommand "` + subcommand + `"`)
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 	command := namespace.scope.ResolveNamedCommand(subcommand)
 	cmdline := append(
@@ -175,7 +175,7 @@ func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandH
 	}
 	result := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return core.ERROR("invalid subcommand name")
+		return INVALID_SUBCOMMAND_ERROR()
 	}
 	subcommand := result.Data
 	if subcommand == "subcommands" {
@@ -185,7 +185,7 @@ func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandH
 		return core.OK(core.STR(signature + " subcommands"))
 	}
 	if !namespace.scope.HasLocalCommand(subcommand) {
-		return core.ERROR(`unknown subcommand "` + subcommand + `"`)
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 	command := namespace.scope.ResolveNamedCommand(subcommand)
 	if c, ok := command.(core.CommandWithHelp); ok {

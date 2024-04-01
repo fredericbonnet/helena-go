@@ -120,7 +120,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 	}
 	result2 := core.ValueToString(args[minArgs])
 	if result2.Code != core.ResultCode_OK {
-		return core.ERROR("invalid subcommand name")
+		return INVALID_SUBCOMMAND_ERROR()
 	}
 	subcommand := result2.Data
 	if subcommand == "subcommands" {
@@ -139,7 +139,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		return core.OK(core.LIST(list))
 	}
 	if !ensemble.scope.HasLocalCommand(subcommand) {
-		return core.ERROR(`unknown subcommand "` + subcommand + `"`)
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 	command := ensemble.scope.ResolveNamedCommand(subcommand)
 	cmdline := append(append(
@@ -171,7 +171,7 @@ func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHel
 	}
 	result := core.ValueToString(args[minArgs])
 	if result.Code != core.ResultCode_OK {
-		return core.ERROR("invalid subcommand name")
+		return INVALID_SUBCOMMAND_ERROR()
 	}
 	subcommand := result.Data
 	if subcommand == "subcommands" {
@@ -181,7 +181,7 @@ func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHel
 		return core.OK(core.STR(signature + " subcommands"))
 	}
 	if !ensemble.scope.HasLocalCommand(subcommand) {
-		return core.ERROR(`unknown subcommand "` + subcommand + `"`)
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 	command := ensemble.scope.ResolveNamedCommand(subcommand)
 	if c, ok := command.(core.CommandWithHelp); ok {
