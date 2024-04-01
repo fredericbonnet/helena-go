@@ -324,8 +324,8 @@ func RealValueFromValue(value Value) TypedResult[RealValue] {
 // - Strings: any ParseFloat()-accepted string
 func ValueIsNumber(value Value) bool {
 	switch value.Type() {
-	case ValueType_INTEGER:
-	case ValueType_REAL:
+	case ValueType_INTEGER,
+		ValueType_REAL:
 		return true
 	}
 	result := ValueToString(value)
