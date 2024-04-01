@@ -336,28 +336,24 @@ func (parser *Parser) Parse(tokens []Token) ParseResult {
 			return result
 		}
 	}
-	return parser.closeStream()
+	return parser.CloseStream()
 }
 
-//   /**
-//    * Parse a token stream till the end
-//    *
-//    * This method is useful when parsing incomplete scripts in interactive mode,
-//    * as getting an error at this stage is unrecoverable even if there is more
-//    * input to parse
-//    *
-//    * @param stream - Stream to parse
-//    *
-//    * @returns        Empty result on success, else error
-//    */
-//   parseStream(stream: TokenStream): ParseResult {
-//     this.begin(stream);
-//     while (!this.end()) {
-//       const result = this.next();
-//       if (!result.success) return result;
-//     }
-//     return PARSE_OK();
-//   }
+// Parse a token stream till the end
+//
+// This method is useful when parsing incomplete scripts in interactive mode,
+// as getting an error at this stage is unrecoverable even if there is more
+// input to parse
+func (parser *Parser) ParseStream(stream TokenStream) ParseResult {
+	parser.begin(stream)
+	for !parser.end() {
+		result := parser.next()
+		if !result.Success {
+			return result
+		}
+	}
+	return PARSE_OK(nil)
+}
 
 // Start incremental parsing of a Helena token stream
 func (parser *Parser) begin(stream TokenStream) {
@@ -382,7 +378,7 @@ func (parser *Parser) next() ParseResult {
 //
 // This method is useful when testing for script completeness in interactive
 // mode and prompt for more input
-func (parser *Parser) closeStream() ParseResult {
+func (parser *Parser) CloseStream() ParseResult {
 	if parser.context.node != nil {
 		switch (parser.context.node).(type) {
 		case *tupleNode:

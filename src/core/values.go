@@ -27,6 +27,37 @@ const (
 	ValueType_CUSTOM
 )
 
+func (t ValueType) String() string {
+	switch t {
+	case ValueType_NIL:
+		return "NIL"
+	case ValueType_BOOLEAN:
+		return "BOOLEAN"
+	case ValueType_INTEGER:
+		return "INTEGER"
+	case ValueType_REAL:
+		return "REAL"
+	case ValueType_STRING:
+		return "STRING"
+	case ValueType_LIST:
+		return "LIST"
+	case ValueType_DICTIONARY:
+		return "DICTIONARY"
+	case ValueType_TUPLE:
+		return "TUPLE"
+	case ValueType_SCRIPT:
+		return "SCRIPT"
+	case ValueType_COMMAND:
+		return "COMMAND"
+	case ValueType_QUALIFIED:
+		return "QUALIFIED"
+	case ValueType_CUSTOM:
+		return "CUSTOM"
+	default:
+		panic("CANTHAPPEN")
+	}
+}
+
 // Helena value
 type Value interface {
 	// Type identifier
