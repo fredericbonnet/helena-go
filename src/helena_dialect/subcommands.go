@@ -21,18 +21,3 @@ func NewSubcommands(names []string) Subcommands {
 		List: core.LIST(values),
 	}
 }
-
-func (subcommands Subcommands) Dispatch(
-	subcommand core.Value,
-	handlers SubcommandHandlers,
-) core.Result {
-	result := core.ValueToString(subcommand)
-	if result.Code != core.ResultCode_OK {
-		return INVALID_SUBCOMMAND_ERROR()
-	}
-	name := result.Data
-	if handlers[name] == nil {
-		return UNKNOWN_SUBCOMMAND_ERROR(name)
-	}
-	return handlers[name]()
-}

@@ -10,55 +10,69 @@ func (trueCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(core.TRUE)
 	}
-	return booleanSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("true subcommands")
-			}
-			return core.OK(booleanSubcommands.List)
-		},
-		"?": func() core.Result {
-			if len(args) < 3 || len(args) > 4 {
-				return ARITY_ERROR("true ? arg ?arg?")
-			}
-			return core.OK(args[2])
-		},
-		"!?": func() core.Result {
-			if len(args) < 3 || len(args) > 4 {
-				return ARITY_ERROR("true !? arg ?arg?")
-			}
-			if len(args) == 4 {
-				return core.OK(args[3])
-			} else {
-				return core.OK(core.NIL)
-			}
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("true subcommands")
+		}
+		return core.OK(booleanSubcommands.List)
+
+	case "?":
+		if len(args) < 3 || len(args) > 4 {
+			return ARITY_ERROR("true ? arg ?arg?")
+		}
+		return core.OK(args[2])
+
+	case "!?":
+		if len(args) < 3 || len(args) > 4 {
+			return ARITY_ERROR("true !? arg ?arg?")
+		}
+		if len(args) == 4 {
+			return core.OK(args[3])
+		} else {
+			return core.OK(core.NIL)
+		}
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 func (trueCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(core.STR("true ?subcommand?"))
 	}
-	return booleanSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) > 2 {
-				return ARITY_ERROR("true subcommands")
-			}
-			return core.OK(core.STR("true subcommands"))
-		},
-		"?": func() core.Result {
-			if len(args) > 4 {
-				return ARITY_ERROR("true ? arg ?arg?")
-			}
-			return core.OK(core.STR("true ? arg ?arg?"))
-		},
-		"!?": func() core.Result {
-			if len(args) > 4 {
-				return ARITY_ERROR("true !? arg ?arg?")
-			}
-			return core.OK(core.STR("true !? arg ?arg?"))
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) > 2 {
+			return ARITY_ERROR("true subcommands")
+		}
+		return core.OK(core.STR("true subcommands"))
+
+	case "?":
+		if len(args) > 4 {
+			return ARITY_ERROR("true ? arg ?arg?")
+		}
+		return core.OK(core.STR("true ? arg ?arg?"))
+
+	case "!?":
+		if len(args) > 4 {
+			return ARITY_ERROR("true !? arg ?arg?")
+		}
+		return core.OK(core.STR("true !? arg ?arg?"))
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 type falseCmd struct{}
@@ -67,55 +81,69 @@ func (falseCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(core.FALSE)
 	}
-	return booleanSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("false subcommands")
-			}
-			return core.OK(booleanSubcommands.List)
-		},
-		"?": func() core.Result {
-			if len(args) < 3 || len(args) > 4 {
-				return ARITY_ERROR("false ? arg ?arg?")
-			}
-			if len(args) == 4 {
-				return core.OK(args[3])
-			} else {
-				return core.OK(core.NIL)
-			}
-		},
-		"!?": func() core.Result {
-			if len(args) < 3 || len(args) > 4 {
-				return ARITY_ERROR("false !? arg ?arg?")
-			}
-			return core.OK(args[2])
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("false subcommands")
+		}
+		return core.OK(booleanSubcommands.List)
+
+	case "?":
+		if len(args) < 3 || len(args) > 4 {
+			return ARITY_ERROR("false ? arg ?arg?")
+		}
+		if len(args) == 4 {
+			return core.OK(args[3])
+		} else {
+			return core.OK(core.NIL)
+		}
+
+	case "!?":
+		if len(args) < 3 || len(args) > 4 {
+			return ARITY_ERROR("false !? arg ?arg?")
+		}
+		return core.OK(args[2])
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 func (falseCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(core.STR("false ?subcommand?"))
 	}
-	return booleanSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) > 2 {
-				return ARITY_ERROR("false subcommands")
-			}
-			return core.OK(core.STR("false subcommands"))
-		},
-		"?": func() core.Result {
-			if len(args) > 4 {
-				return ARITY_ERROR("false ? arg ?arg?")
-			}
-			return core.OK(core.STR("false ? arg ?arg?"))
-		},
-		"!?": func() core.Result {
-			if len(args) > 4 {
-				return ARITY_ERROR("false !? arg ?arg?")
-			}
-			return core.OK(core.STR("false !? arg ?arg?"))
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) > 2 {
+			return ARITY_ERROR("false subcommands")
+		}
+		return core.OK(core.STR("false subcommands"))
+
+	case "?":
+		if len(args) > 4 {
+			return ARITY_ERROR("false ? arg ?arg?")
+		}
+		return core.OK(core.STR("false ? arg ?arg?"))
+
+	case "!?":
+		if len(args) > 4 {
+			return ARITY_ERROR("false !? arg ?arg?")
+		}
+		return core.OK(core.STR("false !? arg ?arg?"))
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 type boolCommand struct {

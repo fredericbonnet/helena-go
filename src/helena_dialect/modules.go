@@ -63,44 +63,51 @@ func (module *Module) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 1 {
 		return core.OK(module.value)
 	}
-	return moduleSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<module> subcommands")
-			}
-			return core.OK(moduleSubcommands.List)
-		},
-		"exports": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<module> exports")
-			}
-			values := make([]core.Value, len(*module.exports))
-			i := 0
-			for _, value := range *module.exports {
-				values[i] = value
-				i++
-			}
-			return core.OK(core.LIST(values))
-		},
-		"import": func() core.Result {
-			if len(args) != 3 && len(args) != 4 {
-				return ARITY_ERROR("<module> import name ?alias?")
-			}
-			var aliasName core.Value
-			if len(args) == 4 {
-				aliasName = args[3]
-			} else {
-				aliasName = args[2]
-			}
-			return importCommand(
-				args[2],
-				aliasName,
-				module.exports,
-				module.scope,
-				scope,
-			)
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("<module> subcommands")
+		}
+		return core.OK(moduleSubcommands.List)
+
+	case "exports":
+		if len(args) != 2 {
+			return ARITY_ERROR("<module> exports")
+		}
+		values := make([]core.Value, len(*module.exports))
+		i := 0
+		for _, value := range *module.exports {
+			values[i] = value
+			i++
+		}
+		return core.OK(core.LIST(values))
+
+	case "import":
+		if len(args) != 3 && len(args) != 4 {
+			return ARITY_ERROR("<module> import name ?alias?")
+		}
+		var aliasName core.Value
+		if len(args) == 4 {
+			aliasName = args[3]
+		} else {
+			aliasName = args[2]
+		}
+		return importCommand(
+			args[2],
+			aliasName,
+			module.exports,
+			module.scope,
+			scope,
+		)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 func importCommand(

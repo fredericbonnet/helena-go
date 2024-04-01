@@ -26,39 +26,46 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(scope.value)
 	}
-	return scopeCommandSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<scope> subcommands")
-			}
-			return core.OK(scopeCommandSubcommands.List)
-		},
-		"eval": func() core.Result {
-			if len(args) != 3 {
-				return ARITY_ERROR("<scope> eval body")
-			}
-			return CreateDeferredValue(core.ResultCode_YIELD, args[2], scope.scope)
-		},
-		"call": func() core.Result {
-			if len(args) < 3 {
-				return ARITY_ERROR("<scope> call cmdname ?arg ...?")
-			}
-			result := core.ValueToString(args[2])
-			if result.Code != core.ResultCode_OK {
-				return core.ERROR("invalid command name")
-			}
-			command := result.Data
-			if !scope.scope.HasLocalCommand(command) {
-				return core.ERROR(`unknown command "` + command + `"`)
-			}
-			cmdline := args[2:]
-			return CreateDeferredValue(
-				core.ResultCode_YIELD,
-				core.TUPLE(cmdline),
-				scope.scope,
-			)
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("<scope> subcommands")
+		}
+		return core.OK(scopeCommandSubcommands.List)
+
+	case "eval":
+		if len(args) != 3 {
+			return ARITY_ERROR("<scope> eval body")
+		}
+		return CreateDeferredValue(core.ResultCode_YIELD, args[2], scope.scope)
+
+	case "call":
+		if len(args) < 3 {
+			return ARITY_ERROR("<scope> call cmdname ?arg ...?")
+		}
+		result := core.ValueToString(args[2])
+		if result.Code != core.ResultCode_OK {
+			return core.ERROR("invalid command name")
+		}
+		command := result.Data
+		if !scope.scope.HasLocalCommand(command) {
+			return core.ERROR(`unknown command "` + command + `"`)
+		}
+		cmdline := args[2:]
+		return CreateDeferredValue(
+			core.ResultCode_YIELD,
+			core.TUPLE(cmdline),
+			scope.scope,
+		)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 type scopeBodyState struct {

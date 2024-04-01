@@ -26,46 +26,53 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 	if len(args) == 1 {
 		return core.OK(metacommand.value)
 	}
-	return ensembleMetacommandSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<ensemble> subcommands")
-			}
-			return core.OK(ensembleMetacommandSubcommands.List)
-		},
-		"eval": func() core.Result {
-			if len(args) != 3 {
-				return ARITY_ERROR("<ensemble> eval body")
-			}
-			return CreateDeferredValue(
-				core.ResultCode_YIELD,
-				args[2],
-				metacommand.ensemble.scope,
-			)
-		},
-		"call": func() core.Result {
-			if len(args) < 3 {
-				return ARITY_ERROR("<ensemble> call cmdname ?arg ...?")
-			}
-			result := core.ValueToString(args[2])
-			if result.Code != core.ResultCode_OK {
-				return core.ERROR("invalid command name")
-			}
-			subcommand := result.Data
-			if !metacommand.ensemble.scope.HasLocalCommand(subcommand) {
-				return core.ERROR(`unknown command "` + subcommand + `"`)
-			}
-			command := metacommand.ensemble.scope.ResolveNamedCommand(subcommand)
-			cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
-			return CreateDeferredValue(core.ResultCode_YIELD, core.TUPLE(cmdline), scope)
-		},
-		"argspec": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<ensemble> argspec")
-			}
-			return core.OK(metacommand.ensemble.argspec)
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("<ensemble> subcommands")
+		}
+		return core.OK(ensembleMetacommandSubcommands.List)
+
+	case "eval":
+		if len(args) != 3 {
+			return ARITY_ERROR("<ensemble> eval body")
+		}
+		return CreateDeferredValue(
+			core.ResultCode_YIELD,
+			args[2],
+			metacommand.ensemble.scope,
+		)
+
+	case "call":
+		if len(args) < 3 {
+			return ARITY_ERROR("<ensemble> call cmdname ?arg ...?")
+		}
+		result := core.ValueToString(args[2])
+		if result.Code != core.ResultCode_OK {
+			return core.ERROR("invalid command name")
+		}
+		subcommand := result.Data
+		if !metacommand.ensemble.scope.HasLocalCommand(subcommand) {
+			return core.ERROR(`unknown command "` + subcommand + `"`)
+		}
+		command := metacommand.ensemble.scope.ResolveNamedCommand(subcommand)
+		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
+		return CreateDeferredValue(core.ResultCode_YIELD, core.TUPLE(cmdline), scope)
+
+	case "argspec":
+		if len(args) != 2 {
+			return ARITY_ERROR("<ensemble> argspec")
+		}
+		return core.OK(metacommand.ensemble.argspec)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 func ENSEMBLE_COMMAND_PREFIX(name core.Value, args string) string {

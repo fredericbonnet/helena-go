@@ -31,26 +31,41 @@ func (numberCommand) Execute(args []core.Value, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(floatToValue(operand1))
 	}
-	return numberSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<number> subcommands")
-			}
-			return core.OK(numberSubcommands.List)
-		},
 
-		"+": func() core.Result { return arithmetics(args, operand1) },
-		"-": func() core.Result { return arithmetics(args, operand1) },
-		"*": func() core.Result { return arithmetics(args, operand1) },
-		"/": func() core.Result { return arithmetics(args, operand1) },
+	result2 := core.ValueToString(args[1])
+	if result2.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result2.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("<number> subcommands")
+		}
+		return core.OK(numberSubcommands.List)
 
-		"==": func() core.Result { return eqOp(args, operand1) },
-		"!=": func() core.Result { return neOp(args, operand1) },
-		">":  func() core.Result { return gtOp(args, operand1) },
-		">=": func() core.Result { return geOp(args, operand1) },
-		"<":  func() core.Result { return ltOp(args, operand1) },
-		"<=": func() core.Result { return leOp(args, operand1) },
-	})
+	case "+",
+		"-",
+		"*",
+		"/":
+		return arithmetics(args, operand1)
+
+	case "==":
+		return eqOp(args, operand1)
+	case "!=":
+		return neOp(args, operand1)
+	case ">":
+		return gtOp(args, operand1)
+	case ">=":
+		return geOp(args, operand1)
+	case "<":
+		return ltOp(args, operand1)
+	case "<=":
+		return leOp(args, operand1)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 var numberCmd = numberCommand{}

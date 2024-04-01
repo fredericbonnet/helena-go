@@ -41,70 +41,77 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 	if len(args) == 1 {
 		return core.OK(metacommand.value)
 	}
-	return namespaceMetacommandSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<namespace> subcommands")
-			}
-			return core.OK(namespaceMetacommandSubcommands.List)
-		},
-		"eval": func() core.Result {
-			if len(args) != 3 {
-				return ARITY_ERROR("<namespace> eval body")
-			}
-			return CreateDeferredValue(
-				core.ResultCode_YIELD,
-				args[2],
-				metacommand.namespace.scope,
-			)
-		},
-		"call": func() core.Result {
-			if len(args) < 3 {
-				return ARITY_ERROR("<namespace> call cmdname ?arg ...?")
-			}
-			result := core.ValueToString(args[2])
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("<namespace> subcommands")
+		}
+		return core.OK(namespaceMetacommandSubcommands.List)
+
+	case "eval":
+		if len(args) != 3 {
+			return ARITY_ERROR("<namespace> eval body")
+		}
+		return CreateDeferredValue(
+			core.ResultCode_YIELD,
+			args[2],
+			metacommand.namespace.scope,
+		)
+
+	case "call":
+		if len(args) < 3 {
+			return ARITY_ERROR("<namespace> call cmdname ?arg ...?")
+		}
+		result := core.ValueToString(args[2])
+		if result.Code != core.ResultCode_OK {
+			return core.ERROR("invalid command name")
+		}
+		subcommand := result.Data
+		if !metacommand.namespace.scope.HasLocalCommand(subcommand) {
+			return core.ERROR(`unknown command "` + subcommand + `"`)
+		}
+		command := metacommand.namespace.scope.ResolveNamedCommand(subcommand)
+		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
+		return CreateDeferredValue(
+			core.ResultCode_YIELD,
+			core.TUPLE(cmdline),
+			metacommand.namespace.scope,
+		)
+
+	case "import":
+		if len(args) != 3 && len(args) != 4 {
+			return ARITY_ERROR("<namespace> import name ?alias?")
+		}
+		result := core.ValueToString(args[2])
+		if result.Code != core.ResultCode_OK {
+			return core.ERROR("invalid import name")
+		}
+		name := result.Data
+		var alias string
+		if len(args) == 4 {
+			result := core.ValueToString(args[3])
 			if result.Code != core.ResultCode_OK {
-				return core.ERROR("invalid command name")
+				return core.ERROR("invalid alias name")
 			}
-			subcommand := result.Data
-			if !metacommand.namespace.scope.HasLocalCommand(subcommand) {
-				return core.ERROR(`unknown command "` + subcommand + `"`)
-			}
-			command := metacommand.namespace.scope.ResolveNamedCommand(subcommand)
-			cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
-			return CreateDeferredValue(
-				core.ResultCode_YIELD,
-				core.TUPLE(cmdline),
-				metacommand.namespace.scope,
-			)
-		},
-		"import": func() core.Result {
-			if len(args) != 3 && len(args) != 4 {
-				return ARITY_ERROR("<namespace> import name ?alias?")
-			}
-			result := core.ValueToString(args[2])
-			if result.Code != core.ResultCode_OK {
-				return core.ERROR("invalid import name")
-			}
-			name := result.Data
-			var alias string
-			if len(args) == 4 {
-				result := core.ValueToString(args[3])
-				if result.Code != core.ResultCode_OK {
-					return core.ERROR("invalid alias name")
-				}
-				alias = result.Data
-			} else {
-				alias = name
-			}
-			command := metacommand.namespace.scope.ResolveNamedCommand(name)
-			if command == nil {
-				return core.ERROR(`cannot resolve imported command "` + name + `"`)
-			}
-			scope.RegisterNamedCommand(alias, command)
-			return core.OK(core.NIL)
-		},
-	})
+			alias = result.Data
+		} else {
+			alias = name
+		}
+		command := metacommand.namespace.scope.ResolveNamedCommand(name)
+		if command == nil {
+			return core.ERROR(`cannot resolve imported command "` + name + `"`)
+		}
+		scope.RegisterNamedCommand(alias, command)
+		return core.OK(core.NIL)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 func NAMESPACE_COMMAND_PREFIX(name core.Value) string {

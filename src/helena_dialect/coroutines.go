@@ -39,51 +39,58 @@ func (cmd *coroutineCommand) Execute(args []core.Value, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(cmd.value)
 	}
-	return coroutineSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<coroutine> subcommands")
-			}
-			return core.OK(coroutineSubcommands.List)
-		},
-		"wait": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<coroutine> wait")
-			}
-			if cmd.state == coroutineState_inactive {
-				cmd.state = coroutineState_active
-				cmd.process = cmd.scope.PrepareScriptValue(cmd.body)
-			}
-			return cmd.run()
-		},
-		"active": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<coroutine> active")
-			}
-			return core.OK(core.BOOL(cmd.state == coroutineState_active))
-		},
-		"done": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<coroutine> done")
-			}
-			return core.OK(core.BOOL(cmd.state == coroutineState_done))
-		},
-		"yield": func() core.Result {
-			if len(args) != 2 && len(args) != 3 {
-				return ARITY_ERROR("<coroutine> yield ?value?")
-			}
-			if cmd.state == coroutineState_inactive {
-				return core.ERROR("coroutine is inactive")
-			}
-			if cmd.state == coroutineState_done {
-				return core.ERROR("coroutine is done")
-			}
-			if len(args) == 3 {
-				cmd.process.YieldBack(args[2])
-			}
-			return cmd.run()
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("<coroutine> subcommands")
+		}
+		return core.OK(coroutineSubcommands.List)
+
+	case "wait":
+		if len(args) != 2 {
+			return ARITY_ERROR("<coroutine> wait")
+		}
+		if cmd.state == coroutineState_inactive {
+			cmd.state = coroutineState_active
+			cmd.process = cmd.scope.PrepareScriptValue(cmd.body)
+		}
+		return cmd.run()
+
+	case "active":
+		if len(args) != 2 {
+			return ARITY_ERROR("<coroutine> active")
+		}
+		return core.OK(core.BOOL(cmd.state == coroutineState_active))
+
+	case "done":
+		if len(args) != 2 {
+			return ARITY_ERROR("<coroutine> done")
+		}
+		return core.OK(core.BOOL(cmd.state == coroutineState_done))
+
+	case "yield":
+		if len(args) != 2 && len(args) != 3 {
+			return ARITY_ERROR("<coroutine> yield ?value?")
+		}
+		if cmd.state == coroutineState_inactive {
+			return core.ERROR("coroutine is inactive")
+		}
+		if cmd.state == coroutineState_done {
+			return core.ERROR("coroutine is done")
+		}
+		if len(args) == 3 {
+			cmd.process.YieldBack(args[2])
+		}
+		return cmd.run()
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 func (cmd *coroutineCommand) run() core.Result {

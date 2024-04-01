@@ -20,20 +20,27 @@ func (metacommand *closureMetacommand) Execute(args []core.Value, _ any) core.Re
 	if len(args) == 1 {
 		return core.OK(metacommand.closure.value)
 	}
-	return closureMetacommandSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<closure> subcommands")
-			}
-			return core.OK(closureMetacommandSubcommands.List)
-		},
-		"argspec": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<closure> argspec")
-			}
-			return core.OK(metacommand.closure.argspec)
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("<closure> subcommands")
+		}
+		return core.OK(closureMetacommandSubcommands.List)
+
+	case "argspec":
+		if len(args) != 2 {
+			return ARITY_ERROR("<closure> argspec")
+		}
+		return core.OK(metacommand.closure.argspec)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 func CLOSURE_COMMAND_SIGNATURE(name core.Value, help string) string {

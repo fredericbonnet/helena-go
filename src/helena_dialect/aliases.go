@@ -20,20 +20,27 @@ func (metacommand *aliasMetacommand) Execute(args []core.Value, _ any) core.Resu
 	if len(args) == 1 {
 		return core.OK(metacommand.alias.value)
 	}
-	return aliasMetacommandSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<alias> subcommands")
-			}
-			return core.OK(aliasMetacommandSubcommands.List)
-		},
-		"command": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<alias> command")
-			}
-			return core.OK(metacommand.alias.cmd)
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("<alias> subcommands")
+		}
+		return core.OK(aliasMetacommandSubcommands.List)
+
+	case "command":
+		if len(args) != 2 {
+			return ARITY_ERROR("<alias> command")
+		}
+		return core.OK(metacommand.alias.cmd)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 func (metacommand *aliasMetacommand) Resume(result core.Result, context any) core.Result {
 	return metacommand.alias.Resume(result, context)

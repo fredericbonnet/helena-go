@@ -20,20 +20,27 @@ func (metacommand *procMetacommand) Execute(args []core.Value, _ any) core.Resul
 	if len(args) == 1 {
 		return core.OK(metacommand.proc.value)
 	}
-	return procMetacommandSubcommands.Dispatch(args[1], SubcommandHandlers{
-		"subcommands": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<proc> subcommands")
-			}
-			return core.OK(procMetacommandSubcommands.List)
-		},
-		"argspec": func() core.Result {
-			if len(args) != 2 {
-				return ARITY_ERROR("<proc> argspec")
-			}
-			return core.OK(metacommand.proc.argspec)
-		},
-	})
+	result := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	subcommand := result.Data
+	switch subcommand {
+	case "subcommands":
+		if len(args) != 2 {
+			return ARITY_ERROR("<proc> subcommands")
+		}
+		return core.OK(procMetacommandSubcommands.List)
+
+	case "argspec":
+		if len(args) != 2 {
+			return ARITY_ERROR("<proc> argspec")
+		}
+		return core.OK(metacommand.proc.argspec)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
 }
 
 func PROC_COMMAND_SIGNATURE(name core.Value, help string) string {
