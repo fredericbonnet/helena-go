@@ -48,6 +48,10 @@ var _ = Describe("Helena numbers", func() {
 			It("can be expressed as strings", func() {
 				Expect(evaluate(`"123"`)).To(Equal(INT(123)))
 			})
+			It("should not take precedence over named commands", func() {
+				Expect(evaluate("123")).To(Equal(INT(123)))
+				Expect(evaluate("macro 123 {} {idem value}; 123")).To(Equal(STR("value")))
+			})
 
 			Describe("Exceptions", func() {
 				Specify("unknown subcommand", func() {
@@ -70,6 +74,10 @@ var _ = Describe("Helena numbers", func() {
 			})
 			It("can be expressed as strings", func() {
 				Expect(evaluate(`"0.5"`)).To(Equal(REAL(0.5)))
+			})
+			It("should not take precedence over named commands", func() {
+				Expect(evaluate("12.3")).To(Equal(REAL(12.3)))
+				Expect(evaluate("macro 12.3 {} {idem value}; 12.3")).To(Equal(STR("value")))
 			})
 
 			Describe("Exceptions", func() {

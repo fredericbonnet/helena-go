@@ -219,13 +219,13 @@ func (scope *Scope) ResolveVariable(name string) core.Value {
 	return nil
 }
 func (scope *Scope) ResolveCommand(value core.Value) core.Command {
-	if value.Type() == core.ValueType_TUPLE {
+	switch value.Type() {
+	case core.ValueType_TUPLE:
 		return expandPrefixCmd
-	}
-	if value.Type() == core.ValueType_COMMAND {
+	case core.ValueType_COMMAND:
 		return value.(core.CommandValue).Command()
-	}
-	if core.ValueIsNumber(value) {
+	case core.ValueType_INTEGER,
+		core.ValueType_REAL:
 		return numberCmd
 	}
 	result := core.ValueToString(value)
@@ -233,7 +233,14 @@ func (scope *Scope) ResolveCommand(value core.Value) core.Command {
 		return nil
 	}
 	cmdname := result.Data
-	return scope.ResolveNamedCommand(cmdname)
+	command := scope.ResolveNamedCommand(cmdname)
+	if command != nil {
+		return command
+	}
+	if core.StringIsNumber(cmdname) {
+		return numberCmd
+	}
+	return nil
 }
 func (scope *Scope) ResolveNamedCommand(name string) core.Command {
 	context := scope.Context

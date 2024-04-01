@@ -228,30 +228,11 @@ func IntegerValueFromValue(value Value) TypedResult[IntegerValue] {
 	return OK_T(v, v)
 }
 
-//   /**
-//    * Test if value is convertible to number
-//    * - Reals
-//    * - Integers
-//    * - Strings: any Number()-accepted string
-//    *
-//    * @param value - Value to convert
-//    *
-//    * @returns       True if value is convertible
-//    */
-//   static isInteger(value: Value): boolean {
-//     switch (value.type) {
-//       case ValueType_INTEGER:
-//         return true;
-//       case ValueType_REAL:
-//         return Number.isSafeInteger((value as RealValue).value);
-//       default: {
-//         const { data, code } = StringValue.toString(value);
-//         if (code != ResultCode_OK) return false;
-//         const n = Number(data);
-//         return !isNaN(n) && Number.isSafeInteger(n);
-//       }
-//     }
-//   }
+// Report whether string value is convertible to integer
+func StringIsInteger(value string) bool {
+	_, err := strconv.ParseInt(value, 10, 64)
+	return err == nil
+}
 
 // Convert value to integer:
 // - Integers: use integer value
@@ -318,21 +299,9 @@ func RealValueFromValue(value Value) TypedResult[RealValue] {
 	return OK_T(v, v)
 }
 
-// Report whether value is convertible to number
-// - Reals
-// - Integers
-// - Strings: any ParseFloat()-accepted string
-func ValueIsNumber(value Value) bool {
-	switch value.Type() {
-	case ValueType_INTEGER,
-		ValueType_REAL:
-		return true
-	}
-	result := ValueToString(value)
-	if result.Code != ResultCode_OK {
-		return false
-	}
-	_, err := strconv.ParseFloat(result.Data, 64)
+// Report whether string value is convertible to number
+func StringIsNumber(value string) bool {
+	_, err := strconv.ParseFloat(value, 64)
 	return err == nil
 }
 
