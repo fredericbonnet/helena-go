@@ -530,8 +530,11 @@ func (compiler Compiler) emitConstant(program *Program, value Value) {
 // reentrancy and parallelism of executors
 //
 type ProgramState struct {
-	// Execution frames; each frame is a stack of values
-	frames [][]Value
+	// Execution stack
+	stack []Value
+
+	// Execution frame start indexes; each frame is a slice of the stack
+	frames []int
 
 	// Program counter
 	PC uint
@@ -548,7 +551,8 @@ type ProgramState struct {
 
 func NewProgramState() *ProgramState {
 	return &ProgramState{
-		frames: [][]Value{{}},
+		stack:  []Value{},
+		frames: []int{0},
 		PC:     0,
 		CC:     0,
 		Result: OK(NIL),
@@ -557,53 +561,49 @@ func NewProgramState() *ProgramState {
 
 // Open a new frame
 func (state *ProgramState) OpenFrame() {
-	state.frames = append(state.frames, []Value{})
+	state.frames = append(state.frames, len(state.stack))
 }
 
 // Close and return the current frame
 func (state *ProgramState) CloseFrame() []Value {
-	f := state.frames[len(state.frames)-1]
+	length := state.frames[len(state.frames)-1]
 	state.frames = state.frames[:len(state.frames)-1]
-	return f
+	frame := append(make([]Value, 0, len(state.stack)-length), state.stack[length:]...)
+	state.stack = state.stack[:length]
+	return frame
 }
 
-// Return current frame
-func (state *ProgramState) Frame() []Value {
-	return state.frames[len(state.frames)-1]
+// Report whether current frame is empty
+func (state *ProgramState) Empty() bool {
+	return state.frames[len(state.frames)-1] == len(state.stack)
 }
 
 // Push value on current frame
 func (state *ProgramState) Push(value Value) {
-	f := state.frames[len(state.frames)-1]
-	f = append(f, value)
-	state.frames[len(state.frames)-1] = f
+	state.stack = append(state.stack, value)
 }
 
 // Pop and return last value on current frame
 func (state *ProgramState) Pop() Value {
-	f := state.frames[len(state.frames)-1]
-	v := f[len(f)-1]
-	state.frames[len(state.frames)-1] = f[:len(f)-1]
-	return v
+	last := state.stack[len(state.stack)-1]
+	state.stack = state.stack[:len(state.stack)-1]
+	return last
 }
 
 // Return last value on current frame
-func (state *ProgramState) last() *Value {
-	f := state.Frame()
-	if len(f) == 0 {
+func (state *ProgramState) last() Value {
+	if len(state.stack) == 0 {
 		return nil
 	}
-	return &f[len(f)-1]
+	return state.stack[len(state.stack)-1]
 }
 
 // Expand last value in current frame
 func (state *ProgramState) Expand() {
 	last := state.last()
-	if last != nil && (*last).Type() == ValueType_TUPLE {
-		f := state.frames[len(state.frames)-1]
-		f = f[:len(f)-1]
-		f = append(f, (*last).(TupleValue).Values...)
-		state.frames[len(state.frames)-1] = f
+	if last != nil && last.Type() == ValueType_TUPLE {
+		state.stack = state.stack[:len(state.stack)-1]
+		state.stack = append(state.stack, last.(TupleValue).Values...)
 	}
 }
 
@@ -773,7 +773,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 			panic("CANTHAPPEN")
 		}
 	}
-	if len(state.Frame()) > 0 {
+	if !state.Empty() {
 		state.Result = OK(state.Pop())
 	}
 	return state.Result
@@ -1122,7 +1122,7 @@ func (executor *Executor) resolveSelector(rules []Value) TypedResult[Selector] {
 //     }
 //     sections.push(`
 //     }
-//     if (state.frame().length) state.result = OK(state.pop());
+//     if (!state.empty()) state.result = OK(state.pop());
 //     return state.result;
 //     `);
 //     return sections.join("\n");
