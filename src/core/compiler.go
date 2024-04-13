@@ -21,6 +21,7 @@ const (
 	OpCode_EVALUATE_SENTENCE
 	OpCode_PUSH_RESULT
 	OpCode_JOIN_STRINGS
+	OpCode_MAKE_TUPLE
 )
 
 //
@@ -93,12 +94,16 @@ func (compiler Compiler) emitScript(program *Program, script Script) {
 // Flatten and compile the given sentences into a program
 func (compiler Compiler) CompileSentences(sentences []Sentence) *Program {
 	program := &Program{}
+	compiler.emitSentences(program, sentences)
+	program.PushOpCode(OpCode_MAKE_TUPLE)
+	return program
+}
+func (compiler Compiler) emitSentences(program *Program, sentences []Sentence) {
 	program.PushOpCode(OpCode_OPEN_FRAME)
 	for _, sentence := range sentences {
 		compiler.emitSentence(program, sentence)
 	}
 	program.PushOpCode(OpCode_CLOSE_FRAME)
-	return program
 }
 
 // Compile the given sentence into a program
@@ -447,11 +452,8 @@ func (compiler Compiler) emitLiteral(program *Program, literal LiteralMorpheme) 
 	compiler.emitConstant(program, value)
 }
 func (compiler Compiler) emitTuple(program *Program, tuple TupleMorpheme) {
-	program.PushOpCode(OpCode_OPEN_FRAME)
-	for _, sentence := range tuple.Subscript.Sentences {
-		compiler.emitSentence(program, sentence)
-	}
-	program.PushOpCode(OpCode_CLOSE_FRAME)
+	compiler.emitSentences(program, tuple.Subscript.Sentences)
+	program.PushOpCode(OpCode_MAKE_TUPLE)
 }
 func (compiler Compiler) emitBlock(program *Program, block BlockMorpheme) {
 	value := NewScriptValue(block.Subscript, block.Value)
@@ -501,7 +503,7 @@ func (compiler Compiler) emitBlockSource(program *Program, block BlockMorpheme) 
 	program.PushOpCode(OpCode_SET_SOURCE)
 }
 func (compiler Compiler) emitKeyedSelector(program *Program, tuple TupleMorpheme) {
-	compiler.emitTuple(program, tuple)
+	compiler.emitSentences(program, tuple.Subscript.Sentences)
 	program.PushOpCode(OpCode_SELECT_KEYS)
 }
 func (compiler Compiler) emitIndexedSelector(program *Program, expression ExpressionMorpheme) {
@@ -514,6 +516,7 @@ func (compiler Compiler) emitSelector(program *Program, block BlockMorpheme) {
 		program.PushOpCode(OpCode_OPEN_FRAME)
 		compiler.emitSentence(program, sentence)
 		program.PushOpCode(OpCode_CLOSE_FRAME)
+		program.PushOpCode(OpCode_MAKE_TUPLE)
 	}
 	program.PushOpCode(OpCode_CLOSE_FRAME)
 	program.PushOpCode(OpCode_SELECT_RULES)
@@ -535,6 +538,9 @@ type ProgramState struct {
 
 	// Execution frame start indexes; each frame is a slice of the stack
 	frames []int
+
+	// Last closed frame
+	LastFrame []Value
 
 	// Program counter
 	PC uint
@@ -564,18 +570,17 @@ func (state *ProgramState) OpenFrame() {
 	state.frames = append(state.frames, len(state.stack))
 }
 
-// Close and return the current frame
-func (state *ProgramState) CloseFrame() []Value {
+// Close the current frame
+func (state *ProgramState) CloseFrame() {
 	length := state.frames[len(state.frames)-1]
 	state.frames = state.frames[:len(state.frames)-1]
-	frame := append(make([]Value, 0, len(state.stack)-length), state.stack[length:]...)
+	state.LastFrame = state.stack[length:]
 	state.stack = state.stack[:length]
-	return frame
 }
 
 // Report whether current frame is empty
 func (state *ProgramState) Empty() bool {
-	return state.frames[len(state.frames)-1] == len(state.stack)
+	return len(state.frames) == 0 || state.frames[len(state.frames)-1] == len(state.stack)
 }
 
 // Push value on current frame
@@ -662,10 +667,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 			state.OpenFrame()
 
 		case OpCode_CLOSE_FRAME:
-			{
-				values := state.CloseFrame()
-				state.Push(NewTupleValue(values))
-			}
+			state.CloseFrame()
 
 		case OpCode_RESOLVE_VALUE:
 			{
@@ -704,9 +706,9 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 
 		case OpCode_SELECT_KEYS:
 			{
-				keys := state.Pop().(TupleValue)
+				keys := state.LastFrame
 				value := state.Pop()
-				result2 := CreateKeyedSelector(keys.Values)
+				result2 := CreateKeyedSelector(append([]Value{}, keys...))
 				if result2.Code != ResultCode_OK {
 					return result2.AsResult()
 				}
@@ -720,9 +722,9 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 
 		case OpCode_SELECT_RULES:
 			{
-				rules := state.Pop().(TupleValue)
+				rules := state.LastFrame
 				value := state.Pop()
-				result := executor.resolveSelector(rules.Values)
+				result := executor.resolveSelector(rules)
 				if result.Code != ResultCode_OK {
 					return result.AsResult()
 				}
@@ -736,16 +738,16 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 
 		case OpCode_EVALUATE_SENTENCE:
 			{
-				args := state.Pop().(TupleValue)
-				if len(args.Values) > 0 {
-					cmdname := args.Values[0]
+				args := state.LastFrame
+				if len(args) > 0 {
+					cmdname := args[0]
 					result := executor.resolveCommand(cmdname)
 					if result.Code != ResultCode_OK {
 						return result.AsResult()
 					}
 					command := result.Data
 					state.Command = command
-					state.Result = state.Command.Execute(args.Values, executor.Context)
+					state.Result = state.Command.Execute(args, executor.Context)
 					if state.Result.Code != ResultCode_OK {
 						return state.Result
 					}
@@ -757,9 +759,9 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 
 		case OpCode_JOIN_STRINGS:
 			{
-				tuple := state.Pop().(TupleValue)
+				values := state.LastFrame
 				s := ""
-				for _, value := range tuple.Values {
+				for _, value := range values {
 					result := ValueToString(value)
 					if result.Code != ResultCode_OK {
 						return result.AsResult()
@@ -767,6 +769,12 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 					s += result.Data
 				}
 				state.Push(NewStringValue(s))
+			}
+
+		case OpCode_MAKE_TUPLE:
+			{
+				values := state.LastFrame
+				state.Push(NewTupleValue(append([]Value{}, values...)))
 			}
 
 		default:
@@ -778,58 +786,6 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 	}
 	return state.Result
 }
-
-//   /**
-//    * Transform the given program into a callable function
-//    *
-//    * The program is first translated into JS code then wrapped into a function
-//    * with all the dependencies injected as parameters. The resulting function
-//    * is itself curried with the current executor context.
-//    *
-//    * @param program - Program to translate
-//    * @returns         Resulting function
-//    */
-//   functionify(program *Program): (state?: ProgramState) => Result {
-//     const translator = new Translator();
-//     const source = translator.translate(program);
-//     const imports = {
-//       ResultCode,
-//       OK,
-//       ERROR,
-//       NIL,
-//       StringValue,
-//       TupleValue,
-//       QualifiedValue,
-//       IndexedSelector,
-//       KeyedSelector,
-//       applySelector,
-//     };
-//     const importsCode = `
-//     const {
-//       ResultCode,
-//       OK,
-//       ERROR,
-//       NIL,
-//       StringValue,
-//       TupleValue,
-//       QualifiedValue,
-//       IndexedSelector,
-//       KeyedSelector,
-//       applySelector,
-//     } = imports;
-//     `;
-
-//     const f = new Function(
-//       "state",
-//       "resolver",
-//       "context",
-//       "constants",
-//       "imports",
-//       importsCode + source
-//     );
-//     return (state = new ProgramState()) =>
-//       f(state, this, this.context, program.constants, imports);
-//   }
 
 // Resolve value
 //
@@ -927,204 +883,3 @@ func (executor *Executor) resolveSelector(rules []Value) TypedResult[Selector] {
 	}
 	return result
 }
-
-// /**
-//  * Helena program translator
-//  *
-//  * This class translates compiled programs into JavaScript code
-//  */
-// export class Translator {
-//   /**
-//    * Translate the given program
-//    *
-//    * Runs a flat loop over the program opcodes and generates JS code of each
-//    * opcode in sequence; constants are inlined in the order they are encountered
-//    *
-//    * Resumability is implemented using `switch` as a jump table (similar to
-//    * `Duff's device technique):
-//    *
-//    * - translated opcodes are wrapped into a `switch` statement whose control
-//    * variable is the current {@link ProgramState.pc}
-//    * - each opcode is behind a case statement whose value is the opcode position
-//    * - case statements fall through (there is no break statement)
-//    *
-//    * This allows a resumed program to jump directly to the current
-//    * {@link ProgramState.pc} and continue execution from there until the next
-//    * `return`.
-//    *
-//    * @see Executor.execute(): The generated code must be kept in sync with the
-//    * execution loop
-//    *
-//    * @param program - Program to execute
-//    *
-//    * @returns         Translated code
-//    */
-//   translate(program *Program) {
-//     const sections: string[] = [];
-
-//     sections.push(`
-//     if (state.result.code == ResultCode_YIELD && state.command?.resume) {
-//       state.result = state.command.resume(state.result, context);
-//       if (state.result.code != ResultCode_OK) return state.result;
-//     }
-//     `);
-
-//     sections.push(`
-//     switch (state.pc) {
-//     `);
-//     let pc = 0;
-//     let cc = 0;
-//     while (pc < program.opCodes.length) {
-//       sections.push(`
-//       case ${pc}: state.pc++;
-//       `);
-//       const opcode = program.opCodes[pc++];
-//       switch (opcode) {
-//         case OpCode_PUSH_NIL:
-//           sections.push(`
-//           state.push(NIL);
-//           `);
-//           break;
-
-//         case OpCode_PUSH_CONSTANT:
-//           sections.push(`
-//           state.push(constants[${cc++}]);
-//           `);
-//           break;
-
-//         case OpCode_OPEN_FRAME:
-//           sections.push(`
-//           state.openFrame();
-//           `);
-//           break;
-
-//         case OpCode_CLOSE_FRAME:
-//           sections.push(`
-//           {
-//             const values = state.closeFrame();
-//             state.push(new TupleValue(values));
-//           }
-//           `);
-//           break;
-
-//         case OpCode_RESOLVE_VALUE:
-//           sections.push(`
-//           {
-//             const source = state.pop();
-//             const result = resolver.resolveValue(source);
-//             if (result.code != ResultCode_OK) return result;
-//             state.push(result.value);
-//           }
-//           `);
-//           break;
-
-//         case OpCode_EXPAND_VALUE:
-//           sections.push(`
-//           state.expand();
-//           `);
-//           break;
-
-//         case OpCode_SET_SOURCE:
-//           sections.push(`
-//           {
-//             const source = state.pop();
-//             state.push(new QualifiedValue(source, []));
-//           }
-//           `);
-//           break;
-
-//         case OpCode_SELECT_INDEX:
-//           sections.push(`
-//           {
-//             const index = state.pop();
-//             const value = state.pop();
-//             const { data: selector, ...result2 } =
-//               IndexedSelector.create(index);
-//             const result = selector.apply(value);
-//             if (result.code != ResultCode_OK) return result;
-//             state.push(result.value);
-//           }
-//           `);
-//           break;
-
-//         case OpCode_SELECT_KEYS:
-//           sections.push(`
-//           {
-//             const keys = state.pop();
-//             const value = state.pop();
-//             const { data: selector, ...result2 } = KeyedSelector.create(
-//               keys.values
-//             );
-//             if (result2.code != ResultCode_OK) return result2;
-//             const result = selector.apply(value);
-//             if (result.code != ResultCode_OK) return result;
-//             state.push(result.value);
-//           }
-//           `);
-//           break;
-
-//         case OpCode_SELECT_RULES:
-//           sections.push(`
-//           {
-//             const rules = state.pop();
-//             const value = state.pop();
-//             const { data: selector, ...result } = resolver.resolveSelector(
-//               rules.values
-//             );
-//             if (result.code != ResultCode_OK) return result;
-//             const result2 = applySelector(value, selector);
-//             if (result2.code != ResultCode_OK) return result2;
-//             state.push(result2.value);
-//           }
-//           `);
-//           break;
-
-//         case OpCode_EVALUATE_SENTENCE:
-//           sections.push(`
-//           {
-//             const args = state.pop();
-//             if (args.values.length) {
-//               const cmdname = args.values[0];
-//               const { data: command, ...result } = resolver.resolveCommand(cmdname);
-//               if (result.code != ResultCode_OK) return result;
-//               state.command = command;
-//               state.result = state.command.execute(args.values, context);
-//               if (state.result.code != ResultCode_OK) return state.result;
-//             }
-//           }
-//           `);
-//           break;
-
-//         case OpCode_PUSH_RESULT:
-//           sections.push(`
-//           state.push(state.result.value);
-//           `);
-//           break;
-
-//         case OpCode_JOIN_STRINGS:
-//           sections.push(`
-//           {
-//             const tuple = state.pop();
-//             let s = "";
-//             for (const value of tuple.values) {
-//               const { data, ...result } = StringValue.toString(value);
-//               if (result.code != ResultCode_OK) return result;
-//               s += data;
-//             }
-//             state.push(new StringValue(s));
-//           }
-//           `);
-//           break;
-
-//         default:
-//           throw new Error("CANTHAPPEN");
-//       }
-//     }
-//     sections.push(`
-//     }
-//     if (!state.empty()) state.result = OK(state.pop());
-//     return state.result;
-//     `);
-//     return sections.join("\n");
-//   }
-// }

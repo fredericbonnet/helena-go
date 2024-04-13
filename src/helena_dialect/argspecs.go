@@ -99,7 +99,7 @@ func (value ArgspecValue) ApplyArguments(
 				continue // Skip missing optional
 			}
 		case ArgumentType_REMAINDER:
-			value = core.TUPLE(values[i : i+remainders])
+			value = core.TUPLE(append([]core.Value{}, values[i:i+remainders]...))
 			i += remainders
 		}
 		if arg.Guard != nil {

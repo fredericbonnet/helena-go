@@ -84,6 +84,7 @@ var _ = Describe("Compilation and execution", func() {
 						Expect(program.OpCodes).To(Equal([]OpCode{
 							OpCode_OPEN_FRAME,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 						}))
 
 						Expect(evaluate(program)).To(Equal(TUPLE([]Value{})))
@@ -96,6 +97,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("lit1"), STR("lit2")}))
 
@@ -129,6 +131,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_KEYS,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 						}))
 						Expect(program.Constants).To(Equal([]Value{
 							STR("this"),
@@ -269,7 +272,7 @@ var _ = Describe("Compilation and execution", func() {
 						)
 						commandResolver.register(
 							"this",
-							functionCommand{func(args []Value) Value { return TUPLE(args) }},
+							functionCommand{func(args []Value) Value { return TUPLE(append([]Value{}, args...)) }},
 						)
 						Expect(evaluate(program)).To(Equal(
 							TUPLE([]Value{
@@ -816,6 +819,7 @@ var _ = Describe("Compilation and execution", func() {
 								OpCode_OPEN_FRAME,
 								OpCode_PUSH_CONSTANT,
 								OpCode_CLOSE_FRAME,
+								OpCode_MAKE_TUPLE,
 								OpCode_CLOSE_FRAME,
 								OpCode_SELECT_RULES,
 								OpCode_PUSH_CONSTANT,
@@ -848,6 +852,7 @@ var _ = Describe("Compilation and execution", func() {
 								OpCode_OPEN_FRAME,
 								OpCode_PUSH_CONSTANT,
 								OpCode_CLOSE_FRAME,
+								OpCode_MAKE_TUPLE,
 								OpCode_CLOSE_FRAME,
 								OpCode_SELECT_RULES,
 								OpCode_RESOLVE_VALUE,
@@ -882,12 +887,14 @@ var _ = Describe("Compilation and execution", func() {
 								OpCode_OPEN_FRAME,
 								OpCode_PUSH_CONSTANT,
 								OpCode_CLOSE_FRAME,
+								OpCode_MAKE_TUPLE,
 								OpCode_CLOSE_FRAME,
 								OpCode_SELECT_RULES,
 								OpCode_OPEN_FRAME,
 								OpCode_OPEN_FRAME,
 								OpCode_PUSH_CONSTANT,
 								OpCode_CLOSE_FRAME,
+								OpCode_MAKE_TUPLE,
 								OpCode_CLOSE_FRAME,
 								OpCode_SELECT_RULES,
 								OpCode_PUSH_CONSTANT,
@@ -922,6 +929,7 @@ var _ = Describe("Compilation and execution", func() {
 									OpCode_OPEN_FRAME,
 									OpCode_PUSH_CONSTANT,
 									OpCode_CLOSE_FRAME,
+									OpCode_MAKE_TUPLE,
 									OpCode_CLOSE_FRAME,
 									OpCode_SELECT_RULES,
 									OpCode_PUSH_CONSTANT,
@@ -1243,6 +1251,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_RESOLVE_VALUE,
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("varname")}))
@@ -1258,6 +1267,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_RESOLVE_VALUE,
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("var2")}))
@@ -1275,6 +1285,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_RESOLVE_VALUE,
 							OpCode_RESOLVE_VALUE,
 						}))
@@ -1293,7 +1304,9 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_RESOLVE_VALUE,
 						}))
 						Expect(program.Constants).To(Equal([]Value{STR("var1"), STR("var2")}))
@@ -1312,7 +1325,9 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_RESOLVE_VALUE,
 							OpCode_RESOLVE_VALUE,
 						}))
@@ -1843,6 +1858,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_RESOLVE_VALUE,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
@@ -1870,7 +1886,9 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_RESOLVE_VALUE,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
@@ -1897,6 +1915,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_RESOLVE_VALUE,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
@@ -1987,6 +2006,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 						}))
@@ -2009,6 +2029,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 							OpCode_RESOLVE_VALUE,
@@ -2033,12 +2054,14 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 							OpCode_OPEN_FRAME,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 						}))
@@ -2069,6 +2092,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_RESOLVE_VALUE,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 						}))
@@ -2095,6 +2119,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 						}))
@@ -2120,6 +2145,7 @@ var _ = Describe("Compilation and execution", func() {
 								OpCode_OPEN_FRAME,
 								OpCode_PUSH_CONSTANT,
 								OpCode_CLOSE_FRAME,
+								OpCode_MAKE_TUPLE,
 								OpCode_CLOSE_FRAME,
 								OpCode_SELECT_RULES,
 							}))
@@ -2218,10 +2244,12 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 						}))
@@ -2234,7 +2262,7 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("varname"), []Selector{
@@ -2264,6 +2292,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_RESOLVE_VALUE,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_OPEN_FRAME,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
@@ -2271,6 +2300,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_EVALUATE_SENTENCE,
 							OpCode_PUSH_RESULT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 							OpCode_OPEN_FRAME,
@@ -2320,7 +2350,7 @@ var _ = Describe("Compilation and execution", func() {
 							functionCommand{func(_ []Value) Value { return STR("key3") }},
 						)
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("varname"), []Selector{
@@ -2344,6 +2374,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_SET_SOURCE,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
@@ -2377,6 +2408,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_SET_SOURCE,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
@@ -2408,16 +2440,19 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_SET_SOURCE,
 							OpCode_OPEN_FRAME,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 						}))
@@ -2431,7 +2466,7 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(
@@ -2456,6 +2491,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_RESOLVE_VALUE,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_SET_SOURCE,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
@@ -2483,6 +2519,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_RESOLVE_VALUE,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_OPEN_FRAME,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
@@ -2490,6 +2527,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_EVALUATE_SENTENCE,
 							OpCode_PUSH_RESULT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 							OpCode_OPEN_FRAME,
@@ -2532,7 +2570,7 @@ var _ = Describe("Compilation and execution", func() {
 							functionCommand{func(_ []Value) Value { return STR("index2") }},
 						)
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(
@@ -2618,10 +2656,12 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
 							OpCode_PUSH_CONSTANT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 						}))
@@ -2634,7 +2674,7 @@ var _ = Describe("Compilation and execution", func() {
 						}))
 
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("source name"), []Selector{
@@ -2664,6 +2704,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_PUSH_CONSTANT,
 							OpCode_RESOLVE_VALUE,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_OPEN_FRAME,
 							OpCode_OPEN_FRAME,
 							OpCode_PUSH_CONSTANT,
@@ -2671,6 +2712,7 @@ var _ = Describe("Compilation and execution", func() {
 							OpCode_EVALUATE_SENTENCE,
 							OpCode_PUSH_RESULT,
 							OpCode_CLOSE_FRAME,
+							OpCode_MAKE_TUPLE,
 							OpCode_CLOSE_FRAME,
 							OpCode_SELECT_RULES,
 							OpCode_OPEN_FRAME,
@@ -2720,7 +2762,7 @@ var _ = Describe("Compilation and execution", func() {
 							functionCommand{func(_ []Value) Value { return STR("key3") }},
 						)
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("source name"), []Selector{
@@ -2772,6 +2814,7 @@ var _ = Describe("Compilation and execution", func() {
 					OpCode_EXPAND_VALUE,
 					OpCode_PUSH_CONSTANT,
 					OpCode_CLOSE_FRAME,
+					OpCode_MAKE_TUPLE,
 				}))
 				Expect(program.Constants).To(Equal([]Value{
 					STR("prefix"),
@@ -2806,6 +2849,7 @@ var _ = Describe("Compilation and execution", func() {
 					OpCode_EXPAND_VALUE,
 					OpCode_PUSH_CONSTANT,
 					OpCode_CLOSE_FRAME,
+					OpCode_MAKE_TUPLE,
 				}))
 				Expect(program.Constants).To(Equal([]Value{
 					STR("prefix"),
@@ -2830,7 +2874,7 @@ var _ = Describe("Compilation and execution", func() {
 				BeforeEach(func() {
 					commandResolver.register(
 						"cmd",
-						functionCommand{func(args []Value) Value { return TUPLE(args) }},
+						functionCommand{func(args []Value) Value { return TUPLE(append([]Value{}, args...)) }},
 					)
 				})
 				Specify("single variable", func() {
@@ -2871,6 +2915,7 @@ var _ = Describe("Compilation and execution", func() {
 						OpCode_PUSH_CONSTANT,
 						OpCode_PUSH_CONSTANT,
 						OpCode_CLOSE_FRAME,
+						OpCode_MAKE_TUPLE,
 						OpCode_RESOLVE_VALUE,
 						OpCode_EXPAND_VALUE,
 						OpCode_PUSH_CONSTANT,
@@ -3112,6 +3157,7 @@ var _ = Describe("Compilation and execution", func() {
 					OpCode_RESOLVE_VALUE,
 					OpCode_PUSH_CONSTANT,
 					OpCode_CLOSE_FRAME,
+					OpCode_MAKE_TUPLE,
 				}))
 				Expect(program.Constants).To(Equal([]Value{
 					STR("cmd1"),

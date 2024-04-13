@@ -56,7 +56,7 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 		if !scope.scope.HasLocalCommand(command) {
 			return core.ERROR(`unknown command "` + command + `"`)
 		}
-		cmdline := args[2:]
+		cmdline := append([]core.Value{}, args[2:]...)
 		return CreateDeferredValue(
 			core.ResultCode_YIELD,
 			core.TUPLE(cmdline),

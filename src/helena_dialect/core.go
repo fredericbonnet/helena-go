@@ -178,6 +178,8 @@ func (scope *Scope) CompileScriptValue(script core.ScriptValue) *core.Program {
 func (scope *Scope) CompileTupleValue(tuple core.TupleValue) *core.Program {
 	program := &core.Program{}
 	program.PushOpCode(core.OpCode_PUSH_CONSTANT)
+	program.PushOpCode(core.OpCode_EXPAND_VALUE)
+	program.PushOpCode(core.OpCode_CLOSE_FRAME)
 	program.PushOpCode(core.OpCode_EVALUATE_SENTENCE)
 	program.PushOpCode(core.OpCode_PUSH_RESULT)
 	program.PushConstant(tuple)

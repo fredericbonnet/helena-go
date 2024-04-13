@@ -505,7 +505,7 @@ func (proc procCommand) Execute(args []core.Value, context any) core.Result {
 		argspec := proc.argspecs[p]
 		var value core.Value
 		if p == len(proc.argspecs)-1 && argspec.name == "args" {
-			value = core.TUPLE(args[a:])
+			value = core.TUPLE(append([]core.Value{}, args[a:]...))
 			a = len(args) - 1
 		} else if p < len(args)-1 {
 			value = args[a]

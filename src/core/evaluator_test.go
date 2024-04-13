@@ -132,7 +132,7 @@ var _ = Describe("CompilingEvaluator", func() {
 				Describe("generic selectors", func() {
 					BeforeEach(func() {
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 					})
 					Specify("simple rule", func() {
@@ -207,7 +207,7 @@ var _ = Describe("CompilingEvaluator", func() {
 
 				Specify("multiple selectors", func() {
 					selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-						return CreateGenericSelector(rules)
+						return CreateGenericSelector(append([]Value{}, rules...))
 					})
 					word := firstWord(
 						parse(
@@ -243,7 +243,7 @@ var _ = Describe("CompilingEvaluator", func() {
 					})
 					Specify("empty generic selector", func() {
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						word := firstWord(parse("var{rule}{}"))
 						Expect(evaluator.EvaluateWord(word)).To(Equal(
@@ -278,7 +278,7 @@ var _ = Describe("CompilingEvaluator", func() {
 				Describe("generic selectors", func() {
 					BeforeEach(func() {
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 					})
 					Specify("simple rule", func() {
@@ -327,7 +327,7 @@ var _ = Describe("CompilingEvaluator", func() {
 				})
 				Specify("multiple selectors", func() {
 					selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-						return CreateGenericSelector(rules)
+						return CreateGenericSelector(append([]Value{}, rules...))
 					})
 					word := firstWord(
 						parse(
@@ -363,7 +363,7 @@ var _ = Describe("CompilingEvaluator", func() {
 					})
 					Specify("empty generic selector", func() {
 						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
-							return CreateGenericSelector(rules)
+							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						word := firstWord(parse("(var1 var2 (var3 var4)){rule}{}"))
 						Expect(evaluator.EvaluateWord(word)).To(Equal(
@@ -930,7 +930,7 @@ var _ = Describe("CompilingEvaluator", func() {
 			BeforeEach(func() {
 				commandResolver.register(
 					"cmd",
-					functionCommand{func(args []Value) Value { return TUPLE(args) }},
+					functionCommand{func(args []Value) Value { return TUPLE(append([]Value{}, args...)) }},
 				)
 			})
 			Specify("empty string", func() {
@@ -998,7 +998,7 @@ var _ = Describe("CompilingEvaluator", func() {
 			Specify("command", func() {
 				commandResolver.register(
 					"cmd",
-					functionCommand{func(args []Value) Value { return TUPLE(args) }},
+					functionCommand{func(args []Value) Value { return TUPLE(append([]Value{}, args...)) }},
 				)
 				sentence := firstSentence(parse("cmd arg # this is a comment"))
 				value := evaluator.EvaluateSentence(sentence).Value
@@ -1016,7 +1016,7 @@ var _ = Describe("CompilingEvaluator", func() {
 			Specify("command", func() {
 				commandResolver.register(
 					"cmd",
-					functionCommand{func(args []Value) Value { return TUPLE(args) }},
+					functionCommand{func(args []Value) Value { return TUPLE(append([]Value{}, args...)) }},
 				)
 				sentence := firstSentence(
 					parse("cmd #{ this is\na\nblock comment }# arg"),
