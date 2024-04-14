@@ -67,6 +67,10 @@ func NewProcess(scope *Scope, program *core.Program) *Process {
 	process.pushContext(scope, program)
 	return process
 }
+func (process *Process) Reset() {
+	process.contextStack = process.contextStack[:1]
+	process.contextStack[0].state.Reset()
+}
 
 func (process *Process) currentContext() ProcessContext {
 	return process.contextStack[len(process.contextStack)-1]

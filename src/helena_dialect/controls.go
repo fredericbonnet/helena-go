@@ -16,6 +16,7 @@ type whileState struct {
 	step        whileStateStep
 	test        core.Value
 	testProgram *core.Program
+	testProcess *Process
 	result      core.Result
 	program     *core.Program
 	process     *Process
@@ -57,7 +58,13 @@ func (cmd whileCmd) Execute(args []core.Value, context any) core.Result {
 func (cmd whileCmd) Resume(result core.Result, context any) core.Result {
 	scope := context.(*Scope)
 	state := result.Data.(*whileState)
-	state.process.YieldBack(result.Value)
+	switch state.step {
+	case whileStateStep_beforeTest,
+		whileStateStep_inTest:
+		state.testProcess.YieldBack(result.Value)
+	case whileStateStep_inBody:
+		state.process.YieldBack(result.Value)
+	}
 	return cmd.run(state, scope)
 }
 func (whileCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
@@ -95,7 +102,11 @@ func (cmd whileCmd) run(state *whileState, scope *Scope) core.Result {
 			}
 			state.step = whileStateStep_beforeBody
 		case whileStateStep_beforeBody:
-			state.process = scope.PrepareProcess(state.program)
+			if state.process != nil {
+				state.process.Reset()
+			} else {
+				state.process = scope.PrepareProcess(state.program)
+			}
 			state.step = whileStateStep_inBody
 		case whileStateStep_inBody:
 			{
@@ -120,8 +131,12 @@ func (cmd whileCmd) run(state *whileState, scope *Scope) core.Result {
 }
 func (whileCmd) executeTest(state *whileState, scope *Scope) core.Result {
 	if state.test.Type() == core.ValueType_SCRIPT {
-		state.process = scope.PrepareProcess(state.testProgram)
-		result := state.process.Run()
+		if state.testProcess != nil {
+			state.testProcess.Reset()
+		} else {
+			state.testProcess = scope.PrepareProcess(state.testProgram)
+		}
+		result := state.testProcess.Run()
 		if result.Code != core.ResultCode_OK {
 			return result
 		}
@@ -130,7 +145,7 @@ func (whileCmd) executeTest(state *whileState, scope *Scope) core.Result {
 	return core.BooleanValueFromValue(state.test).AsResult()
 }
 func (whileCmd) resumeTest(state *whileState) core.Result {
-	result := state.process.Run()
+	result := state.testProcess.Run()
 	if result.Code != core.ResultCode_OK {
 		return result
 	}

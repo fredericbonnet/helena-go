@@ -565,6 +565,18 @@ func NewProgramState() *ProgramState {
 	}
 }
 
+// Reset program state
+func (state *ProgramState) Reset() {
+	state.stack = state.stack[:]
+	state.frames = state.frames[:1]
+	state.frames[0] = 0
+	state.LastFrame = state.LastFrame[:]
+	state.PC = 0
+	state.CC = 0
+	state.Command = nil
+	state.Result = OK(NIL)
+}
+
 // Open a new frame
 func (state *ProgramState) OpenFrame() {
 	state.frames = append(state.frames, len(state.stack))
