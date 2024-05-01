@@ -567,10 +567,10 @@ func NewProgramState() *ProgramState {
 
 // Reset program state
 func (state *ProgramState) Reset() {
-	state.stack = state.stack[:]
+	state.stack = state.stack[:0]
 	state.frames = state.frames[:1]
 	state.frames[0] = 0
-	state.LastFrame = state.LastFrame[:]
+	state.LastFrame = nil
 	state.PC = 0
 	state.CC = 0
 	state.Command = nil
@@ -879,7 +879,7 @@ func (executor *Executor) resolveCommand(cmdname Value) TypedResult[Command] {
 		name := result.Data
 		return ERROR_T[Command](`cannot resolve command "` + name + `"`)
 	}
-	return OK_T[Command](NIL, command)
+	return OK_T(NIL, command)
 }
 
 func (executor *Executor) resolveSelector(rules []Value) TypedResult[Selector] {

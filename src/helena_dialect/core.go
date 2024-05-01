@@ -1,6 +1,9 @@
 package helena_dialect
 
-import "helena/core"
+import (
+	"helena/core"
+	"sync"
+)
 
 type ContinuationValue struct {
 	Scope    *Scope
@@ -31,6 +34,12 @@ type ProcessStack struct {
 	stack []ProcessContext
 }
 
+var programStatePool = sync.Pool{
+	New: func() any {
+		return core.NewProgramState()
+	},
+}
+
 func NewProcessStack() ProcessStack {
 	return ProcessStack{[]ProcessContext{}}
 }
@@ -44,7 +53,7 @@ func (processStack *ProcessStack) PushProgram(scope *Scope, program *core.Progra
 	context := ProcessContext{
 		scope,
 		program,
-		core.NewProgramState(),
+		programStatePool.Get().(*core.ProgramState),
 		nil,
 	}
 	processStack.stack = append(processStack.stack, context)
@@ -54,18 +63,17 @@ func (processStack *ProcessStack) PushContinuation(continuation ContinuationValu
 	context := ProcessContext{
 		continuation.Scope,
 		continuation.Program,
-		core.NewProgramState(),
+		programStatePool.Get().(*core.ProgramState),
 		continuation.Callback,
 	}
 	processStack.stack = append(processStack.stack, context)
 	return context
 }
 func (processStack *ProcessStack) Pop() {
+	last := processStack.stack[len(processStack.stack)-1]
+	last.state.Reset()
+	programStatePool.Put(last.state)
 	processStack.stack = processStack.stack[:len(processStack.stack)-1]
-}
-func (processStack *ProcessStack) Reset() {
-	processStack.stack = processStack.stack[:1]
-	processStack.stack[0].state.Reset()
 }
 
 type Process struct {
@@ -77,9 +85,7 @@ func NewProcess(scope *Scope, program *core.Program) *Process {
 	process.stack.PushProgram(scope, program)
 	return process
 }
-func (process *Process) Reset() {
-	process.stack.Reset()
-}
+
 func (process *Process) Run() core.Result {
 	context := process.stack.CurrentContext()
 	result := context.scope.Execute(context.program, context.state)
