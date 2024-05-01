@@ -177,26 +177,16 @@ func (notCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(NOT_SIGNATURE)
 	}
-	result := ExecuteCondition(scope, args[1])
-	if result.Code != core.ResultCode_OK {
-		return result
-	}
-	if result.Value.(core.BooleanValue).Value {
-		return core.OK(core.FALSE)
-	} else {
-		return core.OK(core.TRUE)
-	}
-}
-func (notCmd) Resume(result core.Result, _ any) core.Result {
-	result = ResumeCondition(result)
-	if result.Code != core.ResultCode_OK {
-		return result
-	}
-	if result.Value.(core.BooleanValue).Value {
-		return core.OK(core.FALSE)
-	} else {
-		return core.OK(core.TRUE)
-	}
+	return ExecuteCondition(scope, args[1], func(result core.TypedResult[bool]) core.Result {
+		if result.Code != core.ResultCode_OK {
+			return result.AsResult()
+		}
+		if result.Data {
+			return core.OK(core.FALSE)
+		} else {
+			return core.OK(core.TRUE)
+		}
+	})
 }
 func (notCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
@@ -207,129 +197,80 @@ func (notCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Res
 
 const AND_SIGNATURE = "&& arg ?arg ...?"
 
-type andCommandState struct {
-	args   []core.Value
-	i      int
-	result *core.Result
-}
 type andCmd struct{}
 
-func (cmd andCmd) Execute(args []core.Value, context any) core.Result {
+func (andCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if len(args) < 2 {
 		return ARITY_ERROR(AND_SIGNATURE)
 	}
-	return cmd.run(&andCommandState{args: args, i: 1}, scope)
-}
-func (cmd andCmd) Resume(result core.Result, context any) core.Result {
-	scope := context.(*Scope)
-	state := result.Data.(*andCommandState)
-	state.result = &core.Result{Code: state.result.Code, Value: result.Value, Data: state.result.Data}
-	return cmd.run(result.Data.(*andCommandState), scope)
+	i := 1
+	var callback func(result core.TypedResult[bool]) core.Result
+	callback = func(result core.TypedResult[bool]) core.Result {
+		if result.Code != core.ResultCode_OK {
+			return result.AsResult()
+		}
+		if !result.Data {
+			return core.OK(core.FALSE)
+		}
+		i++
+		if i >= len(args) {
+			return core.OK(core.TRUE)
+		}
+		return ExecuteCondition(scope, args[i], callback)
+	}
+	return ExecuteCondition(scope, args[i], callback)
 }
 func (andCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(AND_SIGNATURE))
 }
-func (cmd andCmd) run(state *andCommandState, scope *Scope) core.Result {
-	r := core.TRUE
-	for state.i < len(state.args) {
-		var result core.Result
-		if state.result != nil {
-			result = ResumeCondition(*state.result)
-		} else {
-			result = ExecuteCondition(scope, state.args[state.i])
-		}
-		state.result = &result
-		if state.result.Code == core.ResultCode_YIELD {
-			return core.YIELD_STATE(state.result.Value, state)
-		}
-		if state.result.Code != core.ResultCode_OK {
-			return *state.result
-		}
-		if !(state.result.Value.(core.BooleanValue).Value) {
-			r = core.FALSE
-			break
-		}
-		state.result = nil
-		state.i++
-	}
-
-	return core.OK(r)
-}
 
 const OR_SIGNATURE = "|| arg ?arg ...?"
 
-type orCommandState struct {
-	args   []core.Value
-	i      int
-	result *core.Result
-}
 type orCmd struct{}
 
-func (cmd orCmd) Execute(args []core.Value, context any) core.Result {
+func (orCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if len(args) < 2 {
 		return ARITY_ERROR(OR_SIGNATURE)
 	}
-	return cmd.run(&orCommandState{args: args, i: 1}, scope)
-}
-func (cmd orCmd) Resume(result core.Result, context any) core.Result {
-	scope := context.(*Scope)
-	state := result.Data.(*orCommandState)
-	state.result = &core.Result{Code: state.result.Code, Value: result.Value, Data: state.result.Data}
-	return cmd.run(result.Data.(*orCommandState), scope)
+	i := 1
+	var callback func(result core.TypedResult[bool]) core.Result
+	callback = func(result core.TypedResult[bool]) core.Result {
+		if result.Code != core.ResultCode_OK {
+			return result.AsResult()
+		}
+		if result.Data {
+			return core.OK(core.TRUE)
+		}
+		i++
+		if i >= len(args) {
+			return core.OK(core.FALSE)
+		}
+		return ExecuteCondition(scope, args[i], callback)
+	}
+	return ExecuteCondition(scope, args[i], callback)
 }
 func (orCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(OR_SIGNATURE))
 }
-func (orCmd) run(state *orCommandState, scope *Scope) core.Result {
-	r := core.FALSE
-	for state.i < len(state.args) {
-		var result core.Result
-		if state.result != nil {
-			result = ResumeCondition(*state.result)
-		} else {
-			result = ExecuteCondition(scope, state.args[state.i])
-		}
-		state.result = &result
-		if state.result.Code == core.ResultCode_YIELD {
-			return core.YIELD_STATE(state.result.Value, state)
-		}
-		if state.result.Code != core.ResultCode_OK {
-			return *state.result
-		}
-		if state.result.Value.(core.BooleanValue).Value {
-			r = core.TRUE
-			break
-		}
-		state.result = nil
-		state.i++
-	}
 
-	return core.OK(r)
-}
-
-func ExecuteCondition(scope *Scope, value core.Value) core.Result {
+func ExecuteCondition(
+	scope *Scope,
+	value core.Value,
+	callback func(result core.TypedResult[bool]) core.Result,
+) core.Result {
 	if value.Type() == core.ValueType_SCRIPT {
-		process := scope.PrepareScriptValue(value.(core.ScriptValue))
-		return runCondition(process)
+		program := scope.CompileScriptValue(value.(core.ScriptValue))
+		return CreateContinuationValue(scope, program, func(result core.Result) core.Result {
+			if result.Code != core.ResultCode_OK {
+				return result
+			}
+			return callback(core.ValueToBoolean(result.Value))
+		})
 	}
-	return core.BooleanValueFromValue(value).AsResult()
-}
-func ResumeCondition(result core.Result) core.Result {
-	process := result.Data.(*Process)
-	process.YieldBack(result.Value)
-	return runCondition(process)
-}
-func runCondition(process *Process) core.Result {
-	result := process.Run()
-	if result.Code == core.ResultCode_YIELD {
-		return core.YIELD_STATE(result.Value, process)
-	}
-	if result.Code != core.ResultCode_OK {
-		return result
-	}
-	return core.BooleanValueFromValue(result.Value).AsResult()
+	// TODO ensure tail call in trampoline, or unroll in caller
+	return callback(core.ValueToBoolean(value))
 }
 
 func registerLogicCommands(scope *Scope) {

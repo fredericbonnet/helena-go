@@ -122,31 +122,26 @@ var _ = Describe("Helena control flow commands", func() {
 					result := process.Run()
 					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 					Expect(result.Value).To(Equal(STR("test")))
-					Expect(result.Data).NotTo(BeNil())
 
 					process.YieldBack(TRUE)
 					result = process.Run()
 					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 					Expect(result.Value).To(Equal(STR("body")))
-					Expect(result.Data).NotTo(BeNil())
 
 					process.YieldBack(STR("step 1"))
 					result = process.Run()
 					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 					Expect(result.Value).To(Equal(STR("test")))
-					Expect(result.Data).NotTo(BeNil())
 
 					process.YieldBack(TRUE)
 					result = process.Run()
 					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 					Expect(result.Value).To(Equal(STR("body")))
-					Expect(result.Data).NotTo(BeNil())
 
 					process.YieldBack(STR("step 2"))
 					result = process.Run()
 					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 					Expect(result.Value).To(Equal(STR("test")))
-					Expect(result.Data).NotTo(BeNil())
 
 					process.YieldBack(FALSE)
 					result = process.Run()
@@ -400,13 +395,11 @@ var _ = Describe("Helena control flow commands", func() {
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("test1")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(TRUE)
 						result = process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("body1")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(STR("result"))
 						result = process.Run()
@@ -416,19 +409,16 @@ var _ = Describe("Helena control flow commands", func() {
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("test1")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(FALSE)
 						result = process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("test2")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(TRUE)
 						result = process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("body2")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(STR("result"))
 						result = process.Run()
@@ -438,19 +428,16 @@ var _ = Describe("Helena control flow commands", func() {
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("test1")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(FALSE)
 						result = process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("test2")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(FALSE)
 						result = process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("body3")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(STR("result"))
 						result = process.Run()
@@ -807,13 +794,11 @@ var _ = Describe("Helena control flow commands", func() {
 							result := process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test1")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(TRUE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("body1")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("result"))
 							result = process.Run()
@@ -823,19 +808,16 @@ var _ = Describe("Helena control flow commands", func() {
 							result := process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test1")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(FALSE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test2")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(TRUE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("body2")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("result"))
 							result = process.Run()
@@ -845,19 +827,16 @@ var _ = Describe("Helena control flow commands", func() {
 							result := process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test1")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(FALSE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test2")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(FALSE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("body3")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("result"))
 							result = process.Run()
@@ -878,19 +857,16 @@ var _ = Describe("Helena control flow commands", func() {
 							result := process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("command")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("test"))
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test1")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(TRUE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("body1")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("result"))
 							result = process.Run()
@@ -900,31 +876,26 @@ var _ = Describe("Helena control flow commands", func() {
 							result := process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("command")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("test"))
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test1")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(FALSE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("command")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("test"))
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test2")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(TRUE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("body2")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("result"))
 							result = process.Run()
@@ -934,31 +905,26 @@ var _ = Describe("Helena control flow commands", func() {
 							result := process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("command")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("test"))
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test1")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(FALSE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("command")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("test"))
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("test2")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(FALSE)
 							result = process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 							Expect(result.Value).To(Equal(STR("body3")))
-							Expect(result.Data).NotTo(BeNil())
 
 							process.YieldBack(STR("result"))
 							result = process.Run()

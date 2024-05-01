@@ -70,7 +70,24 @@ func (tailcallCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(TAILCALL_SIGNATURE)
 	}
-	return CreateDeferredValue(core.ResultCode_RETURN, args[1], scope)
+	body := args[1]
+	var program *core.Program
+	switch body.Type() {
+	case core.ValueType_SCRIPT:
+		program = scope.CompileScriptValue(body.(core.ScriptValue))
+	case core.ValueType_TUPLE:
+		program = scope.CompileTupleValue(body.(core.TupleValue))
+	default:
+		return core.ERROR("body must be a script or tuple")
+	}
+	return core.RETURN(
+		NewContinuationValue(scope, program, func(result core.Result) core.Result {
+			if result.Code != core.ResultCode_OK {
+				return result
+			}
+			return core.RETURN(result.Value)
+		}),
+	)
 }
 func (tailcallCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
@@ -146,7 +163,17 @@ func (evalCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(EVAL_SIGNATURE)
 	}
-	return CreateDeferredValue(core.ResultCode_YIELD, args[1], scope)
+	body := args[1]
+	var program *core.Program
+	switch body.Type() {
+	case core.ValueType_SCRIPT:
+		program = scope.CompileScriptValue(body.(core.ScriptValue))
+	case core.ValueType_TUPLE:
+		program = scope.CompileTupleValue(body.(core.TupleValue))
+	default:
+		return core.ERROR("body must be a script or tuple")
+	}
+	return CreateContinuationValue(scope, program, nil)
 }
 func (evalCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {

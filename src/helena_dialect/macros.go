@@ -86,18 +86,20 @@ func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
-	return CreateDeferredValue(core.ResultCode_YIELD, macro.body, subscope)
-}
-func (macro *macroCommand) Resume(result core.Result, context any) core.Result {
-	scope := context.(*Scope)
+	program := subscope.CompileScriptValue(macro.body)
 	if macro.guard != nil {
-		return CreateDeferredValue(
-			core.ResultCode_OK,
-			core.TUPLE([]core.Value{macro.guard, result.Value}),
-			scope,
-		)
+		return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+			if result.Code != core.ResultCode_OK {
+				return result
+			}
+			program := scope.CompileTupleValue(
+				core.TUPLE([]core.Value{macro.guard, result.Value}),
+			)
+			return CreateContinuationValue(scope, program, nil)
+		})
+	} else {
+		return CreateContinuationValue(subscope, program, nil)
 	}
-	return core.OK(result.Value)
 }
 func (macro *macroCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
 	var usage string

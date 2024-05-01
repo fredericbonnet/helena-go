@@ -42,11 +42,21 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 		if len(args) != 3 {
 			return ARITY_ERROR("<ensemble> eval body")
 		}
-		return CreateDeferredValue(
-			core.ResultCode_YIELD,
-			args[2],
-			metacommand.ensemble.scope,
-		)
+		body := args[2]
+		var program *core.Program
+		switch body.Type() {
+		case core.ValueType_SCRIPT:
+			program = metacommand.ensemble.scope.CompileScriptValue(
+				body.(core.ScriptValue),
+			)
+		case core.ValueType_TUPLE:
+			program = metacommand.ensemble.scope.CompileTupleValue(
+				body.(core.TupleValue),
+			)
+		default:
+			return core.ERROR("body must be a script or tuple")
+		}
+		return CreateContinuationValue(metacommand.ensemble.scope, program, nil)
 
 	case "call":
 		if len(args) < 3 {
@@ -62,7 +72,8 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 		}
 		command := metacommand.ensemble.scope.ResolveNamedCommand(subcommand)
 		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
-		return CreateDeferredValue(core.ResultCode_YIELD, core.TUPLE(cmdline), scope)
+		program := scope.CompileTupleValue(core.TUPLE(cmdline))
+		return CreateContinuationValue(scope, program, nil)
 
 	case "argspec":
 		if len(args) != 2 {
@@ -153,7 +164,8 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		[]core.Value{core.NewCommandValue(command)},
 		ensembleArgs...),
 		args[minArgs+1:]...)
-	return CreateDeferredValue(core.ResultCode_YIELD, core.TUPLE(cmdline), scope)
+	program := scope.CompileTupleValue(core.TUPLE(cmdline))
+	return CreateContinuationValue(scope, program, nil)
 }
 func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	var usage string
@@ -206,13 +218,6 @@ func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHel
 
 const ENSEMBLE_SIGNATURE = "ensemble ?name? argspec body"
 
-type EnsembleBodyState struct {
-	scope    *Scope
-	subscope *Scope
-	process  *Process
-	argspec  ArgspecValue
-	name     core.Value
-}
 type ensembleCmd struct{}
 
 func (ensembleCmd) Execute(args []core.Value, context any) core.Result {
@@ -240,44 +245,36 @@ func (ensembleCmd) Execute(args []core.Value, context any) core.Result {
 	}
 
 	subscope := NewScope(scope, false)
-	process := subscope.PrepareScriptValue(body.(core.ScriptValue))
-	return executeEnsembleBody(&EnsembleBodyState{scope, subscope, process, argspec, name})
-}
-func (ensembleCmd) Resume(result core.Result, _ any) core.Result {
-	state := result.Data.(*EnsembleBodyState)
-	state.process.YieldBack(result.Value)
-	return executeEnsembleBody(state)
+	program := subscope.CompileScriptValue(body.(core.ScriptValue))
+	return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+		switch result.Code {
+		case core.ResultCode_OK,
+			core.ResultCode_RETURN:
+			{
+				ensemble := NewEnsembleCommand(subscope, argspec)
+				if name != nil {
+					result := scope.RegisterCommand(name, ensemble)
+					if result.Code != core.ResultCode_OK {
+						return result
+					}
+				}
+				if result.Code == core.ResultCode_RETURN {
+					return core.OK(result.Value)
+				} else {
+					return core.OK(ensemble.metacommand.value)
+
+				}
+			}
+		case core.ResultCode_ERROR:
+			return result
+		default:
+			return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
+		}
+	})
 }
 func (ensembleCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 4 {
 		return ARITY_ERROR(ENSEMBLE_SIGNATURE)
 	}
 	return core.OK(core.STR(ENSEMBLE_SIGNATURE))
-}
-func executeEnsembleBody(state *EnsembleBodyState) core.Result {
-	result := state.process.Run()
-	switch result.Code {
-	case core.ResultCode_OK,
-		core.ResultCode_RETURN:
-		{
-			ensemble := NewEnsembleCommand(state.subscope, state.argspec)
-			if state.name != nil {
-				result := state.scope.RegisterCommand(state.name, ensemble)
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-			}
-			if result.Code == core.ResultCode_RETURN {
-				return core.OK(result.Value)
-			} else {
-				return core.OK(ensemble.metacommand.value)
-			}
-		}
-	case core.ResultCode_YIELD:
-		return core.YIELD_STATE(result.Value, state)
-	case core.ResultCode_ERROR:
-		return result
-	default:
-		return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
-	}
 }

@@ -308,27 +308,9 @@ func (dictEntriesCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) 
 
 const DICT_FOREACH_SIGNATURE = "dict value foreach entry body"
 
-type dictForeachStateStep uint8
-
-const (
-	dictForeachStateStep_beforeBody dictForeachStateStep = iota
-	dictForeachStateStep_inBody
-)
-
-type dictForeachState struct {
-	varname    core.Value
-	entries    [][2]core.Value
-	i          int
-	step       dictForeachStateStep
-	program    *core.Program
-	scope      *Scope
-	process    *Process
-	lastResult core.Result
-}
-
 type dictForeachCmd struct{}
 
-func (cmd dictForeachCmd) Execute(args []core.Value, context any) core.Result {
+func (dictForeachCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if len(args) != 4 {
 		return ARITY_ERROR(DICT_FOREACH_SIGNATURE)
@@ -351,70 +333,45 @@ func (cmd dictForeachCmd) Execute(args []core.Value, context any) core.Result {
 		entries[i] = [2]core.Value{core.STR(key), value}
 		i++
 	}
-	return cmd.run(&dictForeachState{
-		varname:    varname,
-		entries:    entries,
-		i:          0,
-		step:       dictForeachStateStep_beforeBody,
-		program:    program,
-		scope:      subscope,
-		lastResult: core.OK(core.NIL),
-	})
-}
-func (cmd dictForeachCmd) Resume(result core.Result, _ any) core.Result {
-	state := result.Data.(*dictForeachState)
-	state.process.YieldBack(result.Value)
-	return cmd.run(state)
+	i = 0
+	lastResult := core.OK(core.NIL)
+	var next func() core.Result
+	next = func() core.Result {
+		if i >= len(entries) {
+			return lastResult
+		}
+		entry := entries[i]
+		i++
+		result := DestructureValue(
+			func(name core.Value, value core.Value, check bool) core.Result {
+				return subscope.DestructureLocal(name, value, check)
+			},
+			varname,
+			core.TUPLE(entry[:]),
+		)
+		if result.Code != core.ResultCode_OK {
+			return result
+		}
+		return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+			switch result.Code {
+			case core.ResultCode_BREAK:
+				return lastResult
+			case core.ResultCode_CONTINUE:
+			case core.ResultCode_OK:
+				lastResult = result
+			default:
+				return result
+			}
+			return next()
+		})
+	}
+	return next()
 }
 func (dictForeachCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 4 {
 		return ARITY_ERROR(DICT_FOREACH_SIGNATURE)
 	}
 	return core.OK(core.STR(DICT_FOREACH_SIGNATURE))
-}
-func (cmd dictForeachCmd) run(state *dictForeachState) core.Result {
-	for {
-		switch state.step {
-		case dictForeachStateStep_beforeBody:
-			{
-				if state.i >= len(state.entries) {
-					return state.lastResult
-				}
-				entry := state.entries[state.i]
-				state.i++
-				result := DestructureValue(
-					func(name core.Value, value core.Value, check bool) core.Result {
-						return state.scope.DestructureLocal(name, value, check)
-					},
-					state.varname,
-					core.TUPLE(entry[:]),
-				)
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-				state.process = state.scope.PrepareProcess(state.program)
-				state.step = dictForeachStateStep_inBody
-			}
-		case dictForeachStateStep_inBody:
-			{
-				result := state.process.Run()
-				if result.Code == core.ResultCode_YIELD {
-					return core.YIELD_STATE(result.Value, state)
-				}
-				state.step = dictForeachStateStep_beforeBody
-				if result.Code == core.ResultCode_BREAK {
-					return state.lastResult
-				}
-				if result.Code == core.ResultCode_CONTINUE {
-					continue
-				}
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-				state.lastResult = result
-			}
-		}
-	}
 }
 
 func valueToDictionaryValue(value core.Value) core.Result {

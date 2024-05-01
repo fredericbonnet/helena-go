@@ -370,12 +370,10 @@ var _ = Describe("Helena logic operations", func() {
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("val1")))
-						Expect(result.Data).NotTo(BeNil())
 
 						result = process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("val2")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(TRUE)
 						result = process.Run()
@@ -469,13 +467,11 @@ var _ = Describe("Helena logic operations", func() {
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("val1")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(TRUE)
 						result = process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("val2")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(FALSE)
 						result = process.Run()
@@ -575,13 +571,11 @@ var _ = Describe("Helena logic operations", func() {
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("val1")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(FALSE)
 						result = process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("val2")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(TRUE)
 						result = process.Run()

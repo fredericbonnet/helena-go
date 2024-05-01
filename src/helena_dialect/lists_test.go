@@ -576,19 +576,16 @@ var _ = Describe("Helena lists", func() {
 								result := process.Run()
 								Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 								Expect(result.Value).To(Equal(STR("a")))
-								Expect(result.Data).NotTo(BeNil())
 
 								process.YieldBack(STR("step 1"))
 								result = process.Run()
 								Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 								Expect(result.Value).To(Equal(STR("b")))
-								Expect(result.Data).NotTo(BeNil())
 
 								process.YieldBack(STR("step 2"))
 								result = process.Run()
 								Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 								Expect(result.Value).To(Equal(STR("c")))
-								Expect(result.Data).NotTo(BeNil())
 
 								process.YieldBack(STR("step 3"))
 								result = process.Run()

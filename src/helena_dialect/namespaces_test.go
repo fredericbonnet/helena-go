@@ -163,7 +163,6 @@ var _ = Describe("Helena namespaces", func() {
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 						Expect(result.Value).To(Equal(STR("val2")))
-						Expect(result.Data).NotTo(BeNil())
 
 						process.YieldBack(STR("val3"))
 						result = process.Run()

@@ -92,17 +92,20 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
-	return CreateDeferredValue(core.ResultCode_YIELD, closure.body, subscope)
-}
-func (closure *closureCommand) Resume(result core.Result, _ any) core.Result {
+	program := subscope.CompileScriptValue(closure.body)
 	if closure.guard != nil {
-		return CreateDeferredValue(
-			core.ResultCode_OK,
-			core.TUPLE([]core.Value{closure.guard, result.Value}),
-			closure.scope,
-		)
+		return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+			if result.Code != core.ResultCode_OK {
+				return result
+			}
+			program := closure.scope.CompileTupleValue(
+				core.TUPLE([]core.Value{closure.guard, result.Value}),
+			)
+			return CreateContinuationValue(closure.scope, program, nil)
+		})
+	} else {
+		return CreateContinuationValue(subscope, program, nil)
 	}
-	return core.OK(result.Value)
 }
 func (closure *closureCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
 	var usage string

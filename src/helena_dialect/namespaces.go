@@ -57,11 +57,21 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		if len(args) != 3 {
 			return ARITY_ERROR("<namespace> eval body")
 		}
-		return CreateDeferredValue(
-			core.ResultCode_YIELD,
-			args[2],
-			metacommand.namespace.scope,
-		)
+		body := args[2]
+		var program *core.Program
+		switch body.Type() {
+		case core.ValueType_SCRIPT:
+			program = metacommand.namespace.scope.CompileScriptValue(
+				body.(core.ScriptValue),
+			)
+		case core.ValueType_TUPLE:
+			program = metacommand.namespace.scope.CompileTupleValue(
+				body.(core.TupleValue),
+			)
+		default:
+			return core.ERROR("body must be a script or tuple")
+		}
+		return CreateContinuationValue(metacommand.namespace.scope, program, nil)
 
 	case "call":
 		if len(args) < 3 {
@@ -77,11 +87,8 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		}
 		command := metacommand.namespace.scope.ResolveNamedCommand(subcommand)
 		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
-		return CreateDeferredValue(
-			core.ResultCode_YIELD,
-			core.TUPLE(cmdline),
-			metacommand.namespace.scope,
-		)
+		program := metacommand.namespace.scope.CompileTupleValue(core.TUPLE(cmdline))
+		return CreateContinuationValue(metacommand.namespace.scope, program, nil)
 
 	case "import":
 		if len(args) != 3 && len(args) != 4 {
@@ -158,7 +165,8 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 		[]core.Value{core.NewCommandValue(command)},
 		args[2:]...,
 	)
-	return CreateDeferredValue(core.ResultCode_YIELD, core.TUPLE(cmdline), namespace.scope)
+	program := namespace.scope.CompileTupleValue(core.TUPLE(cmdline))
+	return CreateContinuationValue(namespace.scope, program, nil)
 }
 func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	var usage string
@@ -207,13 +215,6 @@ func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandH
 
 const NAMESPACE_SIGNATURE = "namespace ?name? body"
 
-type namespaceBodyState struct {
-	scope    *Scope
-	subscope *Scope
-	process  *Process
-	name     core.Value
-}
-
 type namespaceCmd struct{}
 
 func (namespaceCmd) Execute(args []core.Value, context any) core.Result {
@@ -232,45 +233,35 @@ func (namespaceCmd) Execute(args []core.Value, context any) core.Result {
 	}
 
 	subscope := NewScope(scope, false)
-	process := subscope.PrepareScriptValue(body.(core.ScriptValue))
-	return executeNamespaceBody(&namespaceBodyState{scope, subscope, process, name})
-}
-func (namespaceCmd) Resume(result core.Result, _ any) core.Result {
-	state := result.Data.(*namespaceBodyState)
-	state.process.YieldBack(result.Value)
-	return executeNamespaceBody(state)
+	program := subscope.CompileScriptValue(body.(core.ScriptValue))
+	return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+		switch result.Code {
+		case core.ResultCode_OK,
+			core.ResultCode_RETURN:
+			{
+				namespace := newNamespaceCommand(subscope)
+				if name != nil {
+					result := scope.RegisterCommand(name, namespace)
+					if result.Code != core.ResultCode_OK {
+						return result
+					}
+				}
+				if result.Code == core.ResultCode_RETURN {
+					return core.OK(result.Value)
+				} else {
+					return core.OK(namespace.metacommand.value)
+				}
+			}
+		case core.ResultCode_ERROR:
+			return result
+		default:
+			return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
+		}
+	})
 }
 func (namespaceCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 3 {
 		return ARITY_ERROR(NAMESPACE_SIGNATURE)
 	}
 	return core.OK(core.STR(NAMESPACE_SIGNATURE))
-}
-
-func executeNamespaceBody(state *namespaceBodyState) core.Result {
-	result := state.process.Run()
-	switch result.Code {
-	case core.ResultCode_OK,
-		core.ResultCode_RETURN:
-		{
-			namespace := newNamespaceCommand(state.subscope)
-			if state.name != nil {
-				result := state.scope.RegisterCommand(state.name, namespace)
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-			}
-			if result.Code == core.ResultCode_RETURN {
-				return core.OK(result.Value)
-			} else {
-				return core.OK(namespace.metacommand.value)
-			}
-		}
-	case core.ResultCode_YIELD:
-		return core.YIELD_STATE(result.Value, state)
-	case core.ResultCode_ERROR:
-		return result
-	default:
-		return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
-	}
 }

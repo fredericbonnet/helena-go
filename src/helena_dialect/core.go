@@ -2,113 +2,122 @@ package helena_dialect
 
 import "helena/core"
 
-// import { ERROR, OK, Result, ResultCode, RETURN, YIELD } from "../core/results";
-// import { Command } from "../core/command";
-// import {
-//   Compiler,
-//   Executor,
-//   OpCode,
-//   Program,
-//   ProgramState,
-// } from "../core/compiler";
-// import { VariableResolver, CommandResolver } from "../core/resolvers";
-// import { Script } from "../core/syntax";
-// import {
-//   Value,
-//   ValueType,
-//   CustomValueType,
-//   ScriptValue,
-//   RealValue,
-//   TupleValue,
-//   NIL,
-//   StringValue,
-//   CommandValue,
-// } from "../core/values";
-// import { numberCmd } from "./numbers";
-
-type DeferredValue struct {
-	Scope   *Scope
-	Program *core.Program
+type ContinuationValue struct {
+	Scope    *Scope
+	Program  *core.Program
+	Callback func(result core.Result) core.Result
 }
 
-func (DeferredValue) Type() core.ValueType {
+func NewContinuationValue(scope *Scope, program *core.Program, callback func(result core.Result) core.Result) ContinuationValue {
+	return ContinuationValue{scope, program, callback}
+}
+func (ContinuationValue) Type() core.ValueType {
 	return core.ValueType_CUSTOM
 }
-func (DeferredValue) CustomType() core.CustomValueType {
-	return core.CustomValueType{Name: "deferred"}
+func (ContinuationValue) CustomType() core.CustomValueType {
+	return core.CustomValueType{Name: "continuation"}
 }
-func CreateDeferredValue(code core.ResultCode, value core.Value, scope *Scope) core.Result {
-	var program *core.Program
-	switch value.Type() {
-	case core.ValueType_SCRIPT:
-		program = scope.CompileScriptValue(value.(core.ScriptValue))
-	case core.ValueType_TUPLE:
-		program = scope.CompileTupleValue(value.(core.TupleValue))
-	default:
-		return core.ERROR("body must be a script or tuple")
-	}
-	return core.Result{
-		Code:  code,
-		Value: DeferredValue{scope, program},
-	}
+func CreateContinuationValue(scope *Scope, program *core.Program, callback func(result core.Result) core.Result) core.Result {
+	return core.YIELD(NewContinuationValue(scope, program, callback))
 }
 
 type ProcessContext struct {
-	scope   *Scope
-	program *core.Program
-	state   *core.ProgramState
+	scope    *Scope
+	program  *core.Program
+	state    *core.ProgramState
+	callback func(result core.Result) core.Result
 }
+type ProcessStack struct {
+	stack []ProcessContext
+}
+
+func NewProcessStack() ProcessStack {
+	return ProcessStack{[]ProcessContext{}}
+}
+func (processStack *ProcessStack) Depth() int {
+	return len(processStack.stack)
+}
+func (processStack *ProcessStack) CurrentContext() ProcessContext {
+	return processStack.stack[len(processStack.stack)-1]
+}
+func (processStack *ProcessStack) PushProgram(scope *Scope, program *core.Program) ProcessContext {
+	context := ProcessContext{
+		scope,
+		program,
+		core.NewProgramState(),
+		nil,
+	}
+	processStack.stack = append(processStack.stack, context)
+	return context
+}
+func (processStack *ProcessStack) PushContinuation(continuation ContinuationValue) ProcessContext {
+	context := ProcessContext{
+		continuation.Scope,
+		continuation.Program,
+		core.NewProgramState(),
+		continuation.Callback,
+	}
+	processStack.stack = append(processStack.stack, context)
+	return context
+}
+func (processStack *ProcessStack) Pop() {
+	processStack.stack = processStack.stack[:len(processStack.stack)-1]
+}
+func (processStack *ProcessStack) Reset() {
+	processStack.stack = processStack.stack[:1]
+	processStack.stack[0].state.Reset()
+}
+
 type Process struct {
-	contextStack []ProcessContext
+	stack ProcessStack
 }
 
 func NewProcess(scope *Scope, program *core.Program) *Process {
-	process := &Process{[]ProcessContext{}}
-	process.pushContext(scope, program)
+	process := &Process{NewProcessStack()}
+	process.stack.PushProgram(scope, program)
 	return process
 }
 func (process *Process) Reset() {
-	process.contextStack = process.contextStack[:1]
-	process.contextStack[0].state.Reset()
-}
-
-func (process *Process) currentContext() ProcessContext {
-	return process.contextStack[len(process.contextStack)-1]
-}
-func (process *Process) pushContext(scope *Scope, program *core.Program) {
-	process.contextStack = append(process.contextStack, ProcessContext{scope, program, core.NewProgramState()})
-}
-func (process *Process) popContext() {
-	process.contextStack = process.contextStack[:len(process.contextStack)-1]
+	process.stack.Reset()
 }
 func (process *Process) Run() core.Result {
-	for {
-		context := process.currentContext()
-		result := context.scope.Execute(context.program, context.state)
-		if deferred, ok := result.Value.(DeferredValue); ok {
-			process.pushContext(deferred.Scope, deferred.Program)
+	context := process.stack.CurrentContext()
+	result := context.scope.Execute(context.program, context.state)
+	for process.stack.Depth() > 0 {
+		if continuation, ok := result.Value.(ContinuationValue); ok {
+			if result.Code != core.ResultCode_YIELD && context.callback == nil {
+				// End and replace current context
+				process.stack.Pop()
+			}
+			context = process.stack.PushContinuation(continuation)
+			result = context.scope.Execute(context.program, context.state)
 			continue
 		}
-		if result.Code == core.ResultCode_OK && len(process.contextStack) > 1 {
-			process.popContext()
-			previousResult := process.currentContext()
-			switch previousResult.state.Result.Code {
-			case core.ResultCode_OK:
-				return core.OK(result.Value)
-			case core.ResultCode_RETURN:
-				return core.RETURN(result.Value)
-			case core.ResultCode_YIELD:
-				process.YieldBack(result.Value)
-				continue
-			default:
-				return core.ERROR("unexpected deferred result")
-			}
+		if result.Code == core.ResultCode_YIELD {
+			// Yield to caller
+			break
 		}
-		return result
+		if context.callback != nil {
+			result = context.callback(result)
+		}
+		if process.stack.Depth() == 1 {
+			break
+		}
+		process.stack.Pop()
+		if _, ok := result.Value.(ContinuationValue); ok {
+			continue
+		}
+		context = process.stack.CurrentContext()
+		if result.Code == core.ResultCode_OK {
+			// Yield back and resume current context
+			context.state.Result = result
+			result = context.scope.Execute(context.program, context.state)
+		}
 	}
+	return result
 }
 func (process *Process) YieldBack(value core.Value) {
-	context := process.currentContext()
+	context := process.stack.CurrentContext()
 	context.state.Result.Value = value
 }
 

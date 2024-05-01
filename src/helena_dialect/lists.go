@@ -252,27 +252,9 @@ func (listReplaceCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) 
 
 const LIST_FOREACH_SIGNATURE = "list value foreach element body"
 
-type listForeachStateStep uint8
-
-const (
-	listForeachStateStep_beforeBody listForeachStateStep = iota
-	listForeachStateStep_inBody
-)
-
-type listForeachState struct {
-	varname    core.Value
-	list       core.ListValue
-	i          int
-	step       listForeachStateStep
-	program    *core.Program
-	scope      *Scope
-	process    *Process
-	lastResult core.Result
-}
-
 type listForeachCmd struct{}
 
-func (command listForeachCmd) Execute(args []core.Value, context any) core.Result {
+func (listForeachCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if len(args) != 4 {
 		return ARITY_ERROR(LIST_FOREACH_SIGNATURE)
@@ -289,70 +271,45 @@ func (command listForeachCmd) Execute(args []core.Value, context any) core.Resul
 	}
 	program := scope.Compile(body.(core.ScriptValue).Script)
 	subscope := NewScope(scope, true)
-	return command.run(&listForeachState{
-		varname:    varname,
-		list:       list,
-		i:          0,
-		step:       listForeachStateStep_beforeBody,
-		program:    program,
-		scope:      subscope,
-		lastResult: core.OK(core.NIL),
-	})
-}
-func (command listForeachCmd) Resume(result core.Result, _ any) core.Result {
-	state := result.Data.(*listForeachState)
-	state.process.YieldBack(result.Value)
-	return command.run(state)
+	i := 0
+	lastResult := core.OK(core.NIL)
+	var next func() core.Result
+	next = func() core.Result {
+		if i >= len(list.Values) {
+			return lastResult
+		}
+		value := list.Values[i]
+		i++
+		result := DestructureValue(
+			func(name core.Value, value core.Value, check bool) core.Result {
+				return subscope.DestructureLocal(name, value, check)
+			},
+			varname,
+			value,
+		)
+		if result.Code != core.ResultCode_OK {
+			return result
+		}
+		return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+			switch result.Code {
+			case core.ResultCode_BREAK:
+				return lastResult
+			case core.ResultCode_CONTINUE:
+			case core.ResultCode_OK:
+				lastResult = result
+			default:
+				return result
+			}
+			return next()
+		})
+	}
+	return next()
 }
 func (listForeachCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 4 {
 		return ARITY_ERROR(LIST_FOREACH_SIGNATURE)
 	}
 	return core.OK(core.STR(LIST_FOREACH_SIGNATURE))
-}
-func (listForeachCmd) run(state *listForeachState) core.Result {
-	for {
-		switch state.step {
-		case listForeachStateStep_beforeBody:
-			{
-				if state.i == len(state.list.Values) {
-					return state.lastResult
-				}
-				value := state.list.Values[state.i]
-				state.i++
-				result := DestructureValue(
-					func(name core.Value, value core.Value, check bool) core.Result {
-						return state.scope.DestructureLocal(name, value, check)
-					},
-					state.varname,
-					value,
-				)
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-				state.process = state.scope.PrepareProcess(state.program)
-				state.step = listForeachStateStep_inBody
-			}
-		case listForeachStateStep_inBody:
-			{
-				result := state.process.Run()
-				if result.Code == core.ResultCode_YIELD {
-					return core.YIELD_STATE(result.Value, state)
-				}
-				state.step = listForeachStateStep_beforeBody
-				if result.Code == core.ResultCode_BREAK {
-					return state.lastResult
-				}
-				if result.Code == core.ResultCode_CONTINUE {
-					continue
-				}
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-				state.lastResult = result
-			}
-		}
-	}
 }
 
 func ValueToList(value core.Value) core.TypedResult[core.ListValue] {

@@ -380,7 +380,6 @@ var _ = Describe("Helena procedures", func() {
 					result := process.Run()
 					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 					Expect(result.Value).To(Equal(STR("val1")))
-					Expect(result.Data).NotTo(BeNil())
 
 					process.YieldBack(STR("val2"))
 					result = process.Run()

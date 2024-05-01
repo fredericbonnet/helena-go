@@ -589,19 +589,16 @@ var _ = Describe("Helena dictionaries", func() {
 								result := process.Run()
 								Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 								//  Expect(result.Value).To(Equal(STR("a"))) // TODO specify order?
-								Expect(result.Data).NotTo(BeNil())
 
 								process.YieldBack(STR("step 1"))
 								result = process.Run()
 								Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 								// Expect(result.Value).To(Equal(STR("c"))) // TODO specify order?
-								Expect(result.Data).NotTo(BeNil())
 
 								process.YieldBack(STR("step 2"))
 								result = process.Run()
 								Expect(result.Code).To(Equal(core.ResultCode_YIELD))
 								// Expect(result.Value).To(Equal(STR("e"))) // TODO specify order?
-								Expect(result.Data).NotTo(BeNil())
 
 								process.YieldBack(STR("step 3"))
 								result = process.Run()

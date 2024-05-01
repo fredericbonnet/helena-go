@@ -51,11 +51,6 @@ func PROC_COMMAND_SIGNATURE(name core.Value, help string) string {
 	}
 }
 
-type procState struct {
-	scope   *Scope
-	process *Process
-}
-
 type procCommand struct {
 	value       core.Value
 	metacommand *procMetacommand
@@ -97,33 +92,35 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
-	process := subscope.PrepareProcess(proc.program)
-	return proc.run(&procState{subscope, process})
-}
-func (proc *procCommand) Resume(result core.Result, _ any) core.Result {
-	state := result.Data.(*procState)
-	state.process.YieldBack(result.Value)
-	return proc.run(state)
-}
-func (proc *procCommand) run(state *procState) core.Result {
-	result := state.process.Run()
-	switch result.Code {
-	case core.ResultCode_OK,
-		core.ResultCode_RETURN:
-		if proc.guard != nil {
-			return CreateDeferredValue(
-				core.ResultCode_OK,
-				core.TUPLE([]core.Value{proc.guard, result.Value}),
-				proc.scope,
-			)
-		}
-		return core.OK(result.Value)
-	case core.ResultCode_YIELD:
-		return core.YIELD_STATE(result.Value, state)
-	case core.ResultCode_ERROR:
-		return result
-	default:
-		return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
+	if proc.guard != nil {
+		return CreateContinuationValue(subscope, proc.program, func(result core.Result) core.Result {
+			switch result.Code {
+			case core.ResultCode_OK,
+				core.ResultCode_RETURN:
+				{
+					program := proc.scope.CompileTupleValue(
+						core.TUPLE([]core.Value{proc.guard, result.Value}),
+					)
+					return CreateContinuationValue(proc.scope, program, nil)
+				}
+			case core.ResultCode_ERROR:
+				return result
+			default:
+				return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
+			}
+		})
+	} else {
+		return CreateContinuationValue(subscope, proc.program, func(result core.Result) core.Result {
+			switch result.Code {
+			case core.ResultCode_OK,
+				core.ResultCode_RETURN:
+				return core.OK(result.Value)
+			case core.ResultCode_ERROR:
+				return result
+			default:
+				return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
+			}
+		})
 	}
 }
 func (proc *procCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {

@@ -42,7 +42,17 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 		if len(args) != 3 {
 			return ARITY_ERROR("<scope> eval body")
 		}
-		return CreateDeferredValue(core.ResultCode_YIELD, args[2], scope.scope)
+		body := args[2]
+		var program *core.Program
+		switch body.Type() {
+		case core.ValueType_SCRIPT:
+			program = scope.scope.CompileScriptValue(body.(core.ScriptValue))
+		case core.ValueType_TUPLE:
+			program = scope.scope.CompileTupleValue(body.(core.TupleValue))
+		default:
+			return core.ERROR("body must be a script or tuple")
+		}
+		return CreateContinuationValue(scope.scope, program, nil)
 
 	case "call":
 		if len(args) < 3 {
@@ -57,22 +67,12 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 			return core.ERROR(`unknown command "` + command + `"`)
 		}
 		cmdline := append([]core.Value{}, args[2:]...)
-		return CreateDeferredValue(
-			core.ResultCode_YIELD,
-			core.TUPLE(cmdline),
-			scope.scope,
-		)
+		program := scope.scope.CompileTupleValue(core.TUPLE(cmdline))
+		return CreateContinuationValue(scope.scope, program, nil)
 
 	default:
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
-}
-
-type scopeBodyState struct {
-	scope    *Scope
-	subscope *Scope
-	process  *Process
-	name     core.Value
 }
 
 type scopeCmd struct{}
@@ -93,44 +93,35 @@ func (scopeCmd) Execute(args []core.Value, context any) core.Result {
 	}
 
 	subscope := NewScope(scope, false)
-	process := subscope.PrepareScriptValue(body.(core.ScriptValue))
-	return executeScopeBody(&scopeBodyState{scope, subscope, process, name})
-}
-func (scopeCmd) Resume(result core.Result, _ any) core.Result {
-	state := result.Data.(*scopeBodyState)
-	state.process.YieldBack(result.Value)
-	return executeScopeBody(state)
+	program := subscope.CompileScriptValue(body.(core.ScriptValue))
+	return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+		switch result.Code {
+		case core.ResultCode_OK,
+			core.ResultCode_RETURN:
+			{
+				command := newScopeCommand(subscope)
+				if name != nil {
+					result := scope.RegisterCommand(name, command)
+					if result.Code != core.ResultCode_OK {
+						return result
+					}
+				}
+				if result.Code == core.ResultCode_RETURN {
+					return core.OK(result.Value)
+				} else {
+					return core.OK(command.value)
+				}
+			}
+		case core.ResultCode_ERROR:
+			return result
+		default:
+			return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
+		}
+	})
 }
 func (scopeCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 3 {
 		return ARITY_ERROR(SCOPE_SIGNATURE)
 	}
 	return core.OK(core.STR(SCOPE_SIGNATURE))
-}
-func executeScopeBody(state *scopeBodyState) core.Result {
-	result := state.process.Run()
-	switch result.Code {
-	case core.ResultCode_OK,
-		core.ResultCode_RETURN:
-		{
-			command := newScopeCommand(state.subscope)
-			if state.name != nil {
-				result := state.scope.RegisterCommand(state.name, command)
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-			}
-			if result.Code == core.ResultCode_RETURN {
-				return core.OK(result.Value)
-			} else {
-				return core.OK(command.value)
-			}
-		}
-	case core.ResultCode_YIELD:
-		return core.YIELD_STATE(result.Value, state)
-	case core.ResultCode_ERROR:
-		return result
-	default:
-		return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
-	}
 }
