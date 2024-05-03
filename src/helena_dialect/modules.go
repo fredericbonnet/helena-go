@@ -7,15 +7,15 @@ import (
 	"path/filepath"
 )
 
-type exports map[string]core.Value
+type Exports = map[string]core.Value
 
 const EXPORT_SIGNATURE = "export name"
 
 type exportCommand struct {
-	exports *exports
+	exports *Exports
 }
 
-func newExportCommand(exports *exports) exportCommand {
+func newExportCommand(exports *Exports) exportCommand {
 	return exportCommand{exports}
 }
 
@@ -41,10 +41,10 @@ func (exportCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) c
 type Module struct {
 	value   core.Value
 	scope   *Scope
-	exports *exports
+	exports *Exports
 }
 
-func newModule(scope *Scope, exports *exports) *Module {
+func NewModule(scope *Scope, exports *Exports) *Module {
 	module := &Module{}
 	module.value = core.NewCommandValue(module)
 	module.scope = scope
@@ -113,7 +113,7 @@ func (module *Module) Execute(args []core.Value, context any) core.Result {
 func importCommand(
 	importName core.Value,
 	aliasName core.Value,
-	exports *exports,
+	exports *Exports,
 	source *Scope,
 	destination *Scope,
 ) core.Result {
@@ -291,7 +291,7 @@ func createModule(
 	rootScope := NewScope(nil, false)
 	InitCommandsForModule(rootScope, moduleRegistry, rootDir)
 
-	exports := &exports{}
+	exports := &Exports{}
 	rootScope.RegisterNamedCommand("export", newExportCommand(exports))
 
 	result := rootScope.ExecuteScript(script)
@@ -302,7 +302,7 @@ func createModule(
 		return core.ERROR_T[*Module]("unexpected " + core.RESULT_CODE_NAME(result))
 	}
 
-	module := newModule(rootScope, exports)
+	module := NewModule(rootScope, exports)
 	return core.OK_T(module.value, module)
 }
 

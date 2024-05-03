@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"helena/core"
 	"helena/helena_dialect"
+	"helena/native"
 	"helena/picol_dialect"
 	"os"
 
@@ -110,23 +111,7 @@ func prompt() {
 	defer rl.Close()
 
 	rootScope := initScope()
-	//   registerNativeModule("javascript:RegExp", "RegExp", regexpCmd);
-	//   registerNativeModule("javascript:console", "console", consoleCmd);
-	//   registerNativeModule("node:child_process", "child_process", childProcessCmd);
-	//   registerNativeModule("node:fs", "fs", {
-	//     execute: (args: Value[], scope: Scope): Result => {
-	//       const callbackContext: CallbackContext = {
-	//         callback: (args, scope: Scope) => {
-	//           const process = scope.prepareTupleValue(new TupleValue(args));
-	//           const result = process.run();
-	//           if (result.code == core.ResultCode_ERROR)
-	//             throw new Error(StringValue.toString(result.value).data);
-	//         },
-	//         context: scope,
-	//       };
-	//       return fsCmd.execute(args, callbackContext);
-	//     },
-	//   });
+	registerNativeModule("go:slog", "slog", native.SlogCmd{})
 
 	cmd := ""
 	for {
@@ -233,6 +218,19 @@ func resultWriter(output any) string {
 	} else {
 		return color.GreenString(value)
 	}
+}
+
+func registerNativeModule(
+	moduleName string,
+	exportName string,
+	command core.Command,
+) {
+	scope := helena_dialect.NewScope(nil, false)
+	exports := &helena_dialect.Exports{}
+	scope.RegisterNamedCommand(exportName, command)
+	(*exports)[exportName] = core.STR(exportName)
+	moduleRegistry.Register(moduleName, helena_dialect.NewModule(scope, exports))
+
 }
 
 func Cli() {
