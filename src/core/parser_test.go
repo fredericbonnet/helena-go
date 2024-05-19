@@ -19,8 +19,8 @@ type M_HERE_STRING struct{ string }
 type M_TAGGED_STRING struct{ string }
 type M_LINE_COMMENT struct{ string }
 type M_BLOCK_COMMENT struct{ string }
-type M_SUBSTITUTE_NEXT struct{ uint }
-type M_EXPAND_NEXT struct{ uint }
+type M_SUBSTITUTE_NEXT struct{ string }
+type M_EXPAND_NEXT struct{ string }
 
 func mapMorpheme(morpheme Morpheme) any {
 	switch morpheme.Type() {
@@ -68,9 +68,9 @@ func mapMorpheme(morpheme Morpheme) any {
 
 	case MorphemeType_SUBSTITUTE_NEXT:
 		if morpheme.(SubstituteNextMorpheme).Expansion {
-			return M_EXPAND_NEXT{morpheme.(SubstituteNextMorpheme).Levels}
+			return M_EXPAND_NEXT{morpheme.(SubstituteNextMorpheme).Value}
 		} else {
-			return M_SUBSTITUTE_NEXT{morpheme.(SubstituteNextMorpheme).Levels}
+			return M_SUBSTITUTE_NEXT{morpheme.(SubstituteNextMorpheme).Value}
 		}
 
 	default:
@@ -490,13 +490,13 @@ var _ = Describe("Parser", func() {
 				Specify("simple variable", func() {
 					script := parse(`"$a"`)
 					Expect(toTree(script)).To(Equal([]MS{
-						[]MW{[]MM{M_STRING{[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"a"}}}}},
+						[]MW{[]MM{M_STRING{[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"a"}}}}},
 					}))
 				})
 				Specify("Unicode variable name", func() {
 					script := parse("\"$a\u1234\"")
 					Expect(toTree(script)).To(Equal([]MS{
-						[]MW{[]MM{M_STRING{[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"a\u1234"}}}}},
+						[]MW{[]MM{M_STRING{[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"a\u1234"}}}}},
 					}))
 				})
 				Specify("block", func() {
@@ -505,7 +505,7 @@ var _ = Describe("Parser", func() {
 						[]MW{
 							[]MM{
 								M_STRING{[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"a"}}}}},
 								}},
 							},
@@ -518,7 +518,7 @@ var _ = Describe("Parser", func() {
 						[]MW{
 							[]MM{
 								M_STRING{[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"a"}}}}},
 								}},
 							},
@@ -531,13 +531,19 @@ var _ = Describe("Parser", func() {
 						[]MW{
 							[]MM{
 								M_STRING{[]MM{
-									M_SUBSTITUTE_NEXT{2},
+									M_SUBSTITUTE_NEXT{"$"},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_LITERAL{"a"},
 									M_LITERAL{" "},
-									M_SUBSTITUTE_NEXT{3},
+									M_SUBSTITUTE_NEXT{"$"},
+									M_SUBSTITUTE_NEXT{"$"},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_LITERAL{"b"},
 									M_LITERAL{" "},
-									M_SUBSTITUTE_NEXT{4},
+									M_SUBSTITUTE_NEXT{"$"},
+									M_SUBSTITUTE_NEXT{"$"},
+									M_SUBSTITUTE_NEXT{"$"},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"c"}}}}},
 								}},
 							},
@@ -550,10 +556,13 @@ var _ = Describe("Parser", func() {
 						[]MW{
 							[]MM{
 								M_STRING{[]MM{
-									M_EXPAND_NEXT{3},
+									M_EXPAND_NEXT{"$*"},
+									M_SUBSTITUTE_NEXT{"$"},
+									M_SUBSTITUTE_NEXT{"$*"},
 									M_LITERAL{"a"},
 									M_LITERAL{" "},
-									M_EXPAND_NEXT{2},
+									M_EXPAND_NEXT{"$*"},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"b"}}}}},
 								}},
 							},
@@ -573,10 +582,10 @@ var _ = Describe("Parser", func() {
 							[]MW{
 								[]MM{
 									M_STRING{[]MM{
-										M_SUBSTITUTE_NEXT{1},
+										M_SUBSTITUTE_NEXT{"$"},
 										M_LITERAL{"a"},
 										M_LITERAL{"b "},
-										M_SUBSTITUTE_NEXT{1},
+										M_SUBSTITUTE_NEXT{"$"},
 										M_LITERAL{"c"},
 										M_LITERAL{"d"},
 									}},
@@ -598,8 +607,8 @@ var _ = Describe("Parser", func() {
 						script := parse("$a# $b*")
 						Expect(toTree(script)).To(Equal([]MS{
 							[]MW{
-								[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"a"}, M_LITERAL{"#"}},
-								[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"b"}, M_LITERAL{"*"}},
+								[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"a"}, M_LITERAL{"#"}},
+								[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"b"}, M_LITERAL{"*"}},
 							},
 						}))
 					})
@@ -612,11 +621,11 @@ var _ = Describe("Parser", func() {
 								[]MW{
 									[]MM{
 										M_STRING{[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_LITERAL{"name"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index1"}}}}},
 											M_LITERAL{" "},
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index2"}}}}},
 										}},
@@ -632,13 +641,13 @@ var _ = Describe("Parser", func() {
 								[]MW{
 									[]MM{
 										M_STRING{[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_LITERAL{"name"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index1"}}}}},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index2"}}}}},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index3"}}}}},
 											M_LITERAL{" "},
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index4"}}}}},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index5"}}}}},
@@ -656,11 +665,11 @@ var _ = Describe("Parser", func() {
 								[]MW{
 									[]MM{
 										M_STRING{[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_LITERAL{"name"},
 											M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key1"}}}}},
 											M_LITERAL{" "},
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 											M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key2"}}}}},
 										}},
@@ -676,13 +685,13 @@ var _ = Describe("Parser", func() {
 								[]MW{
 									[]MM{
 										M_STRING{[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_LITERAL{"name"},
 											M_TUPLE{[]MS{
 												[]MW{[]MM{M_LITERAL{"key1"}}, []MM{M_LITERAL{"key2"}}},
 											}},
 											M_LITERAL{" "},
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 											M_TUPLE{[]MS{
 												[]MW{[]MM{M_LITERAL{"key3"}}, []MM{M_LITERAL{"key4"}}},
@@ -700,7 +709,7 @@ var _ = Describe("Parser", func() {
 								[]MW{
 									[]MM{
 										M_STRING{[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_LITERAL{"name"},
 											M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key1"}}}}},
 											M_TUPLE{[]MS{
@@ -708,7 +717,7 @@ var _ = Describe("Parser", func() {
 											}},
 											M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key4"}}}}},
 											M_LITERAL{" "},
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 											M_TUPLE{[]MS{
 												[]MW{[]MM{M_LITERAL{"key5"}}, []MM{M_LITERAL{"key6"}}},
@@ -732,13 +741,13 @@ var _ = Describe("Parser", func() {
 								[]MW{
 									[]MM{
 										M_STRING{[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_LITERAL{"name"},
 											M_BLOCK{[]MS{
 												[]MW{[]MM{M_LITERAL{"selector1"}}, []MM{M_LITERAL{"arg1"}}},
 											}},
 											M_LITERAL{" "},
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 											M_BLOCK{[]MS{
 												[]MW{[]MM{M_LITERAL{"selector2"}}, []MM{M_LITERAL{"arg2"}}},
@@ -756,7 +765,7 @@ var _ = Describe("Parser", func() {
 								[]MW{
 									[]MM{
 										M_STRING{[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_LITERAL{"name"},
 											M_BLOCK{[]MS{
 												[]MW{[]MM{M_LITERAL{"selector1"}}, []MM{M_LITERAL{"arg1"}}},
@@ -770,7 +779,7 @@ var _ = Describe("Parser", func() {
 												},
 											}},
 											M_LITERAL{" "},
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 											M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"selector4"}}}}},
 											M_BLOCK{[]MS{
@@ -797,7 +806,7 @@ var _ = Describe("Parser", func() {
 							[]MW{
 								[]MM{
 									M_STRING{[]MM{
-										M_SUBSTITUTE_NEXT{1},
+										M_SUBSTITUTE_NEXT{"$"},
 										M_LITERAL{"name"},
 										M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key1"}}, []MM{M_LITERAL{"key2"}}}}},
 										M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"selector1"}}}}},
@@ -810,7 +819,7 @@ var _ = Describe("Parser", func() {
 										},
 										},
 										M_LITERAL{" "},
-										M_SUBSTITUTE_NEXT{1},
+										M_SUBSTITUTE_NEXT{"$"},
 										M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 										M_BLOCK{[]MS{
 											[]MW{
@@ -835,31 +844,31 @@ var _ = Describe("Parser", func() {
 							[]MW{
 								[]MM{
 									M_STRING{[]MM{
-										M_SUBSTITUTE_NEXT{1},
+										M_SUBSTITUTE_NEXT{"$"},
 										M_LITERAL{"name1"},
 										M_TUPLE{[]MS{
 											[]MW{
 												[]MM{M_LITERAL{"key1"}},
 												[]MM{
-													M_SUBSTITUTE_NEXT{1},
+													M_SUBSTITUTE_NEXT{"$"},
 													M_LITERAL{"name2"},
 													M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"selector1"}}}}},
 												},
 												[]MM{
-													M_SUBSTITUTE_NEXT{1},
+													M_SUBSTITUTE_NEXT{"$"},
 													M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression1"}}}}},
 													M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key2"}}}}},
 												},
 											},
 										}},
 										M_LITERAL{" "},
-										M_SUBSTITUTE_NEXT{1},
+										M_SUBSTITUTE_NEXT{"$"},
 										M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression2"}}}}},
 										M_BLOCK{[]MS{
 											[]MW{
 												[]MM{M_LITERAL{"selector2"}},
 												[]MM{
-													M_SUBSTITUTE_NEXT{1},
+													M_SUBSTITUTE_NEXT{"$"},
 													M_LITERAL{"name3"},
 													M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key3"}}}}},
 												},
@@ -1138,40 +1147,49 @@ int main(void) {
 			Specify("simple variable", func() {
 				script := parse("$a")
 				Expect(toTree(script)).To(Equal([]MS{
-					[]MW{[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"a"}}},
+					[]MW{[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"a"}}},
 				}))
 			})
 			Specify("Unicode variable name", func() {
 				script := parse("$a\u1234")
 				Expect(toTree(script)).To(Equal([]MS{
-					[]MW{[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"a\u1234"}}},
+					[]MW{[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"a\u1234"}}},
 				}))
 			})
 			Specify("tuple", func() {
 				script := parse("$(a)")
 				Expect(toTree(script)).To(Equal([]MS{
-					[]MW{[]MM{M_SUBSTITUTE_NEXT{1}, M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"a"}}}}}}},
+					[]MW{[]MM{M_SUBSTITUTE_NEXT{"$"}, M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"a"}}}}}}},
 				}))
 			})
 			Specify("block", func() {
 				script := parse("${a}")
 				Expect(toTree(script)).To(Equal([]MS{
-					[]MW{[]MM{M_SUBSTITUTE_NEXT{1}, M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"a"}}}}}}},
+					[]MW{[]MM{M_SUBSTITUTE_NEXT{"$"}, M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"a"}}}}}}},
 				}))
 			})
 			Specify("expression", func() {
 				script := parse("$[a]")
 				Expect(toTree(script)).To(Equal([]MS{
-					[]MW{[]MM{M_SUBSTITUTE_NEXT{1}, M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"a"}}}}}}},
+					[]MW{[]MM{M_SUBSTITUTE_NEXT{"$"}, M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"a"}}}}}}},
 				}))
 			})
 			Specify("multiple substitution", func() {
 				script := parse("$$a $$$b $$$$[c]")
 				Expect(toTree(script)).To(Equal([]MS{
 					[]MW{
-						[]MM{M_SUBSTITUTE_NEXT{2}, M_LITERAL{"a"}},
-						[]MM{M_SUBSTITUTE_NEXT{3}, M_LITERAL{"b"}},
-						[]MM{M_SUBSTITUTE_NEXT{4}, M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"c"}}}}}},
+						[]MM{M_SUBSTITUTE_NEXT{"$"},
+							M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"a"}},
+						[]MM{M_SUBSTITUTE_NEXT{"$"},
+							M_SUBSTITUTE_NEXT{"$"},
+							M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"b"}},
+						[]MM{
+							M_SUBSTITUTE_NEXT{"$"},
+							M_SUBSTITUTE_NEXT{"$"},
+							M_SUBSTITUTE_NEXT{"$"},
+							M_SUBSTITUTE_NEXT{"$"},
+							M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"c"}}}}},
+						},
 					},
 				}))
 			})
@@ -1179,8 +1197,17 @@ int main(void) {
 				script := parse("$*$$*a $*$[b]")
 				Expect(toTree(script)).To(Equal([]MS{
 					[]MW{
-						[]MM{M_EXPAND_NEXT{3}, M_LITERAL{"a"}},
-						[]MM{M_EXPAND_NEXT{2}, M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"b"}}}}}},
+						[]MM{
+							M_EXPAND_NEXT{"$*"},
+							M_SUBSTITUTE_NEXT{"$"},
+							M_SUBSTITUTE_NEXT{"$*"},
+							M_LITERAL{"a"},
+						},
+						[]MM{
+							M_EXPAND_NEXT{"$*"},
+							M_SUBSTITUTE_NEXT{"$"},
+							M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"b"}}}}},
+						},
 					},
 				}))
 			})
@@ -1199,8 +1226,8 @@ int main(void) {
 					script := parse("$a\\x62 $c\\d")
 					Expect(toTree(script)).To(Equal([]MS{
 						[]MW{
-							[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"a"}, M_LITERAL{"b"}},
-							[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"c"}, M_LITERAL{"d"}},
+							[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"a"}, M_LITERAL{"b"}},
+							[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"c"}, M_LITERAL{"d"}},
 						},
 					}))
 				})
@@ -1208,8 +1235,8 @@ int main(void) {
 					script := parse("$a# $b*")
 					Expect(toTree(script)).To(Equal([]MS{
 						[]MW{
-							[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"a"}, M_LITERAL{"#"}},
-							[]MM{M_SUBSTITUTE_NEXT{1}, M_LITERAL{"b"}, M_LITERAL{"*"}},
+							[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"a"}, M_LITERAL{"#"}},
+							[]MM{M_SUBSTITUTE_NEXT{"$"}, M_LITERAL{"b"}, M_LITERAL{"*"}},
 						},
 					}))
 				})
@@ -1235,12 +1262,12 @@ int main(void) {
 						Expect(toTree(script)).To(Equal([]MS{
 							[]MW{
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_LITERAL{"name"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index1"}}}}},
 								},
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index2"}}}}},
 								},
@@ -1254,14 +1281,14 @@ int main(void) {
 						Expect(toTree(script)).To(Equal([]MS{
 							[]MW{
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_LITERAL{"name"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index1"}}}}},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index2"}}}}},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index3"}}}}},
 								},
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index4"}}}}},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"index5"}}}}},
@@ -1277,12 +1304,12 @@ int main(void) {
 						Expect(toTree(script)).To(Equal([]MS{
 							[]MW{
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_LITERAL{"name"},
 									M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key1"}}}}},
 								},
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 									M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key2"}}}}},
 								},
@@ -1294,12 +1321,12 @@ int main(void) {
 						Expect(toTree(script)).To(Equal([]MS{
 							[]MW{
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_LITERAL{"name"},
 									M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key1"}}, []MM{M_LITERAL{"key2"}}}}},
 								},
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 									M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key3"}}, []MM{M_LITERAL{"key4"}}}}},
 								},
@@ -1313,14 +1340,14 @@ int main(void) {
 						Expect(toTree(script)).To(Equal([]MS{
 							[]MW{
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_LITERAL{"name"},
 									M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key1"}}}}},
 									M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key2"}}, []MM{M_LITERAL{"key3"}}}}},
 									M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key4"}}}}},
 								},
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 									M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key5"}}, []MM{M_LITERAL{"key6"}}}}},
 									M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key7"}}}}},
@@ -1336,12 +1363,12 @@ int main(void) {
 						Expect(toTree(script)).To(Equal([]MS{
 							[]MW{
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_LITERAL{"name"},
 									M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"selector1"}}}}},
 								},
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 									M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"selector2"}}}}},
 								},
@@ -1355,7 +1382,7 @@ int main(void) {
 						Expect(toTree(script)).To(Equal([]MS{
 							[]MW{
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_LITERAL{"name"},
 									M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"selector1"}}}}},
 									M_BLOCK{[]MS{
@@ -1364,7 +1391,7 @@ int main(void) {
 									M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"selector3"}}}}},
 								},
 								[]MM{
-									M_SUBSTITUTE_NEXT{1},
+									M_SUBSTITUTE_NEXT{"$"},
 									M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 									M_BLOCK{[]MS{
 										[]MW{
@@ -1390,7 +1417,7 @@ int main(void) {
 					Expect(toTree(script)).To(Equal([]MS{
 						[]MW{
 							[]MM{
-								M_SUBSTITUTE_NEXT{1},
+								M_SUBSTITUTE_NEXT{"$"},
 								M_LITERAL{"name"},
 								M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key1"}}, []MM{M_LITERAL{"key2"}}}}},
 								M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"selector1"}}}}},
@@ -1400,7 +1427,7 @@ int main(void) {
 								}},
 							},
 							[]MM{
-								M_SUBSTITUTE_NEXT{1},
+								M_SUBSTITUTE_NEXT{"$"},
 								M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression"}}}}},
 								M_BLOCK{[]MS{
 									[]MW{[]MM{M_LITERAL{"selector4"}}, []MM{M_LITERAL{"selector5"}}},
@@ -1419,18 +1446,18 @@ int main(void) {
 					Expect(toTree(script)).To(Equal([]MS{
 						[]MW{
 							[]MM{
-								M_SUBSTITUTE_NEXT{1},
+								M_SUBSTITUTE_NEXT{"$"},
 								M_LITERAL{"name1"},
 								M_TUPLE{[]MS{
 									[]MW{
 										[]MM{M_LITERAL{"key1"}},
 										[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_LITERAL{"name2"},
 											M_BLOCK{[]MS{[]MW{[]MM{M_LITERAL{"selector1"}}}}},
 										},
 										[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression1"}}}}},
 											M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key2"}}}}},
 										},
@@ -1438,13 +1465,13 @@ int main(void) {
 								}},
 							},
 							[]MM{
-								M_SUBSTITUTE_NEXT{1},
+								M_SUBSTITUTE_NEXT{"$"},
 								M_EXPRESSION{[]MS{[]MW{[]MM{M_LITERAL{"expression2"}}}}},
 								M_BLOCK{[]MS{
 									[]MW{
 										[]MM{M_LITERAL{"selector2"}},
 										[]MM{
-											M_SUBSTITUTE_NEXT{1},
+											M_SUBSTITUTE_NEXT{"$"},
 											M_LITERAL{"name3"},
 											M_TUPLE{[]MS{[]MW{[]MM{M_LITERAL{"key3"}}}}},
 										},

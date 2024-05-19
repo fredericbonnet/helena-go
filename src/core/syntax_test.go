@@ -164,7 +164,7 @@ var _ = Describe("SyntaxChecker", func() {
 				Specify("double", func() {
 					script := parse("$$" + value)
 					word := firstWord(script)
-					Expect(word.Morphemes).To(HaveLen(2))
+					Expect(word.Morphemes).To(HaveLen(3))
 					Expect(checker.CheckWord(word)).To(Equal(WordType_SUBSTITUTION))
 				})
 				Specify("indexed selector", func() {

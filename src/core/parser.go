@@ -276,14 +276,12 @@ func (node *blockCommentNode) toMorpheme() Morpheme {
 // Substitute Next morpheme AST node
 type substituteNextNode struct {
 	expansion bool
-	levels    uint
 	value     string
 }
 
 func newSubstituteNextNode(value string) *substituteNextNode {
 	return &substituteNextNode{
 		expansion: false,
-		levels:    1,
 		value:     value,
 	}
 }
@@ -291,7 +289,6 @@ func newSubstituteNextNode(value string) *substituteNextNode {
 func (node *substituteNextNode) toMorpheme() Morpheme {
 	return SubstituteNextMorpheme{
 		Expansion: node.expansion,
-		Levels:    node.levels,
 		Value:     node.value,
 	}
 }
@@ -972,21 +969,15 @@ func (parser *Parser) addBlockCommentSequence(value string) {
 //
 
 func (parser *Parser) beginSubstitution(value string) {
-	current := parser.context.currentMorpheme()
-	if current != nil {
-		if morpheme, ok := current.(*substituteNextNode); ok {
-			morpheme.value += value
-			morpheme.levels++
-			if !parser.stream.end() && parser.stream.current().Type == TokenType_ASTERISK {
-				// Ignore expansion on inner substitutions
-				morpheme.value += parser.stream.next().Literal
-			}
-			return
-		}
-	}
 	morpheme := newSubstituteNextNode(value)
 	if !parser.stream.end() && parser.stream.current().Type == TokenType_ASTERISK {
-		morpheme.expansion = true
+		// Only expand the leading substitution
+		current := parser.context.currentMorpheme()
+		if current == nil {
+			morpheme.expansion = true
+		} else if _, ok := current.(*substituteNextNode); !ok {
+			morpheme.expansion = true
+		}
 		morpheme.value += parser.stream.next().Literal
 	}
 	*parser.context.morphemes = append(*parser.context.morphemes, morpheme)
@@ -1007,8 +998,18 @@ func (parser *Parser) endSubstitution() {
 
 	// Convert stale substitutions to literals
 	parser.context.substitutionMode = substitutionMode_INITIAL
-	value := parser.context.currentMorpheme().(*substituteNextNode).value
-	*parser.context.morphemes = (*parser.context.morphemes)[:len(*parser.context.morphemes)-1]
+	value := ""
+	for {
+		current := parser.context.currentMorpheme()
+		if current == nil {
+			break
+		} else if morpheme, ok := current.(*substituteNextNode); ok {
+			value = morpheme.value + value
+			*parser.context.morphemes = (*parser.context.morphemes)[:len(*parser.context.morphemes)-1]
+		} else {
+			break
+		}
+	}
 	parser.addLiteral(value)
 }
 func (parser *Parser) withinSubstitution() bool {
@@ -1017,7 +1018,4 @@ func (parser *Parser) withinSubstitution() bool {
 
 func (parser *Parser) expectSource() bool {
 	return parser.context.substitutionMode == substitutionMode_EXPECT_SOURCE
-}
-func (parser *Parser) expectSelector() bool {
-	return parser.context.substitutionMode == substitutionMode_EXPECT_SELECTOR
 }

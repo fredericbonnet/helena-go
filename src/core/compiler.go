@@ -211,8 +211,15 @@ func (compiler Compiler) emitCompound(program *Program, morphemes []Morpheme) {
 	program.PushOpCode(OpCode_JOIN_STRINGS)
 }
 func (compiler Compiler) emitSubstitution(program *Program, morphemes []Morpheme) {
-	substitute := morphemes[0].(SubstituteNextMorpheme)
-	selectable := morphemes[1]
+	expand := (morphemes[0].(SubstituteNextMorpheme)).Expansion
+	levels := 1
+	i := 1
+	for morphemes[i].Type() == MorphemeType_SUBSTITUTE_NEXT {
+		i++
+		levels++
+	}
+	selectable := morphemes[i]
+	i++
 	switch selectable.Type() {
 	case MorphemeType_LITERAL:
 		{
@@ -241,8 +248,9 @@ func (compiler Compiler) emitSubstitution(program *Program, morphemes []Morpheme
 	default:
 		panic(UnexpectedMorphemeError)
 	}
-	for i := 2; i < len(morphemes); i++ {
+	for i < len(morphemes) {
 		morpheme := morphemes[i]
+		i++
 		switch morpheme.Type() {
 		case MorphemeType_TUPLE:
 			{
@@ -266,10 +274,10 @@ func (compiler Compiler) emitSubstitution(program *Program, morphemes []Morpheme
 			panic(UnexpectedMorphemeError)
 		}
 	}
-	for level := 1; level < int(substitute.Levels); level++ {
+	for level := 1; level < levels; level++ {
 		program.PushOpCode(OpCode_RESOLVE_VALUE)
 	}
-	if substitute.Expansion {
+	if expand {
 		program.PushOpCode(OpCode_EXPAND_VALUE)
 	}
 }
@@ -330,7 +338,7 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 		SELECTABLE
 	)
 	mode := INITIAL
-	var substitute SubstituteNextMorpheme
+	var levels int
 	for _, morpheme := range morphemes {
 		if mode == SELECTABLE {
 			switch morpheme.Type() {
@@ -338,7 +346,7 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 				MorphemeType_LITERAL:
 				{
 					// Terminate substitution sequence
-					for level := 1; level < int(substitute.Levels); level++ {
+					for level := 1; level < levels; level++ {
 						program.PushOpCode(OpCode_RESOLVE_VALUE)
 					}
 					mode = INITIAL
@@ -349,8 +357,13 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 		switch mode {
 		case SUBSTITUTE:
 			{
-				// Expecting a source (varname or expression)
 				switch morpheme.Type() {
+				case MorphemeType_SUBSTITUTE_NEXT:
+					// Continue substitution sequence
+					levels++
+					continue
+
+					// Expecting a source (varname or expression)
 				case MorphemeType_LITERAL:
 					{
 						literal := morpheme.(LiteralMorpheme)
@@ -413,8 +426,8 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 				switch morpheme.Type() {
 				case MorphemeType_SUBSTITUTE_NEXT:
 					// Start substitution sequence
-					substitute = morpheme.(SubstituteNextMorpheme)
 					mode = SUBSTITUTE
+					levels = 1
 
 				case MorphemeType_LITERAL:
 					{
@@ -432,13 +445,6 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 					panic(UnexpectedMorphemeError)
 				}
 			}
-		}
-	}
-
-	if mode == SELECTABLE {
-		// Terminate substitution sequence
-		for level := 1; level < int(substitute.Levels); level++ {
-			program.PushOpCode(OpCode_RESOLVE_VALUE)
 		}
 	}
 }

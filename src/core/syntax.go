@@ -230,9 +230,6 @@ type SubstituteNextMorpheme struct {
 	// Simple or expanded substitution flag
 	Expansion bool
 
-	// Number of substitutions to perform
-	Levels uint
-
 	// Literal value; can be safely ignored
 	Value string
 }
@@ -391,6 +388,10 @@ func (checker SyntaxChecker) checkStems(morphemes []Morpheme) int {
 			case MorphemeType_SUBSTITUTE_NEXT:
 				nbStems++
 				substitute = true
+				// Skip all following substitutes
+				for i+1 < len(morphemes) && morphemes[i+1].Type() == MorphemeType_SUBSTITUTE_NEXT {
+					i++
+				}
 
 			case MorphemeType_LITERAL,
 				MorphemeType_EXPRESSION:
