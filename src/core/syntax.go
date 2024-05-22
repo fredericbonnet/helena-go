@@ -29,6 +29,9 @@ var UnexpectedMorphemeError = SyntaxError{"unexpected morpheme"}
 type Script struct {
 	// Sentences that compose the script
 	Sentences []Sentence
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 //
@@ -39,6 +42,9 @@ type Script struct {
 type Sentence struct {
 	// Words that compose the sentence
 	Words []WordOrValue
+
+	// Position in source stream
+	Position *SourcePosition
 }
 type WordOrValue struct {
 	Word  Word
@@ -53,6 +59,9 @@ type WordOrValue struct {
 type Word struct {
 	// Morphemes that compose the word
 	Morphemes []Morpheme
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 // Helena morpheme type
@@ -89,6 +98,9 @@ type Morpheme interface {
 type LiteralMorpheme struct {
 	// Literal string value
 	Value string
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme LiteralMorpheme) Type() MorphemeType {
@@ -103,6 +115,9 @@ func (morpheme LiteralMorpheme) Type() MorphemeType {
 type TupleMorpheme struct {
 	// Tuple script content
 	Subscript Script
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme TupleMorpheme) Type() MorphemeType {
@@ -120,6 +135,9 @@ type BlockMorpheme struct {
 
 	// Block string value
 	Value string
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme BlockMorpheme) Type() MorphemeType {
@@ -134,6 +152,9 @@ func (morpheme BlockMorpheme) Type() MorphemeType {
 type ExpressionMorpheme struct {
 	// Expression script content
 	Subscript Script
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme ExpressionMorpheme) Type() MorphemeType {
@@ -148,6 +169,9 @@ func (morpheme ExpressionMorpheme) Type() MorphemeType {
 type StringMorpheme struct {
 	// String content
 	Morphemes []Morpheme
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme StringMorpheme) Type() MorphemeType {
@@ -165,6 +189,9 @@ type HereStringMorpheme struct {
 
 	// Number of string delimiters around content
 	DelimiterLength uint
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme HereStringMorpheme) Type() MorphemeType {
@@ -183,6 +210,9 @@ type TaggedStringMorpheme struct {
 
 	// Tag
 	Tag string
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme TaggedStringMorpheme) Type() MorphemeType {
@@ -198,6 +228,9 @@ type LineCommentMorpheme struct {
 
 	// Number of comment characters before content
 	DelimiterLength uint
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme LineCommentMorpheme) Type() MorphemeType {
@@ -213,6 +246,9 @@ type BlockCommentMorpheme struct {
 
 	// Number of comment characters around content
 	DelimiterLength uint
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme BlockCommentMorpheme) Type() MorphemeType {
@@ -232,6 +268,9 @@ type SubstituteNextMorpheme struct {
 
 	// Literal value; can be safely ignored
 	Value string
+
+	// Position in source stream
+	Position *SourcePosition
 }
 
 func (morpheme SubstituteNextMorpheme) Type() MorphemeType {

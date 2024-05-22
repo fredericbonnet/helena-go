@@ -41,7 +41,7 @@ var _ = Describe("Picol dialect", func() {
 		InitPicolCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}
-		parser = &core.Parser{}
+		parser = core.NewParser(nil)
 	})
 
 	Describe("math", func() {

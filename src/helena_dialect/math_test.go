@@ -31,7 +31,7 @@ var _ = Describe("Helena math operations", func() {
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}
-		parser = &core.Parser{}
+		parser = core.NewParser(nil)
 	}
 
 	BeforeEach(init)

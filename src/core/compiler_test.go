@@ -46,7 +46,7 @@ var _ = Describe("Compilation and execution", func() {
 
 	BeforeEach(func() {
 		tokenizer = Tokenizer{}
-		parser = &Parser{}
+		parser = NewParser(nil)
 		compiler = Compiler{}
 		variableResolver = newMockVariableResolver()
 		commandResolver = newMockCommandResolver()

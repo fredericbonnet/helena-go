@@ -16,7 +16,7 @@ func (parseCmd) Execute(args []core.Value, _ any) core.Result {
 	}
 	source := result.Data
 	tokenizer := core.Tokenizer{}
-	parser := &core.Parser{}
+	parser := core.NewParser(nil)
 	parseResult := parser.Parse(
 		tokenizer.Tokenize(source),
 	)

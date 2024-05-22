@@ -29,7 +29,7 @@ var _ = Describe("Helena dialect", func() {
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}
-		parser = &core.Parser{}
+		parser = core.NewParser(nil)
 	})
 
 	Describe("leading tuple auto-expansion", func() {

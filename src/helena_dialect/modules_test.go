@@ -37,7 +37,7 @@ var _ = Describe("Helena modules", func() {
 		InitCommandsForModule(rootScope, moduleRegistry, dirname)
 
 		tokenizer = core.Tokenizer{}
-		parser = &core.Parser{}
+		parser = core.NewParser(nil)
 	}
 
 	BeforeEach(init)

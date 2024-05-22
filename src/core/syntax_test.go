@@ -57,7 +57,7 @@ var _ = Describe("SyntaxChecker", func() {
 
 	BeforeEach(func() {
 		tokenizer = Tokenizer{}
-		parser = &Parser{}
+		parser = NewParser(nil)
 		checker = SyntaxChecker{}
 	})
 

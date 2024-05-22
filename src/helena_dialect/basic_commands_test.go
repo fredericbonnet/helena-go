@@ -28,7 +28,7 @@ var _ = Describe("Helena basic commands", func() {
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}
-		parser = &core.Parser{}
+		parser = core.NewParser(nil)
 	}
 
 	BeforeEach(init)

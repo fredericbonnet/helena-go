@@ -28,7 +28,7 @@ var _ = Describe("Helena namespaces", func() {
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}
-		parser = &core.Parser{}
+		parser = core.NewParser(nil)
 	}
 
 	BeforeEach(init)

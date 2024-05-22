@@ -82,7 +82,7 @@ var _ = Describe("CompilingEvaluator", func() {
 
 	BeforeEach(func() {
 		tokenizer = Tokenizer{}
-		parser = &Parser{}
+		parser = NewParser(nil)
 		variableResolver = newMockVariableResolver()
 		commandResolver = newMockCommandResolver()
 		selectorResolver = newMockSelectorResolver()

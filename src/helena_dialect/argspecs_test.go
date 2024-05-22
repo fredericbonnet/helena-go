@@ -28,7 +28,7 @@ var _ = Describe("Helena argument handling", func() {
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}
-		parser = &core.Parser{}
+		parser = core.NewParser(nil)
 	}
 
 	example := specifyExample(func(spec exampleSpec) core.Result { return execute(spec.script) })
