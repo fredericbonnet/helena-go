@@ -33,11 +33,25 @@ type Program struct {
 
 	// Constants the opcodes refer to
 	Constants []Value
+
+	// Opcode positions
+	OpCodePositions []*SourcePosition
+}
+
+func NewProgram(capturePositions bool) *Program {
+	var opCodePositions []*SourcePosition = nil
+	if capturePositions {
+		opCodePositions = []*SourcePosition{}
+	}
+	return &Program{OpCodePositions: opCodePositions}
 }
 
 // Push a new opcode
-func (program *Program) PushOpCode(opCode OpCode) {
+func (program *Program) PushOpCode(opCode OpCode, position *SourcePosition) {
 	program.OpCodes = append(program.OpCodes, opCode)
+	if program.OpCodePositions != nil {
+		program.OpCodePositions = append(program.OpCodePositions, position)
+	}
 }
 
 // Push a new constant
@@ -50,6 +64,14 @@ func (program *Program) Empty() bool {
 	return len(program.OpCodes) == 0
 }
 
+/**
+ * Compiler options
+ */
+type CompilerOptions struct {
+	// Whether to capture opcode and constant positions
+	CapturePositions bool
+}
+
 //
 // Helena compiler
 //
@@ -58,6 +80,17 @@ func (program *Program) Empty() bool {
 type Compiler struct {
 	// Syntax checker used during compilation
 	syntaxChecker SyntaxChecker
+
+	// Compiler options
+	options CompilerOptions
+}
+
+func NewCompiler(options *CompilerOptions) Compiler {
+	if options == nil {
+		return Compiler{options: CompilerOptions{false}}
+	} else {
+		return Compiler{options: *options}
+	}
 }
 
 //
@@ -66,7 +99,7 @@ type Compiler struct {
 
 // Compile the given script into a program
 func (compiler Compiler) CompileScript(script Script) *Program {
-	program := &Program{}
+	program := NewProgram(compiler.options.CapturePositions)
 	if len(script.Sentences) == 0 {
 		return program
 	}
@@ -75,16 +108,16 @@ func (compiler Compiler) CompileScript(script Script) *Program {
 }
 func (compiler Compiler) emitScript(program *Program, script Script) {
 	if len(script.Sentences) == 0 {
-		program.PushOpCode(OpCode_PUSH_NIL)
+		program.PushOpCode(OpCode_PUSH_NIL, script.Position)
 		return
 	}
 	for _, sentence := range script.Sentences {
-		program.PushOpCode(OpCode_OPEN_FRAME)
+		program.PushOpCode(OpCode_OPEN_FRAME, sentence.Position)
 		compiler.emitSentence(program, sentence)
-		program.PushOpCode(OpCode_CLOSE_FRAME)
-		program.PushOpCode(OpCode_EVALUATE_SENTENCE)
+		program.PushOpCode(OpCode_CLOSE_FRAME, sentence.Position)
+		program.PushOpCode(OpCode_EVALUATE_SENTENCE, sentence.Position)
 	}
-	program.PushOpCode(OpCode_PUSH_RESULT)
+	program.PushOpCode(OpCode_PUSH_RESULT, script.Position)
 }
 
 //
@@ -93,22 +126,26 @@ func (compiler Compiler) emitScript(program *Program, script Script) {
 
 // Flatten and compile the given sentences into a program
 func (compiler Compiler) CompileSentences(sentences []Sentence) *Program {
-	program := &Program{}
-	compiler.emitSentences(program, sentences)
-	program.PushOpCode(OpCode_MAKE_TUPLE)
+	program := NewProgram(compiler.options.CapturePositions)
+	compiler.emitSentences(program, sentences, nil)
+	program.PushOpCode(OpCode_MAKE_TUPLE, nil)
 	return program
 }
-func (compiler Compiler) emitSentences(program *Program, sentences []Sentence) {
-	program.PushOpCode(OpCode_OPEN_FRAME)
+func (compiler Compiler) emitSentences(
+	program *Program,
+	sentences []Sentence,
+	position *SourcePosition,
+) {
+	program.PushOpCode(OpCode_OPEN_FRAME, position)
 	for _, sentence := range sentences {
 		compiler.emitSentence(program, sentence)
 	}
-	program.PushOpCode(OpCode_CLOSE_FRAME)
+	program.PushOpCode(OpCode_CLOSE_FRAME, position)
 }
 
 // Compile the given sentence into a program
 func (compiler Compiler) CompileSentence(sentence Sentence) *Program {
-	program := &Program{}
+	program := NewProgram(compiler.options.CapturePositions)
 	compiler.emitSentence(program, sentence)
 	return program
 }
@@ -117,7 +154,7 @@ func (compiler Compiler) emitSentence(program *Program, sentence Sentence) {
 		if word.Value == nil {
 			compiler.emitWord(program, word.Word)
 		} else {
-			compiler.emitConstant(program, word.Value)
+			compiler.emitConstant(program, word.Value, nil)
 		}
 	}
 }
@@ -128,27 +165,27 @@ func (compiler Compiler) emitSentence(program *Program, sentence Sentence) {
 
 // Compile the given word into a program
 func (compiler Compiler) CompileWord(word Word) *Program {
-	program := &Program{}
+	program := NewProgram(compiler.options.CapturePositions)
 	compiler.emitWord(program, word)
 	return program
 }
 
 // Compile the given constant value into a program
 func (compiler Compiler) CompileConstant(value Value) *Program {
-	program := &Program{}
-	compiler.emitConstant(program, value)
+	program := NewProgram(compiler.options.CapturePositions)
+	compiler.emitConstant(program, value, nil)
 	return program
 }
 func (compiler Compiler) emitWord(program *Program, word Word) {
 	switch compiler.syntaxChecker.CheckWord(word) {
 	case WordType_ROOT:
-		compiler.emitRoot(program, word.Morphemes[0])
+		compiler.emitRoot(program, word)
 	case WordType_COMPOUND:
-		compiler.emitCompound(program, word.Morphemes)
+		compiler.emitCompound(program, word)
 	case WordType_SUBSTITUTION:
-		compiler.emitSubstitution(program, word.Morphemes)
+		compiler.emitSubstitution(program, word)
 	case WordType_QUALIFIED:
-		compiler.emitQualified(program, word.Morphemes)
+		compiler.emitQualified(program, word)
 	case WordType_IGNORED:
 	case WordType_INVALID:
 		panic(InvalidWordStructureError)
@@ -156,7 +193,8 @@ func (compiler Compiler) emitWord(program *Program, word Word) {
 		panic("CANTHAPPEN")
 	}
 }
-func (compiler Compiler) emitRoot(program *Program, root Morpheme) {
+func (compiler Compiler) emitRoot(program *Program, word Word) {
+	root := word.Morphemes[0]
 	switch root.Type() {
 	case MorphemeType_LITERAL:
 		{
@@ -204,39 +242,46 @@ func (compiler Compiler) emitRoot(program *Program, root Morpheme) {
 		panic(UnexpectedMorphemeError)
 	}
 }
-func (compiler Compiler) emitCompound(program *Program, morphemes []Morpheme) {
-	program.PushOpCode(OpCode_OPEN_FRAME)
-	compiler.emitStems(program, morphemes)
-	program.PushOpCode(OpCode_CLOSE_FRAME)
-	program.PushOpCode(OpCode_JOIN_STRINGS)
+func (compiler Compiler) emitCompound(program *Program, word Word) {
+	program.PushOpCode(OpCode_OPEN_FRAME, word.Position)
+	compiler.emitStems(program, word.Morphemes)
+	program.PushOpCode(OpCode_CLOSE_FRAME, word.Position)
+	program.PushOpCode(OpCode_JOIN_STRINGS, word.Position)
 }
-func (compiler Compiler) emitSubstitution(program *Program, morphemes []Morpheme) {
-	expand := (morphemes[0].(SubstituteNextMorpheme)).Expansion
+func (compiler Compiler) emitSubstitution(program *Program, word Word) {
+	firstSubstitute := 0
+	expand := (word.Morphemes[0].(SubstituteNextMorpheme)).Expansion
 	levels := 1
 	i := 1
-	for morphemes[i].Type() == MorphemeType_SUBSTITUTE_NEXT {
+	for word.Morphemes[i].Type() == MorphemeType_SUBSTITUTE_NEXT {
 		i++
 		levels++
 	}
-	selectable := morphemes[i]
+	selectable := word.Morphemes[i]
 	i++
 	switch selectable.Type() {
 	case MorphemeType_LITERAL:
 		{
 			literal := selectable.(LiteralMorpheme)
-			compiler.emitLiteralVarname(program, literal)
+			substitute := word.Morphemes[firstSubstitute+levels-1]
+			compiler.emitLiteral(program, literal)
+			program.PushOpCode(OpCode_RESOLVE_VALUE, substitute.Position())
 		}
 
 	case MorphemeType_TUPLE:
 		{
 			tuple := selectable.(TupleMorpheme)
-			compiler.emitTupleVarnames(program, tuple)
+			substitute := word.Morphemes[firstSubstitute+levels-1]
+			compiler.emitTuple(program, tuple)
+			program.PushOpCode(OpCode_RESOLVE_VALUE, substitute.Position())
 		}
 
 	case MorphemeType_BLOCK:
 		{
 			block := selectable.(BlockMorpheme)
-			compiler.emitBlockVarname(program, block)
+			substitute := word.Morphemes[firstSubstitute+levels-1]
+			compiler.emitBlockString(program, block)
+			program.PushOpCode(OpCode_RESOLVE_VALUE, substitute.Position())
 		}
 
 	case MorphemeType_EXPRESSION:
@@ -248,8 +293,8 @@ func (compiler Compiler) emitSubstitution(program *Program, morphemes []Morpheme
 	default:
 		panic(UnexpectedMorphemeError)
 	}
-	for i < len(morphemes) {
-		morpheme := morphemes[i]
+	for i < len(word.Morphemes) {
+		morpheme := word.Morphemes[i]
 		i++
 		switch morpheme.Type() {
 		case MorphemeType_TUPLE:
@@ -274,39 +319,43 @@ func (compiler Compiler) emitSubstitution(program *Program, morphemes []Morpheme
 			panic(UnexpectedMorphemeError)
 		}
 	}
-	for level := 1; level < levels; level++ {
-		program.PushOpCode(OpCode_RESOLVE_VALUE)
-	}
+	compiler.terminateSubstitutionSequence(
+		program,
+		word.Morphemes,
+		firstSubstitute,
+		levels,
+	)
 	if expand {
-		program.PushOpCode(OpCode_EXPAND_VALUE)
+		program.PushOpCode(OpCode_EXPAND_VALUE, word.Position)
 	}
 }
-func (compiler Compiler) emitQualified(program *Program, morphemes []Morpheme) {
-	selectable := morphemes[0]
+func (compiler Compiler) emitQualified(program *Program, word Word) {
+	selectable := word.Morphemes[0]
 	switch selectable.Type() {
 	case MorphemeType_LITERAL:
 		{
 			literal := selectable.(LiteralMorpheme)
-			compiler.emitLiteralSource(program, literal)
+			compiler.emitLiteral(program, literal)
 		}
 
 	case MorphemeType_TUPLE:
 		{
 			tuple := selectable.(TupleMorpheme)
-			compiler.emitTupleSource(program, tuple)
+			compiler.emitTuple(program, tuple)
 		}
 
 	case MorphemeType_BLOCK:
 		{
 			block := selectable.(BlockMorpheme)
-			compiler.emitBlockSource(program, block)
+			compiler.emitBlockString(program, block)
 		}
 
 	default:
 		panic(UnexpectedMorphemeError)
 	}
-	for i := 1; i < len(morphemes); i++ {
-		morpheme := morphemes[i]
+	program.PushOpCode(OpCode_SET_SOURCE, selectable.Position())
+	for i := 1; i < len(word.Morphemes); i++ {
+		morpheme := word.Morphemes[i]
 		switch morpheme.Type() {
 		case MorphemeType_TUPLE:
 			{
@@ -338,19 +387,20 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 		SELECTABLE
 	)
 	mode := INITIAL
+	var firstSubstitute int
 	var levels int
-	for _, morpheme := range morphemes {
+	for i, morpheme := range morphemes {
 		if mode == SELECTABLE {
 			switch morpheme.Type() {
 			case MorphemeType_SUBSTITUTE_NEXT,
 				MorphemeType_LITERAL:
-				{
-					// Terminate substitution sequence
-					for level := 1; level < levels; level++ {
-						program.PushOpCode(OpCode_RESOLVE_VALUE)
-					}
-					mode = INITIAL
-				}
+				compiler.terminateSubstitutionSequence(
+					program,
+					morphemes,
+					firstSubstitute,
+					levels,
+				)
+				mode = INITIAL
 			}
 		}
 
@@ -367,19 +417,25 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 				case MorphemeType_LITERAL:
 					{
 						literal := morpheme.(LiteralMorpheme)
-						compiler.emitLiteralVarname(program, literal)
+						substitute := morphemes[firstSubstitute+levels-1]
+						compiler.emitLiteral(program, literal)
+						program.PushOpCode(OpCode_RESOLVE_VALUE, substitute.Position())
 					}
 
 				case MorphemeType_TUPLE:
 					{
 						tuple := morpheme.(TupleMorpheme)
-						compiler.emitTupleVarnames(program, tuple)
+						substitute := morphemes[firstSubstitute+levels-1]
+						compiler.emitTuple(program, tuple)
+						program.PushOpCode(OpCode_RESOLVE_VALUE, substitute.Position())
 					}
 
 				case MorphemeType_BLOCK:
 					{
 						block := morpheme.(BlockMorpheme)
-						compiler.emitBlockVarname(program, block)
+						substitute := morphemes[firstSubstitute+levels-1]
+						compiler.emitBlockString(program, block)
+						program.PushOpCode(OpCode_RESOLVE_VALUE, substitute.Position())
 					}
 
 				case MorphemeType_EXPRESSION:
@@ -427,6 +483,7 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 				case MorphemeType_SUBSTITUTE_NEXT:
 					// Start substitution sequence
 					mode = SUBSTITUTE
+					firstSubstitute = i
 					levels = 1
 
 				case MorphemeType_LITERAL:
@@ -447,6 +504,26 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 			}
 		}
 	}
+	if mode == SELECTABLE {
+		compiler.terminateSubstitutionSequence(
+			program,
+			morphemes,
+			firstSubstitute,
+			levels,
+		)
+		mode = INITIAL
+	}
+}
+func (Compiler) terminateSubstitutionSequence(
+	program *Program,
+	morphemes []Morpheme,
+	first int,
+	levels int,
+) {
+	for level := levels - 1; level >= 1; level-- {
+		substitute := morphemes[first+level-1]
+		program.PushOpCode(OpCode_RESOLVE_VALUE, substitute.Position())
+	}
 }
 
 //
@@ -455,80 +532,62 @@ func (compiler Compiler) emitStems(program *Program, morphemes []Morpheme) {
 
 func (compiler Compiler) emitLiteral(program *Program, literal LiteralMorpheme) {
 	value := NewStringValue(literal.Value)
-	compiler.emitConstant(program, value)
+	compiler.emitConstant(program, value, literal.position)
 }
 func (compiler Compiler) emitTuple(program *Program, tuple TupleMorpheme) {
-	compiler.emitSentences(program, tuple.Subscript.Sentences)
-	program.PushOpCode(OpCode_MAKE_TUPLE)
+	compiler.emitSentences(program, tuple.Subscript.Sentences, tuple.position)
+	program.PushOpCode(OpCode_MAKE_TUPLE, tuple.position)
 }
 func (compiler Compiler) emitBlock(program *Program, block BlockMorpheme) {
 	value := NewScriptValue(block.Subscript, block.Value)
-	compiler.emitConstant(program, value)
+	compiler.emitConstant(program, value, block.position)
+}
+func (compiler Compiler) emitBlockString(program *Program, block BlockMorpheme) {
+	value := NewStringValue(block.Value)
+	compiler.emitConstant(program, value, block.position)
 }
 func (compiler Compiler) emitExpression(program *Program, expression ExpressionMorpheme) {
 	compiler.emitScript(program, expression.Subscript)
 }
 func (compiler Compiler) emitString(program *Program, string StringMorpheme) {
-	program.PushOpCode(OpCode_OPEN_FRAME)
+	program.PushOpCode(OpCode_OPEN_FRAME, string.position)
 	compiler.emitStems(program, string.Morphemes)
-	program.PushOpCode(OpCode_CLOSE_FRAME)
-	program.PushOpCode(OpCode_JOIN_STRINGS)
+	program.PushOpCode(OpCode_CLOSE_FRAME, string.position)
+	program.PushOpCode(OpCode_JOIN_STRINGS, string.position)
 }
 func (compiler Compiler) emitHereString(program *Program, string HereStringMorpheme) {
 	value := NewStringValue(string.Value)
-	compiler.emitConstant(program, value)
+	compiler.emitConstant(program, value, string.position)
 }
 func (compiler Compiler) emitTaggedString(program *Program, string TaggedStringMorpheme) {
 	value := NewStringValue(string.Value)
-	compiler.emitConstant(program, value)
-}
-func (compiler Compiler) emitLiteralVarname(program *Program, literal LiteralMorpheme) {
-	compiler.emitLiteral(program, literal)
-	program.PushOpCode(OpCode_RESOLVE_VALUE)
-}
-func (compiler Compiler) emitTupleVarnames(program *Program, tuple TupleMorpheme) {
-	compiler.emitTuple(program, tuple)
-	program.PushOpCode(OpCode_RESOLVE_VALUE)
-}
-func (compiler Compiler) emitBlockVarname(program *Program, block BlockMorpheme) {
-	value := NewStringValue(block.Value)
-	compiler.emitConstant(program, value)
-	program.PushOpCode(OpCode_RESOLVE_VALUE)
-}
-func (compiler Compiler) emitLiteralSource(program *Program, literal LiteralMorpheme) {
-	compiler.emitLiteral(program, literal)
-	program.PushOpCode(OpCode_SET_SOURCE)
-}
-func (compiler Compiler) emitTupleSource(program *Program, tuple TupleMorpheme) {
-	compiler.emitTuple(program, tuple)
-	program.PushOpCode(OpCode_SET_SOURCE)
-}
-func (compiler Compiler) emitBlockSource(program *Program, block BlockMorpheme) {
-	value := NewStringValue(block.Value)
-	compiler.emitConstant(program, value)
-	program.PushOpCode(OpCode_SET_SOURCE)
+	compiler.emitConstant(program, value, string.position)
 }
 func (compiler Compiler) emitKeyedSelector(program *Program, tuple TupleMorpheme) {
-	compiler.emitSentences(program, tuple.Subscript.Sentences)
-	program.PushOpCode(OpCode_SELECT_KEYS)
+	compiler.emitSentences(program, tuple.Subscript.Sentences, tuple.position)
+	program.PushOpCode(OpCode_SELECT_KEYS, tuple.position)
 }
 func (compiler Compiler) emitIndexedSelector(program *Program, expression ExpressionMorpheme) {
 	compiler.emitScript(program, expression.Subscript)
-	program.PushOpCode(OpCode_SELECT_INDEX)
+	program.PushOpCode(OpCode_SELECT_INDEX, expression.position)
 }
 func (compiler Compiler) emitSelector(program *Program, block BlockMorpheme) {
-	program.PushOpCode(OpCode_OPEN_FRAME)
+	program.PushOpCode(OpCode_OPEN_FRAME, block.position)
 	for _, sentence := range block.Subscript.Sentences {
-		program.PushOpCode(OpCode_OPEN_FRAME)
+		program.PushOpCode(OpCode_OPEN_FRAME, sentence.Position)
 		compiler.emitSentence(program, sentence)
-		program.PushOpCode(OpCode_CLOSE_FRAME)
-		program.PushOpCode(OpCode_MAKE_TUPLE)
+		program.PushOpCode(OpCode_CLOSE_FRAME, sentence.Position)
+		program.PushOpCode(OpCode_MAKE_TUPLE, sentence.Position)
 	}
-	program.PushOpCode(OpCode_CLOSE_FRAME)
-	program.PushOpCode(OpCode_SELECT_RULES)
+	program.PushOpCode(OpCode_CLOSE_FRAME, block.position)
+	program.PushOpCode(OpCode_SELECT_RULES, block.position)
 }
-func (compiler Compiler) emitConstant(program *Program, value Value) {
-	program.PushOpCode(OpCode_PUSH_CONSTANT)
+func (compiler Compiler) emitConstant(
+	program *Program,
+	value Value,
+	position *SourcePosition,
+) {
+	program.PushOpCode(OpCode_PUSH_CONSTANT, position)
 	program.PushConstant(value)
 }
 

@@ -175,7 +175,7 @@ func NewScope(
 		scope.Context = newScopeContext(nil)
 	}
 	scope.locals = map[string]core.Value{}
-	scope.compiler = core.Compiler{}
+	scope.compiler = core.NewCompiler(nil)
 	scope.executor = core.Executor{
 		VariableResolver: variableResolver{scope},
 		CommandResolver:  commandResolver{scope},
@@ -196,11 +196,11 @@ func (scope *Scope) CompileScriptValue(script core.ScriptValue) *core.Program {
 }
 func (scope *Scope) CompileTupleValue(tuple core.TupleValue) *core.Program {
 	program := &core.Program{}
-	program.PushOpCode(core.OpCode_PUSH_CONSTANT)
-	program.PushOpCode(core.OpCode_EXPAND_VALUE)
-	program.PushOpCode(core.OpCode_CLOSE_FRAME)
-	program.PushOpCode(core.OpCode_EVALUATE_SENTENCE)
-	program.PushOpCode(core.OpCode_PUSH_RESULT)
+	program.PushOpCode(core.OpCode_PUSH_CONSTANT, nil)
+	program.PushOpCode(core.OpCode_EXPAND_VALUE, nil)
+	program.PushOpCode(core.OpCode_CLOSE_FRAME, nil)
+	program.PushOpCode(core.OpCode_EVALUATE_SENTENCE, nil)
+	program.PushOpCode(core.OpCode_PUSH_RESULT, nil)
 	program.PushConstant(tuple)
 	return program
 }
@@ -389,8 +389,8 @@ func (scope *Scope) GetVariable(variable core.Value, def core.Value) core.Result
 }
 func (scope *Scope) ResolveValue(value core.Value) core.Result {
 	program := &core.Program{}
-	program.PushOpCode(core.OpCode_PUSH_CONSTANT)
-	program.PushOpCode(core.OpCode_RESOLVE_VALUE)
+	program.PushOpCode(core.OpCode_PUSH_CONSTANT, nil)
+	program.PushOpCode(core.OpCode_RESOLVE_VALUE, nil)
 	program.PushConstant(value)
 	return scope.Execute(program, nil)
 }

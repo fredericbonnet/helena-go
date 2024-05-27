@@ -139,7 +139,7 @@ func (node *literalNode) toMorpheme(capturePosition bool) Morpheme {
 	}
 	return LiteralMorpheme{
 		Value:    node.value,
-		Position: position,
+		position: position,
 	}
 }
 
@@ -162,7 +162,7 @@ func (node *tupleNode) toMorpheme(capturePosition bool) Morpheme {
 	}
 	return TupleMorpheme{
 		Subscript: *node.subscript.toScript(capturePosition),
-		Position:  position,
+		position:  position,
 	}
 }
 
@@ -191,7 +191,7 @@ func (node *blockNode) toMorpheme(capturePosition bool) Morpheme {
 	return BlockMorpheme{
 		Subscript: *node.subscript.toScript(capturePosition),
 		Value:     node.value,
-		Position:  position,
+		position:  position,
 	}
 }
 
@@ -214,7 +214,7 @@ func (node *expressionNode) toMorpheme(capturePosition bool) Morpheme {
 	}
 	return ExpressionMorpheme{
 		Subscript: *node.subscript.toScript(capturePosition),
-		Position:  position,
+		position:  position,
 	}
 }
 
@@ -233,7 +233,7 @@ func (node *stringNode) toMorpheme(capturePosition bool) Morpheme {
 	morpheme := StringMorpheme{}
 	morpheme.Morphemes = make([]Morpheme, len(node.morphemes))
 	if capturePosition {
-		morpheme.Position = &node.firstToken.Position
+		morpheme.position = &node.firstToken.Position
 	}
 	for i, child := range node.morphemes {
 		morpheme.Morphemes[i] = child.toMorpheme(capturePosition)
@@ -262,7 +262,7 @@ func (node *hereStringNode) toMorpheme(capturePosition bool) Morpheme {
 	return HereStringMorpheme{
 		Value:           node.value,
 		DelimiterLength: node.delimiterLength,
-		Position:        position,
+		position:        position,
 	}
 }
 
@@ -307,7 +307,7 @@ func (node *taggedStringNode) toMorpheme(capturePosition bool) Morpheme {
 	return TaggedStringMorpheme{
 		Value:    value,
 		Tag:      node.tag,
-		Position: position,
+		position: position,
 	}
 }
 
@@ -332,7 +332,7 @@ func (node *lineCommentNode) toMorpheme(capturePosition bool) Morpheme {
 	return LineCommentMorpheme{
 		Value:           node.value,
 		DelimiterLength: node.delimiterLength,
-		Position:        position,
+		position:        position,
 	}
 }
 
@@ -361,7 +361,7 @@ func (node *blockCommentNode) toMorpheme(capturePosition bool) Morpheme {
 	return BlockCommentMorpheme{
 		Value:           node.value,
 		DelimiterLength: node.delimiterLength,
-		Position:        position,
+		position:        position,
 	}
 }
 
@@ -388,7 +388,7 @@ func (node *substituteNextNode) toMorpheme(capturePosition bool) Morpheme {
 	return SubstituteNextMorpheme{
 		Expansion: node.expansion,
 		Value:     node.value,
-		Position:  position,
+		position:  position,
 	}
 }
 

@@ -327,7 +327,7 @@ func ValueToList(value core.Value) core.TypedResult[core.ListValue] {
 
 func ValueToArray(value core.Value) core.TypedResult[[]core.Value] {
 	if value.Type() == core.ValueType_SCRIPT {
-		program := core.Compiler{}.CompileSentences(
+		program := core.NewCompiler(nil).CompileSentences(
 			value.(core.ScriptValue).Script.Sentences,
 		)
 		listExecutor := core.Executor{}

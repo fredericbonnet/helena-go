@@ -124,25 +124,25 @@ func mapMorpheme(morpheme Morpheme) any {
 	case MorphemeType_LITERAL:
 		{
 			m := morpheme.(LiteralMorpheme)
-			return _M_LITERAL{m.Value, m.Position}
+			return _M_LITERAL{m.Value, m.Position()}
 		}
 
 	case MorphemeType_TUPLE:
 		{
 			m := morpheme.(TupleMorpheme)
-			return _M_TUPLE{toTree(&m.Subscript), m.Position}
+			return _M_TUPLE{toTree(&m.Subscript), m.Position()}
 		}
 
 	case MorphemeType_BLOCK:
 		{
 			m := morpheme.(BlockMorpheme)
-			return _M_BLOCK{toTree(&m.Subscript), m.Position}
+			return _M_BLOCK{toTree(&m.Subscript), m.Position()}
 		}
 
 	case MorphemeType_EXPRESSION:
 		{
 			m := morpheme.(ExpressionMorpheme)
-			return _M_EXPRESSION{toTree(&m.Subscript), m.Position}
+			return _M_EXPRESSION{toTree(&m.Subscript), m.Position()}
 		}
 
 	case MorphemeType_STRING:
@@ -152,40 +152,40 @@ func mapMorpheme(morpheme Morpheme) any {
 			for k, morpheme := range m.Morphemes {
 				morphemes[k] = mapMorpheme(morpheme)
 			}
-			return _M_STRING{morphemes, m.Position}
+			return _M_STRING{morphemes, m.Position()}
 		}
 
 	case MorphemeType_HERE_STRING:
 		{
 			m := morpheme.(HereStringMorpheme)
-			return _M_HERE_STRING{m.Value, m.Position}
+			return _M_HERE_STRING{m.Value, m.Position()}
 		}
 
 	case MorphemeType_TAGGED_STRING:
 		{
 			m := morpheme.(TaggedStringMorpheme)
-			return _M_TAGGED_STRING{m.Value, m.Position}
+			return _M_TAGGED_STRING{m.Value, m.Position()}
 		}
 
 	case MorphemeType_LINE_COMMENT:
 		{
 			m := morpheme.(LineCommentMorpheme)
-			return _M_LINE_COMMENT{m.Value, m.Position}
+			return _M_LINE_COMMENT{m.Value, m.Position()}
 		}
 
 	case MorphemeType_BLOCK_COMMENT:
 		{
 			m := morpheme.(BlockCommentMorpheme)
-			return _M_BLOCK_COMMENT{m.Value, m.Position}
+			return _M_BLOCK_COMMENT{m.Value, m.Position()}
 		}
 
 	case MorphemeType_SUBSTITUTE_NEXT:
 		{
 			m := morpheme.(SubstituteNextMorpheme)
 			if m.Expansion {
-				return _M_EXPAND_NEXT{m.Value, m.Position}
+				return _M_EXPAND_NEXT{m.Value, m.Position()}
 			} else {
-				return _M_SUBSTITUTE_NEXT{m.Value, m.Position}
+				return _M_SUBSTITUTE_NEXT{m.Value, m.Position()}
 			}
 		}
 

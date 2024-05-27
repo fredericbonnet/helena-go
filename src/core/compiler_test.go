@@ -30,16 +30,6 @@ var _ = Describe("Compilation and execution", func() {
 		}
 	}
 
-	//   const executionModes = [
-	//     {
-	//       label: "with Executor.execute()",
-	//       execute: (program: Program) => executor.execute(program),
-	//     },
-	//     {
-	//       label: "with Executor.functionify()",
-	//       execute: (program: Program) => executor.functionify(program)(),
-	//     },
-	//   ];
 	execute := func(program *Program) Result {
 		return executor.Execute(program, nil)
 	}
@@ -47,7 +37,7 @@ var _ = Describe("Compilation and execution", func() {
 	BeforeEach(func() {
 		tokenizer = Tokenizer{}
 		parser = NewParser(nil)
-		compiler = Compiler{}
+		compiler = NewCompiler(nil)
 		variableResolver = newMockVariableResolver()
 		commandResolver = newMockCommandResolver()
 		selectorResolver = newMockSelectorResolver()
@@ -59,9 +49,6 @@ var _ = Describe("Compilation and execution", func() {
 		}
 	})
 
-	//   for (const { label, execute } of executionModes) {
-	//     const evaluate = (program: Program) => execute(program).value;
-	//     describe(label, func() {
 	evaluate := func(program *Program) Value {
 		return execute(program).Value
 	}
@@ -3171,6 +3158,283 @@ var _ = Describe("Compilation and execution", func() {
 				}))
 			})
 		})
+
+		Describe("capturePositions", func() {
+			type opCodePositions = struct {
+				*SourcePosition
+				OpCode
+			}
+			toOpCodePositions := func(program *Program) []opCodePositions {
+				result := make([]opCodePositions, len(program.OpCodes))
+				for i := range program.OpCodes {
+					result[i] = opCodePositions{program.OpCodePositions[i], program.OpCodes[i]}
+				}
+				return result
+			}
+			BeforeEach(func() {
+				parser = NewParser(&ParserOptions{CapturePositions: true})
+				compiler = NewCompiler(&CompilerOptions{CapturePositions: true})
+			})
+
+			Specify("literals", func() {
+				script := parse("value1 value2")
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 7, Line: 0, Column: 7}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+			Specify("tuples", func() {
+				script := parse("(value1 (value2 value3) value4) ()")
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 1, Line: 0, Column: 1}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 8, Line: 0, Column: 8}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 9, Line: 0, Column: 9}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 16, Line: 0, Column: 16}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 8, Line: 0, Column: 8}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 8, Line: 0, Column: 8}, OpCode_MAKE_TUPLE},
+					{&SourcePosition{Index: 24, Line: 0, Column: 24}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_MAKE_TUPLE},
+					{&SourcePosition{Index: 32, Line: 0, Column: 32}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 32, Line: 0, Column: 32}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 32, Line: 0, Column: 32}, OpCode_MAKE_TUPLE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+			Specify("blocks", func() {
+				script := parse("{value1 {value2 value3} value4} {}")
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 32, Line: 0, Column: 32}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+			Specify("expressions", func() {
+				script := parse("[value1 [value2 value3] value4] []")
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 1, Line: 0, Column: 1}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 1, Line: 0, Column: 1}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 9, Line: 0, Column: 9}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 9, Line: 0, Column: 9}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 16, Line: 0, Column: 16}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 9, Line: 0, Column: 9}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 9, Line: 0, Column: 9}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 8, Line: 0, Column: 8}, OpCode_PUSH_RESULT},
+					{&SourcePosition{Index: 24, Line: 0, Column: 24}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 1, Line: 0, Column: 1}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 1, Line: 0, Column: 1}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+					{&SourcePosition{Index: 32, Line: 0, Column: 32}, OpCode_PUSH_NIL},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+			Specify("strings", func() {
+				script := parse(`"a b $var1 c$${var2}d e"`)
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 1, Line: 0, Column: 1}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 6, Line: 0, Column: 6}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 5, Line: 0, Column: 5}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 10, Line: 0, Column: 10}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 14, Line: 0, Column: 14}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 13, Line: 0, Column: 13}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 12, Line: 0, Column: 12}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 20, Line: 0, Column: 20}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_JOIN_STRINGS},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+			Specify("here-strings", func() {
+				script := parse(`"""a b c d""" """e f"""`)
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 14, Line: 0, Column: 14}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+			Specify("tagged strings", func() {
+				script := parse("\"\"A\na b c d\nA\"\" \"\"B\ne f\nB\"\"")
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 16, Line: 2, Column: 4}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+			Specify("compounds", func() {
+				script := parse("a$b{c}[d e]fg$$${h}i j$[k l]$m")
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 2, Line: 0, Column: 2}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 1, Line: 0, Column: 1}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 3, Line: 0, Column: 3}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 4, Line: 0, Column: 4}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 4, Line: 0, Column: 4}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 4, Line: 0, Column: 4}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 4, Line: 0, Column: 4}, OpCode_MAKE_TUPLE},
+					{&SourcePosition{Index: 3, Line: 0, Column: 3}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 3, Line: 0, Column: 3}, OpCode_SELECT_RULES},
+					{&SourcePosition{Index: 7, Line: 0, Column: 7}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 7, Line: 0, Column: 7}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 9, Line: 0, Column: 9}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 7, Line: 0, Column: 7}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 7, Line: 0, Column: 7}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 6, Line: 0, Column: 6}, OpCode_PUSH_RESULT},
+					{&SourcePosition{Index: 6, Line: 0, Column: 6}, OpCode_SELECT_INDEX},
+					{&SourcePosition{Index: 11, Line: 0, Column: 11}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 16, Line: 0, Column: 16}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 15, Line: 0, Column: 15}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 14, Line: 0, Column: 14}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 13, Line: 0, Column: 13}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 19, Line: 0, Column: 19}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_JOIN_STRINGS},
+					{&SourcePosition{Index: 21, Line: 0, Column: 21}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 21, Line: 0, Column: 21}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 24, Line: 0, Column: 24}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 24, Line: 0, Column: 24}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 26, Line: 0, Column: 26}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 24, Line: 0, Column: 24}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 24, Line: 0, Column: 24}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 23, Line: 0, Column: 23}, OpCode_PUSH_RESULT},
+					{&SourcePosition{Index: 29, Line: 0, Column: 29}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 28, Line: 0, Column: 28}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 21, Line: 0, Column: 21}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 21, Line: 0, Column: 21}, OpCode_JOIN_STRINGS},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+			Specify("substitutions", func() {
+				script := parse("$var1[a b](c $$var2 e){f g} $*$${var3}")
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 1, Line: 0, Column: 1}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 6, Line: 0, Column: 6}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 6, Line: 0, Column: 6}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 8, Line: 0, Column: 8}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 6, Line: 0, Column: 6}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 6, Line: 0, Column: 6}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 5, Line: 0, Column: 5}, OpCode_PUSH_RESULT},
+					{&SourcePosition{Index: 5, Line: 0, Column: 5}, OpCode_SELECT_INDEX},
+					{&SourcePosition{Index: 10, Line: 0, Column: 10}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 11, Line: 0, Column: 11}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 15, Line: 0, Column: 15}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 14, Line: 0, Column: 14}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 13, Line: 0, Column: 13}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 20, Line: 0, Column: 20}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 10, Line: 0, Column: 10}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 10, Line: 0, Column: 10}, OpCode_SELECT_KEYS},
+					{&SourcePosition{Index: 22, Line: 0, Column: 22}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 23, Line: 0, Column: 23}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 23, Line: 0, Column: 23}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 25, Line: 0, Column: 25}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 23, Line: 0, Column: 23}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 23, Line: 0, Column: 23}, OpCode_MAKE_TUPLE},
+					{&SourcePosition{Index: 22, Line: 0, Column: 22}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 22, Line: 0, Column: 22}, OpCode_SELECT_RULES},
+					{&SourcePosition{Index: 32, Line: 0, Column: 32}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 31, Line: 0, Column: 31}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 30, Line: 0, Column: 30}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 28, Line: 0, Column: 28}, OpCode_RESOLVE_VALUE},
+					{&SourcePosition{Index: 28, Line: 0, Column: 28}, OpCode_EXPAND_VALUE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+			Specify("qualified", func() {
+				script := parse(
+					"var1[a b](c var2(d) e){f g} {var3}(h i j)[k l]",
+				)
+				program := compiler.CompileScript(*script)
+				Expect(toOpCodePositions(program)).To(Equal([]opCodePositions{
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_SET_SOURCE},
+					{&SourcePosition{Index: 5, Line: 0, Column: 5}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 5, Line: 0, Column: 5}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 7, Line: 0, Column: 7}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 5, Line: 0, Column: 5}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 5, Line: 0, Column: 5}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 4, Line: 0, Column: 4}, OpCode_PUSH_RESULT},
+					{&SourcePosition{Index: 4, Line: 0, Column: 4}, OpCode_SELECT_INDEX},
+					{&SourcePosition{Index: 9, Line: 0, Column: 9}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 10, Line: 0, Column: 10}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 12, Line: 0, Column: 12}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 12, Line: 0, Column: 12}, OpCode_SET_SOURCE},
+					{&SourcePosition{Index: 16, Line: 0, Column: 16}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 17, Line: 0, Column: 17}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 16, Line: 0, Column: 16}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 16, Line: 0, Column: 16}, OpCode_SELECT_KEYS},
+					{&SourcePosition{Index: 20, Line: 0, Column: 20}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 9, Line: 0, Column: 9}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 9, Line: 0, Column: 9}, OpCode_SELECT_KEYS},
+					{&SourcePosition{Index: 22, Line: 0, Column: 22}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 23, Line: 0, Column: 23}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 23, Line: 0, Column: 23}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 25, Line: 0, Column: 25}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 23, Line: 0, Column: 23}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 23, Line: 0, Column: 23}, OpCode_MAKE_TUPLE},
+					{&SourcePosition{Index: 22, Line: 0, Column: 22}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 22, Line: 0, Column: 22}, OpCode_SELECT_RULES},
+					{&SourcePosition{Index: 28, Line: 0, Column: 28}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 28, Line: 0, Column: 28}, OpCode_SET_SOURCE},
+					{&SourcePosition{Index: 34, Line: 0, Column: 34}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 35, Line: 0, Column: 35}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 37, Line: 0, Column: 37}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 39, Line: 0, Column: 39}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 34, Line: 0, Column: 34}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 34, Line: 0, Column: 34}, OpCode_SELECT_KEYS},
+					{&SourcePosition{Index: 42, Line: 0, Column: 42}, OpCode_OPEN_FRAME},
+					{&SourcePosition{Index: 42, Line: 0, Column: 42}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 44, Line: 0, Column: 44}, OpCode_PUSH_CONSTANT},
+					{&SourcePosition{Index: 42, Line: 0, Column: 42}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 42, Line: 0, Column: 42}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 41, Line: 0, Column: 41}, OpCode_PUSH_RESULT},
+					{&SourcePosition{Index: 41, Line: 0, Column: 41}, OpCode_SELECT_INDEX},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_CLOSE_FRAME},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_EVALUATE_SENTENCE},
+					{&SourcePosition{Index: 0, Line: 0, Column: 0}, OpCode_PUSH_RESULT},
+				}))
+			})
+		})
 	})
 
 	Describe("Executor", func() {
@@ -3354,6 +3618,4 @@ var _ = Describe("Compilation and execution", func() {
 			Expect(executor.Execute(program, state)).To(Equal(OK(STR("end"))))
 		})
 	})
-	//     });
-	//   }
 })

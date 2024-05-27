@@ -88,6 +88,7 @@ const (
 type Morpheme interface {
 	// Type identifier
 	Type() MorphemeType
+	Position() *SourcePosition
 }
 
 //
@@ -99,12 +100,15 @@ type LiteralMorpheme struct {
 	// Literal string value
 	Value string
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme LiteralMorpheme) Type() MorphemeType {
 	return MorphemeType_LITERAL
+}
+func (morpheme LiteralMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //
@@ -116,12 +120,15 @@ type TupleMorpheme struct {
 	// Tuple script content
 	Subscript Script
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme TupleMorpheme) Type() MorphemeType {
 	return MorphemeType_TUPLE
+}
+func (morpheme TupleMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //
@@ -136,12 +143,15 @@ type BlockMorpheme struct {
 	// Block string value
 	Value string
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme BlockMorpheme) Type() MorphemeType {
 	return MorphemeType_BLOCK
+}
+func (morpheme BlockMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //
@@ -153,12 +163,15 @@ type ExpressionMorpheme struct {
 	// Expression script content
 	Subscript Script
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme ExpressionMorpheme) Type() MorphemeType {
 	return MorphemeType_EXPRESSION
+}
+func (morpheme ExpressionMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //
@@ -170,12 +183,15 @@ type StringMorpheme struct {
 	// String content
 	Morphemes []Morpheme
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme StringMorpheme) Type() MorphemeType {
 	return MorphemeType_STRING
+}
+func (morpheme StringMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //
@@ -190,12 +206,15 @@ type HereStringMorpheme struct {
 	// Number of string delimiters around content
 	DelimiterLength uint
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme HereStringMorpheme) Type() MorphemeType {
 	return MorphemeType_HERE_STRING
+}
+func (morpheme HereStringMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //
@@ -211,12 +230,15 @@ type TaggedStringMorpheme struct {
 	// Tag
 	Tag string
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme TaggedStringMorpheme) Type() MorphemeType {
 	return MorphemeType_TAGGED_STRING
+}
+func (morpheme TaggedStringMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //
@@ -229,12 +251,15 @@ type LineCommentMorpheme struct {
 	// Number of comment characters before content
 	DelimiterLength uint
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme LineCommentMorpheme) Type() MorphemeType {
 	return MorphemeType_LINE_COMMENT
+}
+func (morpheme LineCommentMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //
@@ -247,12 +272,15 @@ type BlockCommentMorpheme struct {
 	// Number of comment characters around content
 	DelimiterLength uint
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme BlockCommentMorpheme) Type() MorphemeType {
 	return MorphemeType_BLOCK_COMMENT
+}
+func (morpheme BlockCommentMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //
@@ -269,12 +297,15 @@ type SubstituteNextMorpheme struct {
 	// Literal value; can be safely ignored
 	Value string
 
-	// Position in source stream
-	Position *SourcePosition
+	// position in source stream
+	position *SourcePosition
 }
 
 func (morpheme SubstituteNextMorpheme) Type() MorphemeType {
 	return MorphemeType_SUBSTITUTE_NEXT
+}
+func (morpheme SubstituteNextMorpheme) Position() *SourcePosition {
+	return morpheme.position
 }
 
 //

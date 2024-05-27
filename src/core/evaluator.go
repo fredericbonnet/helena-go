@@ -39,7 +39,7 @@ func NewCompilingEvaluator(
 	context any,
 ) Evaluator {
 	return &CompilingEvaluator{
-		compiler: Compiler{},
+		compiler: NewCompiler(nil),
 		executor: &Executor{
 			variableResolver,
 			commandResolver,
