@@ -356,7 +356,8 @@ func (ArgspecValue) setArgument(
 	setArgument func(name string, value core.Value) core.Result,
 ) core.Result {
 	if arg.Guard != nil {
-		process := scope.PrepareTupleValue(core.TUPLE([]core.Value{arg.Guard, value}))
+		program := scope.CompileArgs(arg.Guard, value)
+		process := scope.PrepareProcess(program)
 		result := process.Run()
 		// TODO handle YIELD?
 		if result.Code != core.ResultCode_OK {

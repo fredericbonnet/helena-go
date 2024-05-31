@@ -66,8 +66,7 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 		if !scope.scope.HasLocalCommand(command) {
 			return core.ERROR(`unknown command "` + command + `"`)
 		}
-		cmdline := append([]core.Value{}, args[2:]...)
-		program := scope.scope.CompileTupleValue(core.TUPLE(cmdline))
+		program := scope.scope.CompileArgs(args[2:]...)
 		return CreateContinuationValue(scope.scope, program, nil)
 
 	default:

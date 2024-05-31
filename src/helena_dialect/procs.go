@@ -98,9 +98,7 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 			case core.ResultCode_OK,
 				core.ResultCode_RETURN:
 				{
-					program := proc.scope.CompileTupleValue(
-						core.TUPLE([]core.Value{proc.guard, result.Value}),
-					)
+					program := proc.scope.CompileArgs(proc.guard, result.Value)
 					return CreateContinuationValue(proc.scope, program, nil)
 				}
 			case core.ResultCode_ERROR:

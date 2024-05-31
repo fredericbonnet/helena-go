@@ -92,9 +92,7 @@ func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
-			program := scope.CompileTupleValue(
-				core.TUPLE([]core.Value{macro.guard, result.Value}),
-			)
+			program := scope.CompileArgs(macro.guard, result.Value)
 			return CreateContinuationValue(scope, program, nil)
 		})
 	} else {

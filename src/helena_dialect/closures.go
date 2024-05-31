@@ -98,9 +98,7 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
-			program := closure.scope.CompileTupleValue(
-				core.TUPLE([]core.Value{closure.guard, result.Value}),
-			)
+			program := closure.scope.CompileArgs(closure.guard, result.Value)
 			return CreateContinuationValue(closure.scope, program, nil)
 		})
 	} else {

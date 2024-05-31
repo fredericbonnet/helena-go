@@ -269,7 +269,7 @@ func (listForeachCmd) Execute(args []core.Value, context any) core.Result {
 	if body.Type() != core.ValueType_SCRIPT {
 		return core.ERROR("body must be a script")
 	}
-	program := scope.Compile(body.(core.ScriptValue).Script)
+	program := scope.CompileScriptValue(body.(core.ScriptValue))
 	subscope := NewScope(scope, true)
 	i := 0
 	lastResult := core.OK(core.NIL)

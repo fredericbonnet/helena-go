@@ -196,12 +196,25 @@ func (scope *Scope) CompileScriptValue(script core.ScriptValue) *core.Program {
 }
 func (scope *Scope) CompileTupleValue(tuple core.TupleValue) *core.Program {
 	program := &core.Program{}
+	program.PushOpCode(core.OpCode_OPEN_FRAME, nil)
 	program.PushOpCode(core.OpCode_PUSH_CONSTANT, nil)
 	program.PushOpCode(core.OpCode_EXPAND_VALUE, nil)
 	program.PushOpCode(core.OpCode_CLOSE_FRAME, nil)
 	program.PushOpCode(core.OpCode_EVALUATE_SENTENCE, nil)
 	program.PushOpCode(core.OpCode_PUSH_RESULT, nil)
 	program.PushConstant(tuple)
+	return program
+}
+func (scope *Scope) CompileArgs(args ...core.Value) *core.Program {
+	program := &core.Program{}
+	program.PushOpCode(core.OpCode_OPEN_FRAME, nil)
+	for _, arg := range args {
+		program.PushOpCode(core.OpCode_PUSH_CONSTANT, nil)
+		program.PushConstant(arg)
+	}
+	program.PushOpCode(core.OpCode_CLOSE_FRAME, nil)
+	program.PushOpCode(core.OpCode_EVALUATE_SENTENCE, nil)
+	program.PushOpCode(core.OpCode_PUSH_RESULT, nil)
 	return program
 }
 func (scope *Scope) Compile(script core.Script) *core.Program {
@@ -211,12 +224,6 @@ func (scope *Scope) Execute(program *core.Program, state *core.ProgramState) cor
 	return scope.executor.Execute(program, state)
 }
 
-func (scope *Scope) PrepareScriptValue(script core.ScriptValue) *Process {
-	return scope.PrepareProcess(scope.CompileScriptValue(script))
-}
-func (scope *Scope) PrepareTupleValue(tuple core.TupleValue) *Process {
-	return scope.PrepareProcess(scope.CompileTupleValue(tuple))
-}
 func (scope *Scope) PrepareScript(script core.Script) *Process {
 	return scope.PrepareProcess(scope.Compile(script))
 }

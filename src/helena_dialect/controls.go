@@ -23,7 +23,7 @@ func (whileCmd) Execute(args []core.Value, context any) core.Result {
 	var callTest func() core.Result
 	var callBody func() core.Result
 	if test.Type() == core.ValueType_SCRIPT {
-		testProgram := scope.Compile((test.(core.ScriptValue)).Script)
+		testProgram := scope.CompileScriptValue(test.(core.ScriptValue))
 		callTest = func() core.Result {
 			return CreateContinuationValue(scope, testProgram, func(result core.Result) core.Result {
 				if result.Code != core.ResultCode_OK {
@@ -49,7 +49,7 @@ func (whileCmd) Execute(args []core.Value, context any) core.Result {
 		}
 		callTest = callBody
 	}
-	program := scope.Compile((body.(core.ScriptValue)).Script)
+	program := scope.CompileScriptValue(body.(core.ScriptValue))
 	callBody = func() core.Result {
 		return CreateContinuationValue(scope, program, func(result core.Result) core.Result {
 			switch result.Code {
@@ -368,7 +368,8 @@ func (cmd catchCmd) run(state *catchState, scope *Scope) core.Result {
 			{
 				body := state.args[1]
 				// TODO check type
-				state.bodyProcess = scope.PrepareScriptValue(body.(core.ScriptValue)) // TODO check type
+				program := scope.CompileScriptValue(body.(core.ScriptValue)) // TODO check type
+				state.bodyProcess = scope.PrepareProcess(program)
 				state.step = catchStateStep_inBody
 			}
 		case catchStateStep_inBody:
@@ -397,15 +398,17 @@ func (cmd catchCmd) run(state *catchState, scope *Scope) core.Result {
 						handler := state.args[i+2]
 						subscope := NewScope(scope, true)
 						subscope.SetNamedLocal(varname, state.bodyResult.Value)
-						state.process = subscope.PrepareScriptValue(
+						program := subscope.CompileScriptValue(
 							handler.(core.ScriptValue),
 						) // TODO check type
+						state.process = subscope.PrepareProcess(program)
 					}
 				case core.ResultCode_BREAK,
 					core.ResultCode_CONTINUE:
 					{
 						handler := state.args[i+1]
-						state.process = scope.PrepareScriptValue(handler.(core.ScriptValue)) // TODO check type
+						program := scope.CompileScriptValue(handler.(core.ScriptValue)) // TODO check type
+						state.process = scope.PrepareProcess(program)
 					}
 				default:
 					panic("CANTHAPPEN")
@@ -439,7 +442,8 @@ func (cmd catchCmd) run(state *catchState, scope *Scope) core.Result {
 					return state.result
 				}
 				handler := state.args[i+1]
-				state.process = scope.PrepareScriptValue(handler.(core.ScriptValue)) // TODO check type
+				program := scope.CompileScriptValue(handler.(core.ScriptValue)) // TODO check type
+				state.process = scope.PrepareProcess(program)
 				state.step = catchStateStep_inFinally
 			}
 		case catchStateStep_inFinally:

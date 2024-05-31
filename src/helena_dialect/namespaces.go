@@ -87,7 +87,7 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		}
 		command := metacommand.namespace.scope.ResolveNamedCommand(subcommand)
 		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
-		program := metacommand.namespace.scope.CompileTupleValue(core.TUPLE(cmdline))
+		program := metacommand.namespace.scope.CompileArgs(cmdline...)
 		return CreateContinuationValue(metacommand.namespace.scope, program, nil)
 
 	case "import":
@@ -165,7 +165,7 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 		[]core.Value{core.NewCommandValue(command)},
 		args[2:]...,
 	)
-	program := namespace.scope.CompileTupleValue(core.TUPLE(cmdline))
+	program := namespace.scope.CompileArgs(cmdline...)
 	return CreateContinuationValue(namespace.scope, program, nil)
 }
 func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {

@@ -57,7 +57,8 @@ func (cmd *coroutineCommand) Execute(args []core.Value, _ any) core.Result {
 		}
 		if cmd.state == coroutineState_inactive {
 			cmd.state = coroutineState_active
-			cmd.process = cmd.scope.PrepareScriptValue(cmd.body)
+			program := cmd.scope.CompileScriptValue(cmd.body)
+			cmd.process = cmd.scope.PrepareProcess(program)
 		}
 		return cmd.run()
 

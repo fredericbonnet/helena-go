@@ -72,7 +72,7 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 		}
 		command := metacommand.ensemble.scope.ResolveNamedCommand(subcommand)
 		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
-		program := scope.CompileTupleValue(core.TUPLE(cmdline))
+		program := scope.CompileArgs(cmdline...)
 		return CreateContinuationValue(scope, program, nil)
 
 	case "argspec":
@@ -164,7 +164,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		[]core.Value{core.NewCommandValue(command)},
 		ensembleArgs...),
 		args[minArgs+1:]...)
-	program := scope.CompileTupleValue(core.TUPLE(cmdline))
+	program := scope.CompileArgs(cmdline...)
 	return CreateContinuationValue(scope, program, nil)
 }
 func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
