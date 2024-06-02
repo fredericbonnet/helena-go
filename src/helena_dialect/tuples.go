@@ -9,7 +9,7 @@ type tupleCommand struct {
 
 func newTupleCommand(scope *Scope) *tupleCommand {
 	tuple := &tupleCommand{}
-	tuple.scope = NewScope(scope, false)
+	tuple.scope = scope.NewChildScope()
 	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
 	tuple.ensemble = NewEnsembleCommand(tuple.scope, argspec)
 	return tuple

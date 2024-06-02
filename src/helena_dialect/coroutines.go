@@ -128,7 +128,7 @@ func (coroutineCmd) Execute(args []core.Value, context any) core.Result {
 	}
 
 	value := newCoroutineCommand(
-		NewScope(scope, true),
+		scope.NewLocalScope(),
 		body.(core.ScriptValue),
 	)
 	return core.OK(value.value)

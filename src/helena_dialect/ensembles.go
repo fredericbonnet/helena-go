@@ -244,7 +244,7 @@ func (ensembleCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("ensemble arguments cannot be variadic")
 	}
 
-	subscope := NewScope(scope, false)
+	subscope := scope.NewChildScope()
 	program := subscope.CompileScriptValue(body.(core.ScriptValue))
 	return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
 		switch result.Code {

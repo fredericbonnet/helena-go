@@ -82,7 +82,7 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 			CLOSURE_COMMAND_SIGNATURE(args[0], closure.argspec.Usage(0)),
 		)
 	}
-	subscope := NewScope(closure.scope, true)
+	subscope := closure.scope.NewLocalScope()
 	setarg := func(name string, value core.Value) core.Result {
 		subscope.SetNamedLocal(name, value)
 		return core.OK(value)
@@ -165,7 +165,7 @@ func (closureCmd) Execute(args []core.Value, context any) core.Result {
 	}
 	argspec := result.Data
 	closure := newClosureCommand(
-		NewScope(scope, true),
+		scope.NewLocalScope(),
 		argspec,
 		body.(core.ScriptValue),
 		guard,

@@ -162,18 +162,11 @@ func (resolver commandResolver) Resolve(name core.Value) core.Command {
 	return resolver.scope.ResolveCommand(name)
 }
 
-func NewScope(
-	parent *Scope,
-	shared bool,
+func newScope(
+	context *scopeContext,
 ) *Scope {
 	scope := &Scope{}
-	if shared {
-		scope.Context = parent.Context
-	} else if parent != nil && parent.Context != nil {
-		scope.Context = newScopeContext(parent.Context)
-	} else {
-		scope.Context = newScopeContext(nil)
-	}
+	scope.Context = context
 	scope.locals = map[string]core.Value{}
 	scope.compiler = core.NewCompiler(nil)
 	scope.executor = core.Executor{
@@ -183,6 +176,15 @@ func NewScope(
 		Context:          scope,
 	}
 	return scope
+}
+func NewRootScope() *Scope {
+	return newScope(newScopeContext(nil))
+}
+func (scope *Scope) NewChildScope() *Scope {
+	return newScope(newScopeContext(scope.Context))
+}
+func (scope *Scope) NewLocalScope() *Scope {
+	return newScope(scope.Context)
 }
 
 func (scope *Scope) Compile(script core.Script) *core.Program {

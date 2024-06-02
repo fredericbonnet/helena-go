@@ -27,7 +27,7 @@ var _ = Describe("Helena control flow commands", func() {
 		return execute(script).Value
 	}
 	init := func() {
-		rootScope = NewScope(nil, false)
+		rootScope = NewRootScope()
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}

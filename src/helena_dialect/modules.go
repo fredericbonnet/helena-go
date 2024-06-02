@@ -288,7 +288,7 @@ func createModule(
 	rootDir string,
 	script core.Script,
 ) core.TypedResult[*Module] {
-	rootScope := NewScope(nil, false)
+	rootScope := NewRootScope()
 	InitCommandsForModule(rootScope, moduleRegistry, rootDir)
 
 	exports := &Exports{}

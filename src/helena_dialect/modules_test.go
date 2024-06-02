@@ -33,7 +33,7 @@ var _ = Describe("Helena modules", func() {
 		return execute(script).Value
 	}
 	init := func() {
-		rootScope = NewScope(nil, false)
+		rootScope = NewRootScope()
 		moduleRegistry = NewModuleRegistry()
 		_, filename, _, _ := runtime.Caller(0)
 		dirname = filepath.Dir(filename)

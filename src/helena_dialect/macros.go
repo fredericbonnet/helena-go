@@ -76,7 +76,7 @@ func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 			MACRO_COMMAND_SIGNATURE(args[0], macro.argspec.Usage(0)),
 		)
 	}
-	subscope := NewScope(scope, true)
+	subscope := scope.NewLocalScope()
 	setarg := func(name string, value core.Value) core.Result {
 		subscope.SetNamedLocal(name, value)
 		return core.OK(value)
