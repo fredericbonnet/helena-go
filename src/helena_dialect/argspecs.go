@@ -127,11 +127,14 @@ func (argspec ArgspecValue) ApplyArguments(
 				if arg.Default.Type() == core.ValueType_SCRIPT {
 					body := arg.Default.(core.ScriptValue)
 					result := scope.ExecuteScriptValue(body)
-					// TODO handle YIELD?
-					if result.Code != core.ResultCode_OK {
+					switch result.Code {
+					case core.ResultCode_OK:
+						value = result.Value
+					case core.ResultCode_ERROR:
 						return result
+					default:
+						return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
 					}
-					value = result.Value
 				} else {
 					value = arg.Default
 				}
@@ -152,9 +155,12 @@ func (argspec ArgspecValue) ApplyArguments(
 			}
 		}
 		result := argspec.setArgument(scope, arg, value, setArgument)
-		// TODO handle YIELD?
-		if result.Code != core.ResultCode_OK {
+		switch result.Code {
+		case core.ResultCode_OK:
+		case core.ResultCode_ERROR:
 			return result
+		default:
+			return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
 		}
 	}
 	return core.OK(core.NIL)
@@ -326,11 +332,14 @@ func (argspec ArgspecValue) applyPositionals(
 				if arg.Default.Type() == core.ValueType_SCRIPT {
 					body := arg.Default.(core.ScriptValue)
 					result := scope.ExecuteScriptValue(body)
-					// TODO handle YIELD?
-					if result.Code != core.ResultCode_OK {
+					switch result.Code {
+					case core.ResultCode_OK:
+						value = result.Value
+					case core.ResultCode_ERROR:
 						return result
+					default:
+						return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
 					}
-					value = result.Value
 				} else {
 					value = arg.Default
 				}
@@ -342,9 +351,12 @@ func (argspec ArgspecValue) applyPositionals(
 			i += remainders
 		}
 		result := argspec.setArgument(scope, arg, value, setArgument)
-		// TODO handle YIELD?
-		if result.Code != core.ResultCode_OK {
+		switch result.Code {
+		case core.ResultCode_OK:
+		case core.ResultCode_ERROR:
 			return result
+		default:
+			return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result))
 		}
 	}
 	return core.OK(core.NIL)

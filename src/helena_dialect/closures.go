@@ -87,7 +87,6 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 		subscope.SetNamedLocal(name, value)
 		return core.OK(value)
 	}
-	// TODO handle YIELD?
 	result := closure.argspec.ApplyArguments(closure.scope, args, 1, setarg)
 	if result.Code != core.ResultCode_OK {
 		return result
