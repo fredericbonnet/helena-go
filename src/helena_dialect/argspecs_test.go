@@ -442,8 +442,25 @@ var _ = Describe("Helena argument handling", func() {
 							Expect(evaluate("get a")).To(Equal(INT(3)))
 						})
 						Specify("one", func() {
-							evaluate("argspec ((?a def)) set (val)")
+							evaluate("argspec ((?a {unreachable})) set (val)")
 							Expect(evaluate("get a")).To(Equal(STR("val")))
+						})
+						Specify("unexpected result", func() {
+							Expect(execute("argspec ((?a {return})) set ()")).To(Equal(
+								ERROR("unexpected return"),
+							))
+							Expect(execute("argspec ((?a {yield})) set ()")).To(Equal(
+								ERROR("unexpected yield"),
+							))
+							Expect(execute("argspec ((?a {error msg})) set ()")).To(Equal(
+								ERROR("msg"),
+							))
+							Expect(execute("argspec ((?a {break})) set ()")).To(Equal(
+								ERROR("unexpected break"),
+							))
+							Expect(execute("argspec ((?a {continue})) set ()")).To(Equal(
+								ERROR("unexpected continue"),
+							))
 						})
 					})
 				})
@@ -559,6 +576,33 @@ var _ = Describe("Helena argument handling", func() {
 							Expect(evaluate("get a")).To(Equal(FALSE))
 							Expect(execute("argspec $args set (value)")).To(Equal(
 								ERROR(`invalid number "value"`),
+							))
+						})
+					})
+
+					Describe("Exceptions", func() {
+						Specify("unexpected result", func() {
+							Expect(execute("argspec ( (eval a) ) set ({return})")).To(Equal(
+								ERROR("unexpected return"),
+							))
+							Expect(execute("argspec ( (eval a) ) set ({yield})")).To(Equal(
+								ERROR("unexpected yield"),
+							))
+							Expect(execute("argspec ( (eval a) ) set ({break})")).To(Equal(
+								ERROR("unexpected break"),
+							))
+							Expect(execute("argspec ( (eval a) ) set ({continue})")).To(Equal(
+								ERROR("unexpected continue"),
+							))
+						})
+						Specify("wrong arity", func() {
+							evaluate("macro guard0 {} {}")
+							evaluate("macro guard2 {a b} {}")
+							Expect(execute("argspec ( (guard0 a) ) set (val)")).To(Equal(
+								ERROR(`wrong # args: should be "guard0"`),
+							))
+							Expect(execute("argspec ( (guard2 a) ) set (val)")).To(Equal(
+								ERROR(`wrong # args: should be "guard2 a b"`),
 							))
 						})
 					})

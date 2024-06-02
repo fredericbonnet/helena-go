@@ -81,7 +81,6 @@ func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 		subscope.SetNamedLocal(name, value)
 		return core.OK(value)
 	}
-	// TODO handle YIELD?
 	result := macro.argspec.ApplyArguments(scope, args, 1, setarg)
 	if result.Code != core.ResultCode_OK {
 		return result

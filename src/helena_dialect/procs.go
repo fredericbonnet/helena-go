@@ -87,7 +87,6 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 	setarg := func(name string, value core.Value) core.Result {
 		return subscope.SetNamedVariable(name, value)
 	}
-	// TODO handle YIELD?
 	result := proc.argspec.ApplyArguments(proc.scope, args, 1, setarg)
 	if result.Code != core.ResultCode_OK {
 		return result
