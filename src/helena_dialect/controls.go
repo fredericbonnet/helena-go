@@ -333,7 +333,8 @@ func (cmd catchCmd) Execute(args []core.Value, context any) core.Result {
 		if body.Type() != core.ValueType_SCRIPT {
 			return core.ERROR("body must be a script")
 		}
-		result := scope.ExecuteScriptValue(body.(core.ScriptValue))
+		program := scope.CompileScriptValue(body.(core.ScriptValue))
+		result := scope.Execute(program, nil)
 		codeName := core.STR(core.RESULT_CODE_NAME(result))
 		switch result.Code {
 		case core.ResultCode_OK,

@@ -17,8 +17,11 @@ var _ = Describe("Helena control flow commands", func() {
 	parse := func(script string) *core.Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
+	prepareScript := func(script string) *Process {
+		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
+	}
 	execute := func(script string) core.Result {
-		return rootScope.ExecuteScript(*parse(script))
+		return prepareScript(script).Run()
 	}
 	evaluate := func(script string) core.Value {
 		return execute(script).Value
@@ -115,8 +118,8 @@ var _ = Describe("Helena control flow commands", func() {
 					))
 				})
 				It("should provide a resumable state", func() {
-					process := rootScope.PrepareScript(
-						*parse("while {yield test} {yield body}"),
+					process := prepareScript(
+						"while {yield test} {yield body}",
 					)
 
 					result := process.Run()
@@ -385,10 +388,8 @@ var _ = Describe("Helena control flow commands", func() {
 				Describe("should provide a resumable state", func() {
 					var process *Process
 					BeforeEach(func() {
-						process = rootScope.PrepareScript(
-							*parse(
-								"if {yield test1} {yield body1} elseif {yield test2} {yield body2} else {yield body3}",
-							),
+						process = prepareScript(
+							"if {yield test1} {yield body1} elseif {yield test2} {yield body2} else {yield body3}",
 						)
 					})
 					Specify("if", func() {
@@ -784,10 +785,8 @@ var _ = Describe("Helena control flow commands", func() {
 					Describe("no command", func() {
 						var process *Process
 						BeforeEach(func() {
-							process = rootScope.PrepareScript(
-								*parse(
-									"when {{yield test1} {yield body1} {yield test2} {yield body2} {yield body3}}",
-								),
+							process = prepareScript(
+								"when {{yield test1} {yield body1} {yield test2} {yield body2} {yield body3}}",
 							)
 						})
 						Specify("first", func() {
@@ -847,10 +846,8 @@ var _ = Describe("Helena control flow commands", func() {
 						var process *Process
 						BeforeEach(func() {
 							evaluate("macro test {v} {yield $v}")
-							process = rootScope.PrepareScript(
-								*parse(
-									"when {yield command} {test1 {yield body1} test2 {yield body2} {yield body3}}",
-								),
+							process = prepareScript(
+								"when {yield command} {test1 {yield body1} test2 {yield body2} {yield body3}}",
 							)
 						})
 						Specify("first", func() {
@@ -1158,8 +1155,8 @@ var _ = Describe("Helena control flow commands", func() {
 						).To(Equal(core.ResultCode_YIELD))
 					})
 					It("should provide a resumable state", func() {
-						process := rootScope.PrepareScript(
-							*parse("catch {return val} return res {idem _$[yield handler]}"),
+						process := prepareScript(
+							"catch {return val} return res {idem _$[yield handler]}",
 						)
 
 						result := process.Run()
@@ -1172,10 +1169,8 @@ var _ = Describe("Helena control flow commands", func() {
 						Expect(result).To(Equal(OK(STR("_value"))))
 					})
 					It("should not bypass `finally` handler", func() {
-						process := rootScope.PrepareScript(
-							*parse(
-								"catch {return val} return res {yield; idem handler} finally {set var finally}",
-							),
+						process := prepareScript(
+							"catch {return val} return res {yield; idem handler} finally {set var finally}",
 						)
 
 						_ = process.Run()
@@ -1321,8 +1316,8 @@ var _ = Describe("Helena control flow commands", func() {
 						).To(Equal(core.ResultCode_YIELD))
 					})
 					It("should provide a resumable state", func() {
-						process := rootScope.PrepareScript(
-							*parse("catch {yield val} yield res {idem _$[yield handler]}"),
+						process := prepareScript(
+							"catch {yield val} yield res {idem _$[yield handler]}",
 						)
 
 						result := process.Run()
@@ -1335,10 +1330,8 @@ var _ = Describe("Helena control flow commands", func() {
 						Expect(result).To(Equal(OK(STR("_value"))))
 					})
 					It("should not bypass `finally` handler", func() {
-						process := rootScope.PrepareScript(
-							*parse(
-								"catch {yield val} yield res {yield; idem handler} finally {set var finally}",
-							),
+						process := prepareScript(
+							"catch {yield val} yield res {yield; idem handler} finally {set var finally}",
 						)
 
 						_ = process.Run()
@@ -1483,8 +1476,8 @@ var _ = Describe("Helena control flow commands", func() {
 						).To(Equal(core.ResultCode_YIELD))
 					})
 					It("should provide a resumable state", func() {
-						process := rootScope.PrepareScript(
-							*parse("catch {error message} error msg {idem _$[yield handler]}"),
+						process := prepareScript(
+							"catch {error message} error msg {idem _$[yield handler]}",
 						)
 
 						result := process.Run()
@@ -1497,10 +1490,8 @@ var _ = Describe("Helena control flow commands", func() {
 						Expect(result).To(Equal(OK(STR("_value"))))
 					})
 					It("should not bypass `finally` handler", func() {
-						process := rootScope.PrepareScript(
-							*parse(
-								"catch {error message} error msg {yield; idem handler} finally {set var finally}",
-							),
+						process := prepareScript(
+							"catch {error message} error msg {yield; idem handler} finally {set var finally}",
 						)
 
 						_ = process.Run()
@@ -1637,8 +1628,8 @@ var _ = Describe("Helena control flow commands", func() {
 						).To(Equal(core.ResultCode_YIELD))
 					})
 					It("should provide a resumable state", func() {
-						process := rootScope.PrepareScript(
-							*parse("catch {break} break {idem _$[yield handler]}"),
+						process := prepareScript(
+							"catch {break} break {idem _$[yield handler]}",
 						)
 
 						result := process.Run()
@@ -1651,10 +1642,8 @@ var _ = Describe("Helena control flow commands", func() {
 						Expect(result).To(Equal(OK(STR("_value"))))
 					})
 					It("should not bypass `finally` handler", func() {
-						process := rootScope.PrepareScript(
-							*parse(
-								"catch {break} break {yield; idem handler} finally {set var finally}",
-							),
+						process := prepareScript(
+							"catch {break} break {yield; idem handler} finally {set var finally}",
 						)
 
 						_ = process.Run()
@@ -1779,8 +1768,8 @@ var _ = Describe("Helena control flow commands", func() {
 						).To(Equal(core.ResultCode_YIELD))
 					})
 					It("should provide a resumable state", func() {
-						process := rootScope.PrepareScript(
-							*parse("catch {continue} continue {idem _$[yield handler]}"),
+						process := prepareScript(
+							"catch {continue} continue {idem _$[yield handler]}",
 						)
 
 						result := process.Run()
@@ -1793,10 +1782,8 @@ var _ = Describe("Helena control flow commands", func() {
 						Expect(result).To(Equal(OK(STR("_value"))))
 					})
 					It("should not bypass `finally` handler", func() {
-						process := rootScope.PrepareScript(
-							*parse(
-								"catch {continue} continue {yield; idem handler} finally {set var finally}",
-							),
+						process := prepareScript(
+							"catch {continue} continue {yield; idem handler} finally {set var finally}",
 						)
 
 						_ = process.Run()
@@ -1928,8 +1915,8 @@ var _ = Describe("Helena control flow commands", func() {
 						).To(Equal(core.ResultCode_YIELD))
 					})
 					It("should provide a resumable state", func() {
-						process := rootScope.PrepareScript(
-							*parse("catch {error message} finally {idem _$[yield handler]}"),
+						process := prepareScript(
+							"catch {error message} finally {idem _$[yield handler]}",
 						)
 
 						result := process.Run()
@@ -2063,10 +2050,8 @@ var _ = Describe("Helena control flow commands", func() {
 					Expect(evaluate("get var")).To(Equal(STR("handler")))
 				})
 				Specify("`YIELD`", func() {
-					process := rootScope.PrepareScript(
-						*parse(
-							"catch {yield value} yield res {pass} finally {set var handler}",
-						),
+					process := prepareScript(
+						"catch {yield value} yield res {pass} finally {set var handler}",
 					)
 
 					result := process.Run()
@@ -2100,10 +2085,8 @@ var _ = Describe("Helena control flow commands", func() {
 				})
 			})
 			It("should resume yielded body", func() {
-				process := rootScope.PrepareScript(
-					*parse(
-						"catch {set var [yield step1]; idem _$[yield step2]} yield res {pass}",
-					),
+				process := prepareScript(
+					"catch {set var [yield step1]; idem _$[yield step2]} yield res {pass}",
 				)
 
 				result := process.Run()

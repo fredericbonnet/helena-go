@@ -17,8 +17,11 @@ var _ = Describe("Helena lists", func() {
 	parse := func(script string) *core.Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
+	prepareScript := func(script string) *Process {
+		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
+	}
 	execute := func(script string) core.Result {
-		return rootScope.ExecuteScript(*parse(script))
+		return prepareScript(script).Run()
 	}
 	evaluate := func(script string) core.Value {
 		return execute(script).Value
@@ -567,10 +570,8 @@ var _ = Describe("Helena lists", func() {
 								).To(Equal(core.ResultCode_YIELD))
 							})
 							It("should provide a resumable state", func() {
-								process := rootScope.PrepareScript(
-									*parse(
-										"list (a b c) foreach element {idem _$[yield $element]_}",
-									),
+								process := prepareScript(
+									"list (a b c) foreach element {idem _$[yield $element]_}",
 								)
 
 								result := process.Run()

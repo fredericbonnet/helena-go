@@ -17,8 +17,11 @@ var _ = Describe("Helena scopes", func() {
 	parse := func(script string) *core.Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
+	prepareScript := func(script string) *Process {
+		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
+	}
 	execute := func(script string) core.Result {
-		return rootScope.ExecuteScript(*parse(script))
+		return prepareScript(script).Run()
 	}
 	evaluate := func(script string) core.Value {
 		return execute(script).Value
@@ -162,8 +165,8 @@ var _ = Describe("Helena scopes", func() {
 					It("should provide a resumable state", func() {
 						evaluate("closure cmd1 {} {set var val1}")
 						evaluate("closure cmd2 {val} {set var $val}")
-						process := rootScope.PrepareScript(
-							*parse("scope cmd {cmd1; cmd2 _[yield val2]_}"),
+						process := prepareScript(
+							"scope cmd {cmd1; cmd2 _[yield val2]_}",
 						)
 
 						result := process.Run()
@@ -177,7 +180,7 @@ var _ = Describe("Helena scopes", func() {
 						Expect(evaluate("get var")).To(Equal(STR("_val3_")))
 					})
 					It("should delay the definition of scope command until resumed", func() {
-						process := rootScope.PrepareScript(*parse("scope cmd {yield}"))
+						process := prepareScript("scope cmd {yield}")
 
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
@@ -310,8 +313,8 @@ var _ = Describe("Helena scopes", func() {
 							evaluate("closure cmd1 {} {set var val1}")
 							evaluate("closure cmd2 {val} {set var $val}")
 							evaluate("scope cmd {}")
-							process := rootScope.PrepareScript(
-								*parse("cmd eval {cmd1; cmd2 _[yield val2]_}"),
+							process := prepareScript(
+								"cmd eval {cmd1; cmd2 _[yield val2]_}",
 							)
 
 							result := process.Run()
@@ -425,7 +428,7 @@ var _ = Describe("Helena scopes", func() {
 							evaluate("closure cmd1 {} {set var val1}")
 							evaluate("closure cmd2 {val} {set var $val}")
 							evaluate("scope cmd {macro mac {} {cmd1; cmd2 _[yield val2]_}}")
-							process := rootScope.PrepareScript(*parse("cmd call mac"))
+							process := prepareScript("cmd call mac")
 
 							result := process.Run()
 							Expect(result.Code).To(Equal(core.ResultCode_YIELD))
