@@ -397,7 +397,7 @@ func (cmd catchCmd) run(state *catchState, scope *Scope) core.Result {
 					{
 						varname := core.ValueToString(state.args[i+1]).Data
 						handler := state.args[i+2]
-						subscope := NewScope(scope, true)
+						subscope := scope.NewLocalScope()
 						subscope.SetNamedLocal(varname, state.bodyResult.Value)
 						program := subscope.CompileScriptValue(
 							handler.(core.ScriptValue),

@@ -39,7 +39,7 @@ type scriptCommand struct {
 
 func newScriptCommand(scope *Scope) *scriptCommand {
 	list := &scriptCommand{}
-	list.scope = NewScope(scope, false)
+	list.scope = scope.NewChildScope()
 	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
 	list.ensemble = NewEnsembleCommand(list.scope, argspec)
 	return list

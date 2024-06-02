@@ -175,7 +175,7 @@ type intCommand struct {
 
 func newIntCommand(scope *Scope) *intCommand {
 	cmd := &intCommand{}
-	cmd.scope = NewScope(scope, false)
+	cmd.scope = scope.NewChildScope()
 	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
 	cmd.ensemble = NewEnsembleCommand(cmd.scope, argspec)
 	return cmd
@@ -197,7 +197,7 @@ type realCommand struct {
 
 func newRealCommand(scope *Scope) *realCommand {
 	cmd := &realCommand{}
-	cmd.scope = NewScope(scope, false)
+	cmd.scope = scope.NewChildScope()
 	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
 	cmd.ensemble = NewEnsembleCommand(cmd.scope, argspec)
 	return cmd

@@ -83,7 +83,7 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 	if !proc.argspec.CheckArity(args, 1) {
 		return ARITY_ERROR(PROC_COMMAND_SIGNATURE(args[0], proc.argspec.Usage(0)))
 	}
-	subscope := NewScope(proc.scope, false)
+	subscope := proc.scope.NewChildScope()
 	setarg := func(name string, value core.Value) core.Result {
 		return subscope.SetNamedVariable(name, value)
 	}
@@ -166,7 +166,7 @@ func (procCmd) Execute(args []core.Value, context any) core.Result {
 	argspec := result.Data
 	program := scope.CompileScriptValue(body.(core.ScriptValue))
 	proc := newProcCommand(
-		NewScope(scope, true),
+		scope.NewLocalScope(),
 		argspec,
 		body.(core.ScriptValue),
 		guard,

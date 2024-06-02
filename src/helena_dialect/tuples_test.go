@@ -28,7 +28,7 @@ var _ = Describe("Helena tuples", func() {
 		return execute(script).Value
 	}
 	init := func() {
-		rootScope = NewScope(nil, false)
+		rootScope = NewRootScope()
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}

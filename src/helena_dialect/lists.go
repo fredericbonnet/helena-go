@@ -9,7 +9,7 @@ type listCommand struct {
 
 func newListCommand(scope *Scope) *listCommand {
 	list := &listCommand{}
-	list.scope = NewScope(scope, false)
+	list.scope = scope.NewChildScope()
 	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
 	list.ensemble = NewEnsembleCommand(list.scope, argspec)
 	return list
@@ -270,7 +270,7 @@ func (listForeachCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script")
 	}
 	program := scope.CompileScriptValue(body.(core.ScriptValue))
-	subscope := NewScope(scope, true)
+	subscope := scope.NewLocalScope()
 	i := 0
 	lastResult := core.OK(core.NIL)
 	var next func() core.Result

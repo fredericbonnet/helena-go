@@ -91,7 +91,7 @@ func (scopeCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script")
 	}
 
-	subscope := NewScope(scope, false)
+	subscope := scope.NewChildScope()
 	program := subscope.CompileScriptValue(body.(core.ScriptValue))
 	return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
 		switch result.Code {

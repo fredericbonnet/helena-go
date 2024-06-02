@@ -390,7 +390,7 @@ type argspecCommand struct {
 }
 
 func newArgspecCommand(scope *Scope) argspecCommand {
-	subscope := NewScope(scope, false)
+	subscope := scope.NewChildScope()
 	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
 	ensemble := NewEnsembleCommand(subscope, argspec)
 	return argspecCommand{subscope, ensemble}

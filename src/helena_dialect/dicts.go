@@ -9,7 +9,7 @@ type dictCommand struct {
 
 func newDictCommand(scope *Scope) *dictCommand {
 	dict := &dictCommand{}
-	dict.scope = NewScope(scope, false)
+	dict.scope = scope.NewChildScope()
 	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
 	dict.ensemble = NewEnsembleCommand(dict.scope, argspec)
 	return dict
@@ -326,7 +326,7 @@ func (dictForeachCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script")
 	}
 	program := scope.CompileScriptValue(body.(core.ScriptValue))
-	subscope := NewScope(scope, true)
+	subscope := scope.NewLocalScope()
 	entries := make([][2]core.Value, len(map_))
 	i := 0
 	for key, value := range map_ {

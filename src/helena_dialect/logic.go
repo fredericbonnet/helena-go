@@ -153,7 +153,7 @@ type boolCommand struct {
 
 func newBoolCommand(scope *Scope) *boolCommand {
 	cmd := &boolCommand{}
-	cmd.scope = NewScope(scope, false)
+	cmd.scope = scope.NewChildScope()
 	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
 	cmd.ensemble = NewEnsembleCommand(cmd.scope, argspec)
 	return cmd
