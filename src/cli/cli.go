@@ -24,7 +24,9 @@ func sourceFile(path string, scope *helena_dialect.Scope) core.Result {
 	if !result.Success {
 		return core.ERROR(result.Message)
 	}
-	return scope.ExecuteScript(*result.Script)
+	program := scope.Compile(*result.Script)
+	process := scope.PrepareProcess(program)
+	return process.Run()
 }
 
 type sourceCmd struct{}
@@ -159,7 +161,9 @@ func run(scope *helena_dialect.Scope, cmd string) (core.Value, error) {
 		return nil, recoverableError{parseResult.Message}
 	}
 
-	result := scope.ExecuteScript(*parseResult.Script)
+	program := scope.Compile(*parseResult.Script)
+	process := scope.PrepareProcess(program)
+	result := process.Run()
 	return processResult(result)
 }
 

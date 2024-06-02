@@ -125,8 +125,10 @@ func (argspec ArgspecValue) ApplyArguments(
 				value = core.FALSE
 			} else if arg.Default != nil {
 				if arg.Default.Type() == core.ValueType_SCRIPT {
-					body := arg.Default.(core.ScriptValue)
-					result := scope.ExecuteScriptValue(body)
+					program := scope.CompileScriptValue(
+						arg.Default.(core.ScriptValue),
+					)
+					result := scope.Execute(program, nil)
 					switch result.Code {
 					case core.ResultCode_OK:
 						value = result.Value
@@ -330,8 +332,10 @@ func (argspec ArgspecValue) applyPositionals(
 				i++
 			} else if arg.Default != nil {
 				if arg.Default.Type() == core.ValueType_SCRIPT {
-					body := arg.Default.(core.ScriptValue)
-					result := scope.ExecuteScriptValue(body)
+					program := scope.CompileScriptValue(
+						arg.Default.(core.ScriptValue),
+					)
+					result := scope.Execute(program, nil)
 					switch result.Code {
 					case core.ResultCode_OK:
 						value = result.Value

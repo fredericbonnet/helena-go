@@ -17,8 +17,11 @@ var _ = Describe("Helena aliases", func() {
 	parse := func(script string) *core.Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
+	prepareScript := func(script string) *Process {
+		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
+	}
 	execute := func(script string) core.Result {
-		return rootScope.ExecuteScript(*parse(script))
+		return prepareScript(script).Run()
 	}
 	evaluate := func(script string) core.Value {
 		return execute(script).Value
@@ -188,7 +191,7 @@ var _ = Describe("Helena aliases", func() {
 					It("should provide a resumable state for macro alias", func() {
 						evaluate("macro mac {} {idem _[yield val1]_}")
 						evaluate("alias cmd mac")
-						process := rootScope.PrepareScript(*parse("cmd"))
+						process := prepareScript("cmd")
 
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))
@@ -200,7 +203,7 @@ var _ = Describe("Helena aliases", func() {
 					})
 					It("should provide a resumable state for tuple alias", func() {
 						evaluate("alias cmd (yield val1)")
-						process := rootScope.PrepareScript(*parse("cmd"))
+						process := prepareScript("cmd")
 
 						result := process.Run()
 						Expect(result.Code).To(Equal(core.ResultCode_YIELD))

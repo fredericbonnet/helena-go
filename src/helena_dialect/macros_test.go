@@ -17,8 +17,11 @@ var _ = Describe("Helena macros", func() {
 	parse := func(script string) *core.Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
+	prepareScript := func(script string) *Process {
+		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
+	}
 	execute := func(script string) core.Result {
-		return rootScope.ExecuteScript(*parse(script))
+		return prepareScript(script).Run()
 	}
 	evaluate := func(script string) core.Value {
 		return execute(script).Value
@@ -399,7 +402,7 @@ var _ = Describe("Helena macros", func() {
 				})
 				It("should provide a resumable state", func() {
 					evaluate("macro cmd {} {idem _[yield val1]_}")
-					process := rootScope.PrepareScript(*parse("cmd"))
+					process := prepareScript("cmd")
 
 					result := process.Run()
 					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
@@ -414,7 +417,7 @@ var _ = Describe("Helena macros", func() {
 					evaluate("macro cmd2 {} {yield [cmd3]; idem [cmd4]}")
 					evaluate("macro cmd3 {} {yield val1}")
 					evaluate("macro cmd4 {} {yield val3}")
-					process := rootScope.PrepareScript(*parse("cmd1"))
+					process := prepareScript("cmd1")
 
 					result := process.Run()
 					Expect(result.Code).To(Equal(core.ResultCode_YIELD))

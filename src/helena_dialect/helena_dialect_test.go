@@ -17,8 +17,11 @@ var _ = Describe("Helena dialect", func() {
 	parse := func(script string) *core.Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
+	prepareScript := func(script string) *Process {
+		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
+	}
 	execute := func(script string) core.Result {
-		return rootScope.ExecuteScript(*parse(script))
+		return prepareScript(script).Run()
 	}
 	evaluate := func(script string) core.Value {
 		return execute(script).Value
@@ -74,7 +77,7 @@ var _ = Describe("Helena dialect", func() {
 		Describe("yield", func() {
 			It("should provide a resumable state", func() {
 				evaluate("macro cmd {*} {yield val1; idem val2}")
-				process := rootScope.PrepareScript(*parse("cmd a b c"))
+				process := prepareScript("cmd a b c")
 
 				result := process.Run()
 				Expect(result.Code).To(Equal(core.ResultCode_YIELD))
@@ -86,7 +89,7 @@ var _ = Describe("Helena dialect", func() {
 			It("should work on several levels", func() {
 				evaluate("macro cmd2 {*} {yield val2}")
 				evaluate("macro cmd {*} {yield val1; yield [cmd2]; idem val4}")
-				process := rootScope.PrepareScript(*parse("(((cmd) a) b) c"))
+				process := prepareScript("(((cmd) a) b) c")
 
 				result := process.Run()
 				Expect(result.Code).To(Equal(core.ResultCode_YIELD))

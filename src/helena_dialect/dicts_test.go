@@ -17,8 +17,11 @@ var _ = Describe("Helena dictionaries", func() {
 	parse := func(script string) *core.Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
+	prepareScript := func(script string) *Process {
+		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
+	}
 	execute := func(script string) core.Result {
-		return rootScope.ExecuteScript(*parse(script))
+		return prepareScript(script).Run()
 	}
 	evaluate := func(script string) core.Value {
 		return execute(script).Value
@@ -580,10 +583,8 @@ var _ = Describe("Helena dictionaries", func() {
 								).To(Equal(core.ResultCode_YIELD))
 							})
 							It("should provide a resumable state", func() {
-								process := rootScope.PrepareScript(
-									*parse(
-										"dict (a b c d e f) foreach (key value) {idem _$[yield $key]_}",
-									),
+								process := prepareScript(
+									"dict (a b c d e f) foreach (key value) {idem _$[yield $key]_}",
 								)
 
 								result := process.Run()

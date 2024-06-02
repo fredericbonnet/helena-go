@@ -294,7 +294,9 @@ func createModule(
 	exports := &Exports{}
 	rootScope.RegisterNamedCommand("export", newExportCommand(exports))
 
-	result := rootScope.ExecuteScript(script)
+	program := rootScope.Compile(script)
+	process := rootScope.PrepareProcess(program)
+	result := process.Run()
 	if result.Code == core.ResultCode_ERROR {
 		return core.ResultAs[*Module](result)
 	}

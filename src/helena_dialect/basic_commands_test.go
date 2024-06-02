@@ -17,8 +17,11 @@ var _ = Describe("Helena basic commands", func() {
 	parse := func(script string) *core.Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
+	prepareScript := func(script string) *Process {
+		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
+	}
 	execute := func(script string) core.Result {
-		return rootScope.ExecuteScript(*parse(script))
+		return prepareScript(script).Run()
 	}
 	evaluate := func(script string) core.Value {
 		return execute(script).Value
@@ -302,8 +305,8 @@ var _ = Describe("Helena basic commands", func() {
 				Expect(evaluate("eval (idem val)")).To(Equal(STR("val")))
 			})
 			It("should work recursively", func() {
-				process := rootScope.PrepareScript(
-					*parse("eval {eval {yield val1}; yield val2; eval {yield val3}}"),
+				process := prepareScript(
+					"eval {eval {yield val1}; yield val2; eval {yield val3}}",
 				)
 
 				result := process.Run()
@@ -376,8 +379,8 @@ var _ = Describe("Helena basic commands", func() {
 					Expect(evaluate("get var")).To(Equal(STR("val1")))
 				})
 				It("should provide a resumable state", func() {
-					process := rootScope.PrepareScript(
-						*parse("eval {set var val1; set var _[yield val2]_}"),
+					process := prepareScript(
+						"eval {set var val1; set var _[yield val2]_}",
 					)
 
 					result := process.Run()

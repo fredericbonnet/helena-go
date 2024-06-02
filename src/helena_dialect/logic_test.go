@@ -19,8 +19,11 @@ var _ = Describe("Helena logic operations", func() {
 	parse := func(script string) *core.Script {
 		return parser.Parse(tokenizer.Tokenize(script)).Script
 	}
+	prepareScript := func(script string) *Process {
+		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
+	}
 	execute := func(script string) core.Result {
-		return rootScope.ExecuteScript(*parse(script))
+		return prepareScript(script).Run()
 	}
 	evaluate := func(script string) core.Value {
 		return execute(script).Value
@@ -363,8 +366,8 @@ var _ = Describe("Helena logic operations", func() {
 						Expect(result.Value).To(Equal(STR("value")))
 					})
 					It("should provide a resumable state", func() {
-						process := rootScope.PrepareScript(
-							*parse("! {yield val1; yield val2}"),
+						process := prepareScript(
+							"! {yield val1; yield val2}",
 						)
 
 						result := process.Run()
@@ -460,8 +463,8 @@ var _ = Describe("Helena logic operations", func() {
 						Expect(result.Value).To(Equal(STR("value")))
 					})
 					It("should provide a resumable state", func() {
-						process := rootScope.PrepareScript(
-							*parse("&& {yield val1} {yield val2}"),
+						process := prepareScript(
+							"&& {yield val1} {yield val2}",
 						)
 
 						result := process.Run()
@@ -564,8 +567,8 @@ var _ = Describe("Helena logic operations", func() {
 						Expect(result.Value).To(Equal(STR("value")))
 					})
 					It("should provide a resumable state", func() {
-						process := rootScope.PrepareScript(
-							*parse("|| {yield val1} {yield val2}"),
+						process := prepareScript(
+							"|| {yield val1} {yield val2}",
 						)
 
 						result := process.Run()

@@ -185,12 +185,13 @@ func NewScope(
 	return scope
 }
 
-func (scope *Scope) ExecuteScriptValue(script core.ScriptValue) core.Result {
-	return scope.ExecuteScript(script.Script)
+func (scope *Scope) Compile(script core.Script) *core.Program {
+	return scope.compiler.CompileScript(script)
 }
-func (scope *Scope) ExecuteScript(script core.Script) core.Result {
-	return scope.PrepareScript(script).Run()
+func (scope *Scope) Execute(program *core.Program, state *core.ProgramState) core.Result {
+	return scope.executor.Execute(program, state)
 }
+
 func (scope *Scope) CompileScriptValue(script core.ScriptValue) *core.Program {
 	return scope.Compile(script.Script)
 }
@@ -217,16 +218,7 @@ func (scope *Scope) CompileArgs(args ...core.Value) *core.Program {
 	program.PushOpCode(core.OpCode_PUSH_RESULT, nil)
 	return program
 }
-func (scope *Scope) Compile(script core.Script) *core.Program {
-	return scope.compiler.CompileScript(script)
-}
-func (scope *Scope) Execute(program *core.Program, state *core.ProgramState) core.Result {
-	return scope.executor.Execute(program, state)
-}
 
-func (scope *Scope) PrepareScript(script core.Script) *Process {
-	return scope.PrepareProcess(scope.Compile(script))
-}
 func (scope *Scope) PrepareProcess(program *core.Program) *Process {
 	return NewProcess(scope, program)
 }
