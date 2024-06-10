@@ -43,8 +43,8 @@ var programStatePool = sync.Pool{
 func NewProcessStack() ProcessStack {
 	return ProcessStack{[]ProcessContext{}}
 }
-func (processStack *ProcessStack) Depth() int {
-	return len(processStack.stack)
+func (processStack *ProcessStack) Depth() uint {
+	return uint(len(processStack.stack))
 }
 func (processStack *ProcessStack) CurrentContext() ProcessContext {
 	return processStack.stack[len(processStack.stack)-1]
@@ -76,12 +76,61 @@ func (processStack *ProcessStack) Pop() {
 	processStack.stack = processStack.stack[:len(processStack.stack)-1]
 }
 
-type Process struct {
-	stack ProcessStack
+type ErrorStackLevel struct {
+	Frame    []core.Value
+	Position *core.SourcePosition
+}
+type ErrorStack struct {
+	stack []ErrorStackLevel
 }
 
-func NewProcess(scope *Scope, program *core.Program) *Process {
-	process := &Process{NewProcessStack()}
+func NewErrorStack() *ErrorStack {
+	return &ErrorStack{[]ErrorStackLevel{}}
+}
+func (errorStack *ErrorStack) Depth() uint {
+	return uint(len(errorStack.stack))
+}
+func (errorStack *ErrorStack) Push(context ProcessContext) {
+	var level ErrorStackLevel
+	if context.program.OpCodePositions != nil {
+		level = ErrorStackLevel{
+			Frame:    append([]core.Value{}, context.state.LastFrame...),
+			Position: context.program.OpCodePositions[context.state.PC-1],
+		}
+	} else {
+		level = ErrorStackLevel{
+			Frame: append([]core.Value{}, context.state.LastFrame...),
+		}
+	}
+	errorStack.stack = append(errorStack.stack, level)
+}
+func (errorStack *ErrorStack) Clear() {
+	errorStack.stack = errorStack.stack[:0]
+}
+func (errorStack *ErrorStack) Level(level uint) ErrorStackLevel {
+	return errorStack.stack[level]
+}
+
+type ProcessOptions struct {
+	CaptureErrorStack bool
+}
+type Process struct {
+	options    ProcessOptions
+	stack      ProcessStack
+	ErrorStack *ErrorStack
+}
+
+func NewProcess(scope *Scope, program *core.Program, options *ProcessOptions) *Process {
+	process := &Process{}
+	if options == nil {
+		process.options = ProcessOptions{false}
+	} else {
+		process.options = *options
+	}
+	process.stack = NewProcessStack()
+	if process.options.CaptureErrorStack {
+		process.ErrorStack = NewErrorStack()
+	}
 	process.stack.PushProgram(scope, program)
 	return process
 }
@@ -105,6 +154,13 @@ func (process *Process) Run() core.Result {
 		}
 		if context.callback != nil {
 			result = context.callback(result)
+		}
+		if process.options.CaptureErrorStack {
+			if result.Code == core.ResultCode_ERROR {
+				process.ErrorStack.Push(process.stack.CurrentContext())
+			} else {
+				process.ErrorStack.Clear()
+			}
 		}
 		if process.stack.Depth() == 1 {
 			break
@@ -143,7 +199,12 @@ func newScopeContext(parent *scopeContext) *scopeContext {
 	}
 }
 
+type ScopeOptions struct {
+	CapturePositions  bool
+	CaptureErrorStack bool
+}
 type Scope struct {
+	options  ScopeOptions
 	Context  *scopeContext
 	locals   map[string]core.Value
 	compiler core.Compiler
@@ -164,11 +225,22 @@ func (resolver commandResolver) Resolve(name core.Value) core.Command {
 
 func newScope(
 	context *scopeContext,
+	options *ScopeOptions,
 ) *Scope {
 	scope := &Scope{}
+	if options == nil {
+		scope.options = ScopeOptions{
+			CaptureErrorStack: false,
+			CapturePositions:  false,
+		}
+	} else {
+		scope.options = *options
+	}
 	scope.Context = context
 	scope.locals = map[string]core.Value{}
-	scope.compiler = core.NewCompiler(nil)
+	scope.compiler = core.NewCompiler(&core.CompilerOptions{
+		CapturePositions: scope.options.CapturePositions,
+	})
 	scope.executor = core.Executor{
 		VariableResolver: variableResolver{scope},
 		CommandResolver:  commandResolver{scope},
@@ -177,14 +249,14 @@ func newScope(
 	}
 	return scope
 }
-func NewRootScope() *Scope {
-	return newScope(newScopeContext(nil))
+func NewRootScope(options *ScopeOptions) *Scope {
+	return newScope(newScopeContext(nil), options)
 }
 func (scope *Scope) NewChildScope() *Scope {
-	return newScope(newScopeContext(scope.Context))
+	return newScope(newScopeContext(scope.Context), &scope.options)
 }
 func (scope *Scope) NewLocalScope() *Scope {
-	return newScope(scope.Context)
+	return newScope(scope.Context, &scope.options)
 }
 
 func (scope *Scope) Compile(script core.Script) *core.Program {
@@ -222,7 +294,9 @@ func (scope *Scope) CompileArgs(args ...core.Value) *core.Program {
 }
 
 func (scope *Scope) PrepareProcess(program *core.Program) *Process {
-	return NewProcess(scope, program)
+	return NewProcess(scope, program, &ProcessOptions{
+		CaptureErrorStack: scope.options.CaptureErrorStack,
+	})
 }
 
 func (scope *Scope) ResolveVariable(name string) core.Value {

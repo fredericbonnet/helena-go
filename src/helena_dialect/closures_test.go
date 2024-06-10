@@ -27,7 +27,7 @@ var _ = Describe("Helena closures", func() {
 		return execute(script).Value
 	}
 	init := func() {
-		rootScope = NewRootScope()
+		rootScope = NewRootScope(nil)
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}

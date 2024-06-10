@@ -70,7 +70,7 @@ func initScope() *helena_dialect.Scope {
 	if err != nil {
 		panic(err)
 	}
-	rootScope := helena_dialect.NewRootScope()
+	rootScope := helena_dialect.NewRootScope(nil)
 	helena_dialect.InitCommandsForModule(rootScope, moduleRegistry, cwd)
 	rootScope.RegisterNamedCommand("source", sourceCmd{})
 	rootScope.RegisterNamedCommand("exit", exitCmd{})
@@ -229,7 +229,7 @@ func registerNativeModule(
 	exportName string,
 	command core.Command,
 ) {
-	scope := helena_dialect.NewRootScope()
+	scope := helena_dialect.NewRootScope(nil)
 	exports := &helena_dialect.Exports{}
 	scope.RegisterNamedCommand(exportName, command)
 	(*exports)[exportName] = core.STR(exportName)
