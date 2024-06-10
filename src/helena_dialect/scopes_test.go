@@ -27,7 +27,7 @@ var _ = Describe("Helena scopes", func() {
 		return execute(script).Value
 	}
 	init := func() {
-		rootScope = NewRootScope()
+		rootScope = NewRootScope(nil)
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}

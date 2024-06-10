@@ -29,7 +29,7 @@ var _ = Describe("Helena numbers", func() {
 		return execute(script).Value
 	}
 	init := func() {
-		rootScope = NewRootScope()
+		rootScope = NewRootScope(nil)
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}

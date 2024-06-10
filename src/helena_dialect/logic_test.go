@@ -29,7 +29,7 @@ var _ = Describe("Helena logic operations", func() {
 		return execute(script).Value
 	}
 	init := func() {
-		rootScope = NewRootScope()
+		rootScope = NewRootScope(nil)
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}

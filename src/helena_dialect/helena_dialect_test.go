@@ -28,7 +28,7 @@ var _ = Describe("Helena dialect", func() {
 	}
 
 	BeforeEach(func() {
-		rootScope = NewRootScope()
+		rootScope = NewRootScope(nil)
 		InitCommands(rootScope)
 
 		tokenizer = core.Tokenizer{}
