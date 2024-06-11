@@ -3618,4 +3618,181 @@ var _ = Describe("Compilation and execution", func() {
 			Expect(executor.Execute(program, state)).To(Equal(OK(STR("end"))))
 		})
 	})
+
+	Describe("Executor.ExecuteUntil", func() {
+		Specify("empty program", func() {
+			script := parse("")
+			program := compiler.CompileScript(*script)
+			state := NewProgramState()
+			Expect(executor.ExecuteUntil(program, state, 1000)).To(Equal(OK(NIL)))
+		})
+		Specify("step by step", func() {
+			script := parse("ok 1; ok 2; ok 3")
+			program := compiler.CompileScript(*script)
+			Expect(program.OpCodes).To(Equal([]OpCode{
+				/*  0 */ OpCode_OPEN_FRAME,
+				/*  1 */ OpCode_PUSH_CONSTANT,
+				/*  2 */ OpCode_PUSH_CONSTANT,
+				/*  3 */ OpCode_CLOSE_FRAME,
+				/*  4 */ OpCode_EVALUATE_SENTENCE,
+				/*  5 */ OpCode_OPEN_FRAME,
+				/*  6 */ OpCode_PUSH_CONSTANT,
+				/*  7 */ OpCode_PUSH_CONSTANT,
+				/*  8 */ OpCode_CLOSE_FRAME,
+				/*  9 */ OpCode_EVALUATE_SENTENCE,
+				/* 10 */ OpCode_OPEN_FRAME,
+				/* 11 */ OpCode_PUSH_CONSTANT,
+				/* 12 */ OpCode_PUSH_CONSTANT,
+				/* 13 */ OpCode_CLOSE_FRAME,
+				/* 14 */ OpCode_EVALUATE_SENTENCE,
+				/* 15 */ OpCode_PUSH_RESULT,
+			}))
+
+			commandResolver.register("ok", simpleCommand{func(args []Value) Result {
+				return OK(args[1])
+			}})
+
+			state := NewProgramState()
+			Expect(executor.ExecuteUntil(program, state, 1)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 2)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 3)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 4)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 5)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("1"))))
+			Expect(executor.ExecuteUntil(program, state, 6)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("1"))))
+			Expect(executor.ExecuteUntil(program, state, 7)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("1"))))
+			Expect(executor.ExecuteUntil(program, state, 8)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("1"))))
+			Expect(executor.ExecuteUntil(program, state, 9)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("1"))))
+			Expect(executor.ExecuteUntil(program, state, 10)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("2"))))
+			Expect(executor.ExecuteUntil(program, state, 11)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("2"))))
+			Expect(executor.ExecuteUntil(program, state, 12)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("2"))))
+			Expect(executor.ExecuteUntil(program, state, 13)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("2"))))
+			Expect(executor.ExecuteUntil(program, state, 14)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("2"))))
+			Expect(executor.ExecuteUntil(program, state, 15)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("3"))))
+			Expect(executor.ExecuteUntil(program, state, 16)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(STR("3"))))
+		})
+		Specify("error", func() {
+			script := parse("$var")
+			program := compiler.CompileScript(*script)
+			Expect(program.OpCodes).To(Equal([]OpCode{
+				/* 0 */ OpCode_OPEN_FRAME,
+				/* 1 */ OpCode_PUSH_CONSTANT,
+				/* 2 */ OpCode_RESOLVE_VALUE,
+				/* 3 */ OpCode_CLOSE_FRAME,
+				/* 4 */ OpCode_EVALUATE_SENTENCE,
+				/* 5 */ OpCode_PUSH_RESULT,
+			}))
+
+			state := NewProgramState()
+			Expect(executor.ExecuteUntil(program, state, 1)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 2)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 3)).To(Equal(
+				ERROR(`cannot resolve variable "var"`),
+			))
+			Expect(state.Result).To(Equal(OK(NIL)))
+		})
+		Specify("repeat", func() {
+			script := parse("cmd")
+			program := compiler.CompileScript(*script)
+			Expect(program.OpCodes).To(Equal([]OpCode{
+				/* 0 */ OpCode_OPEN_FRAME,
+				/* 1 */ OpCode_PUSH_CONSTANT,
+				/* 2 */ OpCode_CLOSE_FRAME,
+				/* 3 */ OpCode_EVALUATE_SENTENCE,
+				/* 4 */ OpCode_PUSH_RESULT,
+			}))
+
+			count := 0
+			commandResolver.register(
+				"cmd",
+				simpleCommand{func(_ []Value) Result { count++; return OK(INT(int64(count))) }},
+			)
+
+			state := NewProgramState()
+			Expect(executor.ExecuteUntil(program, state, 1)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 2)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 3)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 4)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(INT(1))))
+			Expect(count).To(Equal(1))
+			Expect(executor.ExecuteUntil(program, state, 4)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(INT(1))))
+			Expect(count).To(Equal(1))
+			Expect(executor.ExecuteUntil(program, state, 4)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(INT(1))))
+			Expect(count).To(Equal(1))
+			Expect(executor.ExecuteUntil(program, state, 5)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(INT(1))))
+			Expect(count).To(Equal(1))
+			Expect(executor.ExecuteUntil(program, state, 5)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(INT(1))))
+			Expect(count).To(Equal(1))
+		})
+		Specify("yield", func() {
+			script := parse("cmd")
+			program := compiler.CompileScript(*script)
+			Expect(program.OpCodes).To(Equal([]OpCode{
+				/* 0 */ OpCode_OPEN_FRAME,
+				/* 1 */ OpCode_PUSH_CONSTANT,
+				/* 2 */ OpCode_CLOSE_FRAME,
+				/* 3 */ OpCode_EVALUATE_SENTENCE,
+				/* 4 */ OpCode_PUSH_RESULT,
+			}))
+
+			count := 0
+			commandResolver.register("cmd", resumableCommand{
+				func(_ []Value, _ any) Result {
+					count++
+					return YIELD(INT(int64(count)))
+				},
+				func(_ Result, _ any) Result {
+					count++
+					return OK(INT(int64(count)))
+				},
+			})
+
+			state := NewProgramState()
+			Expect(executor.ExecuteUntil(program, state, 1)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 2)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 3)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(NIL)))
+			Expect(executor.ExecuteUntil(program, state, 4)).To(Equal(YIELD(INT(1))))
+			Expect(state.Result).To(Equal(YIELD(INT(1))))
+			Expect(count).To(Equal(1))
+			Expect(executor.ExecuteUntil(program, state, 4)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(YIELD(INT(1))))
+			Expect(count).To(Equal(1))
+			Expect(executor.ExecuteUntil(program, state, 4)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(YIELD(INT(1))))
+			Expect(count).To(Equal(1))
+			Expect(executor.ExecuteUntil(program, state, 5)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(INT(2))))
+			Expect(count).To(Equal(2))
+			Expect(executor.ExecuteUntil(program, state, 5)).To(Equal(OK(NIL)))
+			Expect(state.Result).To(Equal(OK(INT(2))))
+			Expect(count).To(Equal(2))
+		})
+	})
 })
