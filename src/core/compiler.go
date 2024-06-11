@@ -719,6 +719,28 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 	if state == nil {
 		state = NewProgramState()
 	}
+	result := executor.ExecuteUntil(program, state, uint(len(program.OpCodes)))
+	if result.Code != ResultCode_OK {
+		return result
+	}
+	if !state.Empty() {
+		state.Result = OK(state.Pop())
+	}
+	return state.Result
+}
+
+// Execute the given program until the provided stop point
+//
+// Runs a flat loop over the program opcodes
+//
+// Return OK(NIL) upon success, else last result
+func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, stop uint) Result {
+	if stop > uint(len(program.OpCodes)) {
+		stop = uint(len(program.OpCodes))
+	}
+	if state.PC >= stop {
+		return OK(NIL)
+	}
 	if state.Result.Code == ResultCode_YIELD {
 		if resumable, ok := state.Command.(ResumableCommand); ok {
 			state.Result = resumable.Resume(state.Result, executor.Context)
@@ -727,7 +749,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 			}
 		}
 	}
-	for state.PC < uint(len(program.OpCodes)) {
+	for state.PC < stop {
 		opcode := program.OpCodes[state.PC]
 		state.PC++
 		switch opcode {
@@ -858,10 +880,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 			panic("CANTHAPPEN")
 		}
 	}
-	if !state.Empty() {
-		state.Result = OK(state.Pop())
-	}
-	return state.Result
+	return OK(NIL)
 }
 
 // Resolve value
