@@ -29,33 +29,42 @@ const (
 )
 
 //
-// Position in source stream
+// Current position in source stream
 //
-type SourcePosition struct {
+type sourceCursor struct {
 	// Character Index (zero-indexed)
-	Index uint
+	index uint
 
 	// Line number (zero-indexed)
-	Line uint
+	line uint
 
 	// Column number (zero-indexed)
-	Column uint
+	column uint
 }
 
-// Advance to Next character.
+// Return current position
+func (cursor *sourceCursor) current() SourcePosition {
+	return SourcePosition{
+		Index:  cursor.index,
+		Line:   cursor.line,
+		Column: cursor.column,
+	}
+}
+
+// Advance to next character.
 //
 // If newline is true, increment line number as well.
 //
 // Returns the previous index.
-func (pos *SourcePosition) Next(newline bool) uint {
+func (cursor *sourceCursor) Next(newline bool) uint {
 	if newline {
-		pos.Line++
-		pos.Column = 0
+		cursor.line++
+		cursor.column = 0
 	} else {
-		pos.Column++
+		cursor.column++
 	}
-	pos.Index += 1
-	return pos.Index - 1
+	cursor.index += 1
+	return cursor.index - 1
 }
 
 //
@@ -422,28 +431,28 @@ type StringStream struct {
 	// Source string
 	source string
 
-	// Current input position in stream
-	position SourcePosition
+	// Current input cursor in stream
+	cursor sourceCursor
 }
 
 // Create a new stream from the source string
 func NewStringStream(source string) *StringStream {
-	return &StringStream{source, SourcePosition{}}
+	return &StringStream{source, sourceCursor{}}
 }
 
 // Report whether stream is at end
 func (stream *StringStream) end() bool {
-	return stream.position.Index >= uint(len(stream.source))
+	return stream.cursor.index >= uint(len(stream.source))
 }
 
 // Advance to next character and return character at previous position
 func (stream *StringStream) next() byte {
-	return stream.source[stream.position.Next(stream.current() == '\n')]
+	return stream.source[stream.cursor.Next(stream.current() == '\n')]
 }
 
 // Get current character
 func (stream *StringStream) current() byte {
-	return stream.source[stream.position.Index]
+	return stream.source[stream.cursor.index]
 }
 
 // Get range of characters between start (inclusive) and end (exclusive)
@@ -454,12 +463,12 @@ func (stream *StringStream) range_(start uint, end uint) string {
 
 // Get current character index
 func (stream *StringStream) currentIndex() uint {
-	return stream.position.Index
+	return stream.cursor.index
 }
 
 // Get current character position
 func (stream *StringStream) currentPosition() SourcePosition {
-	return stream.position
+	return stream.cursor.current()
 }
 
 //

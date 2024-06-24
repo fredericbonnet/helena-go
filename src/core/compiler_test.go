@@ -19,7 +19,7 @@ var _ = Describe("Compilation and execution", func() {
 	var executor *Executor
 
 	parse := func(script string) *Script {
-		return parser.Parse(tokenizer.Tokenize(script)).Script
+		return parser.Parse(tokenizer.Tokenize(script), nil).Script
 	}
 	compileFirstWord := func(script *Script) *Program {
 		word := script.Sentences[0].Words[0]

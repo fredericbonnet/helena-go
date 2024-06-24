@@ -64,9 +64,9 @@ func (program *Program) Empty() bool {
 	return len(program.OpCodes) == 0
 }
 
-/**
- * Compiler options
- */
+//
+// Compiler options
+//
 type CompilerOptions struct {
 	// Whether to capture opcode and constant positions
 	CapturePositions bool

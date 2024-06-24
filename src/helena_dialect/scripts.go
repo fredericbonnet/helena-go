@@ -18,7 +18,7 @@ func (parseCmd) Execute(args []core.Value, _ any) core.Result {
 	tokenizer := core.Tokenizer{}
 	parser := core.NewParser(nil)
 	parseResult := parser.Parse(
-		tokenizer.Tokenize(source),
+		tokenizer.Tokenize(source), nil,
 	)
 	if !parseResult.Success {
 		return core.ERROR(parseResult.Message)
