@@ -100,7 +100,7 @@ type Tokenizer struct {
 // Tokenize and return a Helena source string into a token array
 func (tokenizer Tokenizer) Tokenize(source string) []Token {
 	input := NewStringStream(source)
-	output := NewArrayTokenStream([]Token{})
+	output := NewArrayTokenStream([]Token{}, input.Source())
 	tokenizer.TokenizeStream(input, output)
 	return output.tokens
 }
@@ -111,7 +111,7 @@ func (tokenizer *Tokenizer) TokenizeStream(input SourceStream, output TokenStrea
 	for !tokenizer.End() {
 		emittedToken := tokenizer.Next()
 		if emittedToken != nil {
-			output.emit(*emittedToken)
+			output.Emit(*emittedToken)
 		}
 	}
 }
@@ -124,14 +124,14 @@ func (tokenizer *Tokenizer) Begin(input SourceStream) {
 
 // Report whether tokenization is done
 func (tokenizer *Tokenizer) End() bool {
-	return tokenizer.input.end() && (tokenizer.currentToken == nil)
+	return tokenizer.input.End() && (tokenizer.currentToken == nil)
 }
 
 // Return current token and advance to next one
 func (tokenizer *Tokenizer) Next() *Token {
-	for !tokenizer.input.end() {
-		position := tokenizer.input.currentPosition()
-		c := tokenizer.input.next()
+	for !tokenizer.input.End() {
+		position := tokenizer.input.CurrentPosition()
+		c := tokenizer.input.Next()
 		var emittedToken *Token
 		switch c {
 		// Whitespaces
@@ -139,8 +139,8 @@ func (tokenizer *Tokenizer) Next() *Token {
 			'\t',
 			'\r',
 			'\f':
-			for !tokenizer.input.end() && isWhitespace(tokenizer.input.current()) {
-				tokenizer.input.next()
+			for !tokenizer.input.End() && isWhitespace(tokenizer.input.Current()) {
+				tokenizer.input.Next()
 			}
 			emittedToken = tokenizer.addToken(TokenType_WHITESPACE, position, nil)
 
@@ -151,15 +151,15 @@ func (tokenizer *Tokenizer) Next() *Token {
 		// Escape sequence
 		case '\\':
 			{
-				if tokenizer.input.end() {
+				if tokenizer.input.End() {
 					emittedToken = tokenizer.addToken(TokenType_TEXT, position, nil)
 					break
 				}
-				e := tokenizer.input.next()
+				e := tokenizer.input.Next()
 				if e == '\n' {
 					// Continuation, eat up all subsequent whitespaces
-					for !tokenizer.input.end() && isWhitespace(tokenizer.input.current()) {
-						tokenizer.input.next()
+					for !tokenizer.input.End() && isWhitespace(tokenizer.input.Current()) {
+						tokenizer.input.Next()
 					}
 					literal := " "
 					emittedToken = tokenizer.addToken(TokenType_CONTINUATION, position, &literal)
@@ -170,23 +170,23 @@ func (tokenizer *Tokenizer) Next() *Token {
 					escape = string(getEscape(e))
 				} else if isOctal(e) {
 					codepoint := rune(e - '0')
-					for i := 1; !tokenizer.input.end() &&
-						isOctal(tokenizer.input.current()) &&
+					for i := 1; !tokenizer.input.End() &&
+						isOctal(tokenizer.input.Current()) &&
 						i < 3; i += 1 {
 						codepoint *= 8
-						codepoint += rune(digitValue(tokenizer.input.current()))
-						tokenizer.input.next()
+						codepoint += rune(digitValue(tokenizer.input.Current()))
+						tokenizer.input.Next()
 					}
 					escape = string(rune(codepoint))
 				} else if e == 'x' {
 					codepoint := rune(0)
 					i := 0
-					for ; !tokenizer.input.end() &&
-						isHexadecimal(tokenizer.input.current()) &&
+					for ; !tokenizer.input.End() &&
+						isHexadecimal(tokenizer.input.Current()) &&
 						i < 2; i += 1 {
 						codepoint *= 16
-						codepoint += rune(digitValue(tokenizer.input.current()))
-						tokenizer.input.next()
+						codepoint += rune(digitValue(tokenizer.input.Current()))
+						tokenizer.input.Next()
 					}
 					if i > 0 {
 						escape = string(rune(codepoint))
@@ -194,12 +194,12 @@ func (tokenizer *Tokenizer) Next() *Token {
 				} else if e == 'u' {
 					codepoint := rune(0)
 					i := 0
-					for ; !tokenizer.input.end() &&
-						isHexadecimal(tokenizer.input.current()) &&
+					for ; !tokenizer.input.End() &&
+						isHexadecimal(tokenizer.input.Current()) &&
 						i < 4; i += 1 {
 						codepoint *= 16
-						codepoint += rune(digitValue(tokenizer.input.current()))
-						tokenizer.input.next()
+						codepoint += rune(digitValue(tokenizer.input.Current()))
+						tokenizer.input.Next()
 					}
 					if i > 0 {
 						escape = string(rune(codepoint))
@@ -207,12 +207,12 @@ func (tokenizer *Tokenizer) Next() *Token {
 				} else if e == 'U' {
 					codepoint := rune(0)
 					i := 0
-					for ; !tokenizer.input.end() &&
-						isHexadecimal(tokenizer.input.current()) &&
+					for ; !tokenizer.input.End() &&
+						isHexadecimal(tokenizer.input.Current()) &&
 						i < 8; i += 1 {
 						codepoint *= 16
-						codepoint += rune(digitValue(tokenizer.input.current()))
-						tokenizer.input.next()
+						codepoint += rune(digitValue(tokenizer.input.Current()))
+						tokenizer.input.Next()
 					}
 					if i > 0 {
 						escape = string(rune(codepoint))
@@ -223,8 +223,8 @@ func (tokenizer *Tokenizer) Next() *Token {
 
 		// Comment
 		case '#':
-			for !tokenizer.input.end() && tokenizer.input.current() == '#' {
-				tokenizer.input.next()
+			for !tokenizer.input.End() && tokenizer.input.Current() == '#' {
+				tokenizer.input.Next()
 			}
 			emittedToken = tokenizer.addToken(TokenType_COMMENT, position, nil)
 
@@ -251,8 +251,8 @@ func (tokenizer *Tokenizer) Next() *Token {
 
 		// String delimiter
 		case '"':
-			for !tokenizer.input.end() && tokenizer.input.current() == '"' {
-				tokenizer.input.next()
+			for !tokenizer.input.End() && tokenizer.input.Current() == '"' {
+				tokenizer.input.Next()
 			}
 			emittedToken = tokenizer.addToken(TokenType_STRING_DELIMITER, position, nil)
 
@@ -294,9 +294,9 @@ func (tokenizer *Tokenizer) addToken(
 	literal *string,
 ) *Token {
 	emitted := tokenizer.emitToken()
-	sequence := tokenizer.input.range_(
+	sequence := tokenizer.input.Range(
 		position.Index,
-		tokenizer.input.currentIndex(),
+		tokenizer.input.CurrentIndex(),
 	)
 	var lit string
 	if literal != nil {
@@ -318,14 +318,14 @@ func (tokenizer *Tokenizer) addToken(
 // Added character sequence is between given position and current stream
 // position
 func (tokenizer *Tokenizer) addText(position SourcePosition) *Token {
-	literal := tokenizer.input.range_(position.Index, tokenizer.input.currentIndex())
+	literal := tokenizer.input.Range(position.Index, tokenizer.input.CurrentIndex())
 	if tokenizer.currentToken == nil || tokenizer.currentToken.Type != TokenType_TEXT {
 		return tokenizer.addToken(TokenType_TEXT, position, &literal)
 	} else {
 		tokenizer.currentToken.Literal += literal
-		tokenizer.currentToken.Sequence = tokenizer.input.range_(
+		tokenizer.currentToken.Sequence = tokenizer.input.Range(
 			tokenizer.currentToken.Position.Index,
-			tokenizer.input.currentIndex(),
+			tokenizer.input.CurrentIndex(),
 		)
 		return nil
 	}
@@ -405,31 +405,34 @@ func digitValue(c byte) rune {
 // Source stream (input)
 //
 type SourceStream interface {
+	// Get stream source
+	Source() *Source
+
 	// Report whether stream is at end
-	end() bool
+	End() bool
 
 	// Advance to next character and return character at previous position
-	next() byte
+	Next() byte
 
 	// Get current character
-	current() byte
+	Current() byte
 
 	// Get range of characters between start (inclusive) and end (exclusive)
-	range_(start uint, end uint) string
+	Range(start uint, end uint) string
 
 	// Get current character index
-	currentIndex() uint
+	CurrentIndex() uint
 
 	// Get current character position
-	currentPosition() SourcePosition
+	CurrentPosition() SourcePosition
 }
 
 //
 // String-based character stream
 //
 type StringStream struct {
-	// Source string
-	source string
+	// String source
+	source Source
 
 	// Current input cursor in stream
 	cursor sourceCursor
@@ -437,37 +440,47 @@ type StringStream struct {
 
 // Create a new stream from the source string
 func NewStringStream(source string) *StringStream {
-	return &StringStream{source, sourceCursor{}}
+	return &StringStream{Source{Content: &source}, sourceCursor{}}
+}
+
+// Create a new stream from the source file content
+func NewStringStreamFromFile(source string, filename string) *StringStream {
+	return &StringStream{Source{Content: &source, Filename: &filename}, sourceCursor{}}
+}
+
+// Get stream source
+func (stream *StringStream) Source() *Source {
+	return &stream.source
 }
 
 // Report whether stream is at end
-func (stream *StringStream) end() bool {
-	return stream.cursor.index >= uint(len(stream.source))
+func (stream *StringStream) End() bool {
+	return stream.cursor.index >= uint(len(*stream.source.Content))
 }
 
 // Advance to next character and return character at previous position
-func (stream *StringStream) next() byte {
-	return stream.source[stream.cursor.Next(stream.current() == '\n')]
+func (stream *StringStream) Next() byte {
+	return (*stream.source.Content)[stream.cursor.Next(stream.Current() == '\n')]
 }
 
 // Get current character
-func (stream *StringStream) current() byte {
-	return stream.source[stream.cursor.index]
+func (stream *StringStream) Current() byte {
+	return (*stream.source.Content)[stream.cursor.index]
 }
 
 // Get range of characters between start (inclusive) and end (exclusive)
-func (stream *StringStream) range_(start uint, end uint) string {
+func (stream *StringStream) Range(start uint, end uint) string {
 
-	return stream.source[start:end]
+	return (*stream.source.Content)[start:end]
 }
 
 // Get current character index
-func (stream *StringStream) currentIndex() uint {
+func (stream *StringStream) CurrentIndex() uint {
 	return stream.cursor.index
 }
 
 // Get current character position
-func (stream *StringStream) currentPosition() SourcePosition {
+func (stream *StringStream) CurrentPosition() SourcePosition {
 	return stream.cursor.current()
 }
 
@@ -475,29 +488,35 @@ func (stream *StringStream) currentPosition() SourcePosition {
 // Token stream (input/output)
 //
 type TokenStream interface {
+	// Get stream source
+	Source() *Source
+
 	// Emit (add) token to end of stream
-	emit(token Token)
+	Emit(token Token)
 
 	// Reports whether stream is at end
-	end() bool
+	End() bool
 
 	// Advance to next token and return token at previous position
-	next() Token
+	Next() Token
 
 	// Get current token
-	current() Token
+	Current() Token
 
 	// Get range of tokens between start (inclusive) and end (exclusive)
-	range_(start uint, end uint) []Token
+	Range(start uint, end uint) []Token
 
 	// Get current token index
-	currentIndex() uint
+	CurrentIndex() uint
 }
 
 //
 // Array-based token stream
 //
 type ArrayTokenStream struct {
+	/** Stream source */
+	source *Source
+
 	// Emitted tokens
 	tokens []Token
 
@@ -506,37 +525,42 @@ type ArrayTokenStream struct {
 }
 
 // Create a new stream from from the tokens array
-func NewArrayTokenStream(tokens []Token) *ArrayTokenStream {
-	return &ArrayTokenStream{tokens, 0}
+func NewArrayTokenStream(tokens []Token, source *Source) *ArrayTokenStream {
+	return &ArrayTokenStream{source, tokens, 0}
+}
+
+// Get stream source
+func (stream *ArrayTokenStream) Source() *Source {
+	return stream.source
 }
 
 // Emit (add) token to end of stream
-func (stream *ArrayTokenStream) emit(token Token) {
+func (stream *ArrayTokenStream) Emit(token Token) {
 	stream.tokens = append(stream.tokens, token)
 }
 
 // Reports whether stream is at end
-func (stream ArrayTokenStream) end() bool {
+func (stream ArrayTokenStream) End() bool {
 	return stream.index >= uint(len(stream.tokens))
 }
 
 // Advance to next token and return token at previous position
-func (stream *ArrayTokenStream) next() Token {
+func (stream *ArrayTokenStream) Next() Token {
 	stream.index += 1
 	return stream.tokens[stream.index-1]
 }
 
 // Get current token
-func (stream ArrayTokenStream) current() Token {
+func (stream ArrayTokenStream) Current() Token {
 	return stream.tokens[stream.index]
 }
 
 // Get range of tokens between start (inclusive) and end (exclusive)
-func (stream ArrayTokenStream) range_(start uint, end uint) []Token {
+func (stream ArrayTokenStream) Range(start uint, end uint) []Token {
 	return stream.tokens[start:end]
 }
 
 // Get current token index
-func (stream ArrayTokenStream) currentIndex() uint {
+func (stream ArrayTokenStream) CurrentIndex() uint {
 	return stream.index
 }
