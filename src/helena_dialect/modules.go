@@ -272,7 +272,7 @@ func loadFileBasedModule(
 	}
 	tokens := core.Tokenizer{}.Tokenize(string(data))
 	parser := core.NewParser(nil)
-	parseResult := parser.Parse(tokens)
+	parseResult := parser.Parse(tokens, nil)
 	if !parseResult.Success {
 		moduleRegistry.Release(modulePath)
 		return core.ERROR_T[*Module](parseResult.Message)

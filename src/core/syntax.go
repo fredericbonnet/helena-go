@@ -30,7 +30,10 @@ type Script struct {
 	// Sentences that compose the script
 	Sentences []Sentence
 
-	// Position in source stream
+	// Script source
+	Source *Source
+
+	// Position in source
 	Position *SourcePosition
 }
 
@@ -43,7 +46,7 @@ type Sentence struct {
 	// Words that compose the sentence
 	Words []WordOrValue
 
-	// Position in source stream
+	// Position in source
 	Position *SourcePosition
 }
 type WordOrValue struct {
@@ -60,7 +63,7 @@ type Word struct {
 	// Morphemes that compose the word
 	Morphemes []Morpheme
 
-	// Position in source stream
+	// Position in source
 	Position *SourcePosition
 }
 
@@ -100,7 +103,7 @@ type LiteralMorpheme struct {
 	// Literal string value
 	Value string
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 
@@ -120,7 +123,7 @@ type TupleMorpheme struct {
 	// Tuple script content
 	Subscript Script
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 
@@ -143,7 +146,7 @@ type BlockMorpheme struct {
 	// Block string value
 	Value string
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 
@@ -163,7 +166,7 @@ type ExpressionMorpheme struct {
 	// Expression script content
 	Subscript Script
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 
@@ -183,7 +186,7 @@ type StringMorpheme struct {
 	// String content
 	Morphemes []Morpheme
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 
@@ -206,7 +209,7 @@ type HereStringMorpheme struct {
 	// Number of string delimiters around content
 	DelimiterLength uint
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 
@@ -230,7 +233,7 @@ type TaggedStringMorpheme struct {
 	// Tag
 	Tag string
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 
@@ -251,7 +254,7 @@ type LineCommentMorpheme struct {
 	// Number of comment characters before content
 	DelimiterLength uint
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 
@@ -272,7 +275,7 @@ type BlockCommentMorpheme struct {
 	// Number of comment characters around content
 	DelimiterLength uint
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 
@@ -297,7 +300,7 @@ type SubstituteNextMorpheme struct {
 	// Literal value; can be safely ignored
 	Value string
 
-	// position in source stream
+	// Position in source
 	position *SourcePosition
 }
 

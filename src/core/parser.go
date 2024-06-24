@@ -58,14 +58,15 @@ func newScriptNode(firstToken Token) *scriptNode {
 	return &scriptNode{firstToken: firstToken}
 }
 
-func (node scriptNode) toScript(capturePosition bool) *Script {
+func (node scriptNode) toScript(capturePosition bool, source *Source) *Script {
 	script := &Script{}
 	script.Sentences = make([]Sentence, len(node.sentences))
+	script.Source = source
 	if capturePosition {
 		script.Position = &node.firstToken.Position
 	}
 	for i, sentence := range node.sentences {
-		script.Sentences[i] = sentence.toSentence(capturePosition)
+		script.Sentences[i] = sentence.toSentence(capturePosition, source)
 	}
 	return script
 }
@@ -80,14 +81,14 @@ func newSentenceNode(firstToken Token) *sentenceNode {
 	return &sentenceNode{firstToken: firstToken}
 }
 
-func (node sentenceNode) toSentence(capturePosition bool) Sentence {
+func (node sentenceNode) toSentence(capturePosition bool, source *Source) Sentence {
 	sentence := Sentence{}
 	sentence.Words = make([]WordOrValue, len(node.words))
 	if capturePosition {
 		sentence.Position = &node.firstToken.Position
 	}
 	for i, word := range node.words {
-		sentence.Words[i].Word = word.toWord(capturePosition)
+		sentence.Words[i].Word = word.toWord(capturePosition, source)
 	}
 	return sentence
 }
@@ -102,14 +103,14 @@ func newWordNode(firstToken Token) *wordNode {
 	return &wordNode{firstToken: firstToken}
 }
 
-func (node wordNode) toWord(capturePosition bool) Word {
+func (node wordNode) toWord(capturePosition bool, source *Source) Word {
 	word := Word{}
 	word.Morphemes = make([]Morpheme, len(node.morphemes))
 	if capturePosition {
 		word.Position = &node.firstToken.Position
 	}
 	for i, morpheme := range node.morphemes {
-		word.Morphemes[i] = morpheme.toMorpheme(capturePosition)
+		word.Morphemes[i] = morpheme.toMorpheme(capturePosition, source)
 	}
 	return word
 }
@@ -117,7 +118,7 @@ func (node wordNode) toWord(capturePosition bool) Word {
 // Morpheme AST node
 type morphemeNode interface {
 	// Create morpheme from node
-	toMorpheme(capturePosition bool) Morpheme
+	toMorpheme(capturePosition bool, source *Source) Morpheme
 }
 
 // Literal morpheme AST node
@@ -132,7 +133,7 @@ func newLiteralNode(firstToken Token, value string) *literalNode {
 		value:      value,
 	}
 }
-func (node *literalNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *literalNode) toMorpheme(capturePosition bool, _ *Source) Morpheme {
 	var position *SourcePosition
 	if capturePosition {
 		position = &node.firstToken.Position
@@ -155,13 +156,13 @@ func newTupleNode(firstToken Token) *tupleNode {
 		subscript:  newScriptNode(firstToken),
 	}
 }
-func (node *tupleNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *tupleNode) toMorpheme(capturePosition bool, source *Source) Morpheme {
 	var position *SourcePosition
 	if capturePosition {
 		position = &node.firstToken.Position
 	}
 	return TupleMorpheme{
-		Subscript: *node.subscript.toScript(capturePosition),
+		Subscript: *node.subscript.toScript(capturePosition, source),
 		position:  position,
 	}
 }
@@ -183,13 +184,13 @@ func newBlockNode(firstToken Token, start uint) *blockNode {
 		start:      start,
 	}
 }
-func (node *blockNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *blockNode) toMorpheme(capturePosition bool, source *Source) Morpheme {
 	var position *SourcePosition
 	if capturePosition {
 		position = &node.firstToken.Position
 	}
 	return BlockMorpheme{
-		Subscript: *node.subscript.toScript(capturePosition),
+		Subscript: *node.subscript.toScript(capturePosition, source),
 		Value:     node.value,
 		position:  position,
 	}
@@ -207,13 +208,13 @@ func newExpressionNode(firstToken Token) *expressionNode {
 		subscript:  newScriptNode(firstToken),
 	}
 }
-func (node *expressionNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *expressionNode) toMorpheme(capturePosition bool, source *Source) Morpheme {
 	var position *SourcePosition
 	if capturePosition {
 		position = &node.firstToken.Position
 	}
 	return ExpressionMorpheme{
-		Subscript: *node.subscript.toScript(capturePosition),
+		Subscript: *node.subscript.toScript(capturePosition, source),
 		position:  position,
 	}
 }
@@ -229,14 +230,14 @@ func newStringNode(firstToken Token) *stringNode {
 		firstToken: firstToken,
 	}
 }
-func (node *stringNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *stringNode) toMorpheme(capturePosition bool, source *Source) Morpheme {
 	morpheme := StringMorpheme{}
 	morpheme.Morphemes = make([]Morpheme, len(node.morphemes))
 	if capturePosition {
 		morpheme.position = &node.firstToken.Position
 	}
 	for i, child := range node.morphemes {
-		morpheme.Morphemes[i] = child.toMorpheme(capturePosition)
+		morpheme.Morphemes[i] = child.toMorpheme(capturePosition, source)
 	}
 	return morpheme
 }
@@ -254,7 +255,7 @@ func newHereStringNode(firstToken Token, delimiter string) *hereStringNode {
 		delimiterLength: uint(len(delimiter)),
 	}
 }
-func (node *hereStringNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *hereStringNode) toMorpheme(capturePosition bool, _ *Source) Morpheme {
 	var position *SourcePosition
 	if capturePosition {
 		position = &node.firstToken.Position
@@ -279,7 +280,7 @@ func newTaggedStringNode(firstToken Token, tag string) *taggedStringNode {
 		tag:        tag,
 	}
 }
-func (node *taggedStringNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *taggedStringNode) toMorpheme(capturePosition bool, _ *Source) Morpheme {
 	// Shift lines by prefix length
 	// - First find prefix length = length of last line
 	i := len(node.value)
@@ -324,7 +325,7 @@ func newLineCommentNode(firstToken Token, delimiter string) *lineCommentNode {
 		delimiterLength: uint(len(delimiter)),
 	}
 }
-func (node *lineCommentNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *lineCommentNode) toMorpheme(capturePosition bool, _ *Source) Morpheme {
 	var position *SourcePosition
 	if capturePosition {
 		position = &node.firstToken.Position
@@ -353,7 +354,7 @@ func newBlockCommentNode(firstToken Token, delimiter string) *blockCommentNode {
 		nesting:         1,
 	}
 }
-func (node *blockCommentNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *blockCommentNode) toMorpheme(capturePosition bool, _ *Source) Morpheme {
 	var position *SourcePosition
 	if capturePosition {
 		position = &node.firstToken.Position
@@ -380,7 +381,7 @@ func newSubstituteNextNode(firstToken Token, value string) *substituteNextNode {
 	}
 }
 
-func (node *substituteNextNode) toMorpheme(capturePosition bool) Morpheme {
+func (node *substituteNextNode) toMorpheme(capturePosition bool, _ *Source) Morpheme {
 	var position *SourcePosition
 	if capturePosition {
 		position = &node.firstToken.Position
@@ -426,10 +427,13 @@ type Parser struct {
 	// Input stream
 	stream TokenStream
 
+	// Input source
+	source *Source
+
 	// Current context
 	context *context
 
-	/** Parser options */
+	// Parser options
 	options ParserOptions
 }
 
@@ -442,14 +446,11 @@ func NewParser(options *ParserOptions) *Parser {
 }
 
 // Parse an array of tokens
-func (parser *Parser) Parse(tokens []Token) ParseResult {
+func (parser *Parser) Parse(tokens []Token, source *Source) ParseResult {
 	stream := NewArrayTokenStream(tokens)
-	parser.begin(stream)
-	for !parser.end() {
-		result := parser.next()
-		if !result.Success {
-			return result
-		}
+	result := parser.ParseStream(stream, source)
+	if !result.Success {
+		return result
 	}
 	return parser.CloseStream()
 }
@@ -459,8 +460,8 @@ func (parser *Parser) Parse(tokens []Token) ParseResult {
 // This method is useful when parsing incomplete scripts in interactive mode,
 // as getting an error at this stage is unrecoverable even if there is more
 // input to parse
-func (parser *Parser) ParseStream(stream TokenStream) ParseResult {
-	parser.begin(stream)
+func (parser *Parser) ParseStream(stream TokenStream, source *Source) ParseResult {
+	parser.begin(stream, source)
 	for !parser.end() {
 		result := parser.next()
 		if !result.Success {
@@ -471,7 +472,7 @@ func (parser *Parser) ParseStream(stream TokenStream) ParseResult {
 }
 
 // Start incremental parsing of a Helena token stream
-func (parser *Parser) begin(stream TokenStream) {
+func (parser *Parser) begin(stream TokenStream, source *Source) {
 	var firstToken Token
 	if !stream.end() {
 		firstToken = stream.current()
@@ -480,6 +481,7 @@ func (parser *Parser) begin(stream TokenStream) {
 		script: newScriptNode(firstToken),
 	}
 	parser.stream = stream
+	parser.source = source
 }
 
 // Report whether parsing is done
@@ -522,7 +524,7 @@ func (parser *Parser) CloseStream() ParseResult {
 	}
 	parser.closeSentence()
 
-	return PARSE_OK(parser.context.script.toScript(parser.options.CapturePositions))
+	return PARSE_OK(parser.context.script.toScript(parser.options.CapturePositions, parser.source))
 }
 
 // Parse a single token
@@ -894,7 +896,7 @@ func (parser *Parser) openString(token Token) {
 	})
 }
 
-/** Close the string parsing context */
+// Close the string parsing context
 func (parser *Parser) closeString() {
 	parser.endSubstitution()
 	parser.popContext()

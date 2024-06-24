@@ -29,7 +29,7 @@ var _ = Describe("Picol dialect", func() {
 	var parser *core.Parser
 
 	parse := func(script string) *core.Script {
-		return parser.Parse(tokenizer.Tokenize(script)).Script
+		return parser.Parse(tokenizer.Tokenize(script), nil).Script
 	}
 	execute := func(script string) core.Result {
 		return rootScope.Evaluator.EvaluateScript(*parse(script))

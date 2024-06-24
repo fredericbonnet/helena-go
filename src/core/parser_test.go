@@ -215,7 +215,7 @@ var _ = Describe("Parser", func() {
 	var parser *Parser
 
 	parse := func(script string) *Script {
-		return parser.Parse(tokenizer.Tokenize(script)).Script
+		return parser.Parse(tokenizer.Tokenize(script), nil).Script
 	}
 
 	BeforeEach(func() {
@@ -326,25 +326,25 @@ var _ = Describe("Parser", func() {
 			Describe("exceptions", func() {
 				Specify("unterminated tuple", func() {
 					tokens := tokenizer.Tokenize("(")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched left parenthesis")),
 					)
 				})
 				Specify("unmatched right parenthesis", func() {
 					tokens := tokenizer.Tokenize(")")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched right parenthesis")),
 					)
 				})
 				Specify("mismatched right brace", func() {
 					tokens := tokenizer.Tokenize("(}")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("mismatched right brace")),
 					)
 				})
 				Specify("mismatched right bracket", func() {
 					tokens := tokenizer.Tokenize("(]")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("mismatched right bracket")),
 					)
 				})
@@ -420,25 +420,25 @@ var _ = Describe("Parser", func() {
 			Describe("exceptions", func() {
 				Specify("unterminated block", func() {
 					tokens := tokenizer.Tokenize("{")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched left brace"),
 					))
 				})
 				Specify("unmatched right brace", func() {
 					tokens := tokenizer.Tokenize("}")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched right brace"),
 					))
 				})
 				Specify("mismatched right parenthesis", func() {
 					tokens := tokenizer.Tokenize("{)")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("mismatched right parenthesis"),
 					))
 				})
 				Specify("mismatched right bracket", func() {
 					tokens := tokenizer.Tokenize("{]")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("mismatched right bracket"),
 					))
 				})
@@ -481,25 +481,25 @@ var _ = Describe("Parser", func() {
 			Describe("exceptions", func() {
 				Specify("unterminated expression", func() {
 					tokens := tokenizer.Tokenize("[")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched left bracket"),
 					))
 				})
 				Specify("unmatched right bracket", func() {
 					tokens := tokenizer.Tokenize("]")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched right bracket"),
 					))
 				})
 				Specify("mismatched right parenthesis", func() {
 					tokens := tokenizer.Tokenize("[)")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("mismatched right parenthesis"),
 					))
 				})
 				Specify("mismatched right brace", func() {
 					tokens := tokenizer.Tokenize("[}")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("mismatched right brace"),
 					))
 				})
@@ -580,19 +580,19 @@ var _ = Describe("Parser", func() {
 				Describe("exceptions", func() {
 					Specify("unterminated expression", func() {
 						tokens := tokenizer.Tokenize(`"[`)
-						Expect(parser.Parse(tokens)).To(Equal(
+						Expect(parser.Parse(tokens, nil)).To(Equal(
 							PARSE_ERROR("unmatched left bracket"),
 						))
 					})
 					Specify("mismatched right parenthesis", func() {
 						tokens := tokenizer.Tokenize(`"[)"`)
-						Expect(parser.Parse(tokens)).To(Equal(
+						Expect(parser.Parse(tokens, nil)).To(Equal(
 							PARSE_ERROR("mismatched right parenthesis"),
 						))
 					})
 					Specify("mismatched right brace", func() {
 						tokens := tokenizer.Tokenize(`"[}"`)
-						Expect(parser.Parse(tokens)).To(Equal(
+						Expect(parser.Parse(tokens, nil)).To(Equal(
 							PARSE_ERROR("mismatched right brace"),
 						))
 					})
@@ -998,13 +998,13 @@ var _ = Describe("Parser", func() {
 			Describe("exceptions", func() {
 				Specify("unterminated string", func() {
 					tokens := tokenizer.Tokenize(`"`)
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched string delimiter"),
 					))
 				})
 				Specify("extra quotes", func() {
 					tokens := tokenizer.Tokenize(`"hello""`)
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("extra characters after string delimiter"),
 					))
 				})
@@ -1051,7 +1051,7 @@ var _ = Describe("Parser", func() {
 			Describe("exceptions", func() {
 				Specify("unterminated here-string", func() {
 					tokens := tokenizer.Tokenize(`"""hello`)
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched here-string delimiter"),
 					))
 				})
@@ -1059,7 +1059,7 @@ var _ = Describe("Parser", func() {
 					tokens := tokenizer.Tokenize(
 						`""" <- 3 quotes here / 4 quotes there -> """"`,
 					)
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched here-string delimiter"),
 					))
 				})
@@ -1148,13 +1148,13 @@ int main(void) {
 			Describe("exceptions", func() {
 				Specify("unterminated tagged string", func() {
 					tokens := tokenizer.Tokenize("\"\"EOF\nhello")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched tagged string delimiter"),
 					))
 				})
 				Specify("extra quotes", func() {
 					tokens := tokenizer.Tokenize("\"\"EOF\nhello\nEOF\"\"\"")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched tagged string delimiter"),
 					))
 				})
@@ -1238,7 +1238,7 @@ int main(void) {
 			Describe("exceptions", func() {
 				Specify("unterminated block comment", func() {
 					tokens := tokenizer.Tokenize("#{hello")
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched block comment delimiter"),
 					))
 				})
@@ -1246,7 +1246,7 @@ int main(void) {
 					tokens := tokenizer.Tokenize(
 						"#{ <- 1 hash here / 2 hashes there -> }##",
 					)
-					Expect(parser.Parse(tokens)).To(Equal(
+					Expect(parser.Parse(tokens, nil)).To(Equal(
 						PARSE_ERROR("unmatched block comment delimiter"),
 					))
 				})
@@ -1356,13 +1356,13 @@ int main(void) {
 				Describe("exceptions", func() {
 					Specify("leading hash", func() {
 						tokens := tokenizer.Tokenize("$#")
-						Expect(parser.Parse(tokens)).To(Equal(
+						Expect(parser.Parse(tokens, nil)).To(Equal(
 							PARSE_ERROR("unexpected comment delimiter"),
 						))
 					})
 					Specify("leading quote", func() {
 						tokens := tokenizer.Tokenize(`$"`)
-						Expect(parser.Parse(tokens)).To(Equal(
+						Expect(parser.Parse(tokens, nil)).To(Equal(
 							PARSE_ERROR("unexpected string delimiter"),
 						))
 					})

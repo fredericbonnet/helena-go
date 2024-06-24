@@ -73,7 +73,7 @@ var _ = Describe("CompilingEvaluator", func() {
 	var evaluator Evaluator
 
 	parse := func(script string) *Script {
-		return parser.Parse(tokenizer.Tokenize(script)).Script
+		return parser.Parse(tokenizer.Tokenize(script), nil).Script
 	}
 	firstSentence := func(script *Script) Sentence { return script.Sentences[0] }
 	firstWord := func(script *Script) Word {
