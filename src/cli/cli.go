@@ -20,7 +20,7 @@ func sourceFile(path string, scope *helena_dialect.Scope) core.Result {
 		return core.ERROR("error reading file: " + fmt.Sprint(err))
 	}
 	tokens := core.Tokenizer{}.Tokenize(string(data))
-	result := core.NewParser(nil).Parse(tokens)
+	result := core.NewParser(nil).Parse(tokens, nil)
 	if !result.Success {
 		return core.ERROR(result.Message)
 	}
@@ -147,7 +147,7 @@ func run(scope *helena_dialect.Scope, cmd string) (core.Value, error) {
 		return nil, recoverableError{"continuation"}
 	}
 
-	stream := core.NewArrayTokenStream(tokens)
+	stream := core.NewArrayTokenStream(tokens, nil)
 	parser := core.NewParser(nil)
 	parseResult := parser.ParseStream(stream)
 	if !parseResult.Success {

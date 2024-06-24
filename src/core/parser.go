@@ -427,9 +427,6 @@ type Parser struct {
 	// Input stream
 	stream TokenStream
 
-	// Input source
-	source *Source
-
 	// Current context
 	context *context
 
@@ -447,8 +444,8 @@ func NewParser(options *ParserOptions) *Parser {
 
 // Parse an array of tokens
 func (parser *Parser) Parse(tokens []Token, source *Source) ParseResult {
-	stream := NewArrayTokenStream(tokens)
-	result := parser.ParseStream(stream, source)
+	stream := NewArrayTokenStream(tokens, source)
+	result := parser.ParseStream(stream)
 	if !result.Success {
 		return result
 	}
@@ -460,10 +457,10 @@ func (parser *Parser) Parse(tokens []Token, source *Source) ParseResult {
 // This method is useful when parsing incomplete scripts in interactive mode,
 // as getting an error at this stage is unrecoverable even if there is more
 // input to parse
-func (parser *Parser) ParseStream(stream TokenStream, source *Source) ParseResult {
-	parser.begin(stream, source)
-	for !parser.end() {
-		result := parser.next()
+func (parser *Parser) ParseStream(stream TokenStream) ParseResult {
+	parser.Begin(stream)
+	for !parser.End() {
+		result := parser.Next()
 		if !result.Success {
 			return result
 		}
@@ -472,26 +469,25 @@ func (parser *Parser) ParseStream(stream TokenStream, source *Source) ParseResul
 }
 
 // Start incremental parsing of a Helena token stream
-func (parser *Parser) begin(stream TokenStream, source *Source) {
+func (parser *Parser) Begin(stream TokenStream) {
 	var firstToken Token
-	if !stream.end() {
-		firstToken = stream.current()
+	if !stream.End() {
+		firstToken = stream.Current()
 	}
 	parser.context = &context{
 		script: newScriptNode(firstToken),
 	}
 	parser.stream = stream
-	parser.source = source
 }
 
 // Report whether parsing is done
-func (parser *Parser) end() bool {
-	return parser.stream.end()
+func (parser *Parser) End() bool {
+	return parser.stream.End()
 }
 
 // Parse current token and advance to next one
-func (parser *Parser) next() ParseResult {
-	token := parser.stream.next()
+func (parser *Parser) Next() ParseResult {
+	token := parser.stream.Next()
 	return parser.parseToken(token)
 }
 
@@ -524,7 +520,12 @@ func (parser *Parser) CloseStream() ParseResult {
 	}
 	parser.closeSentence()
 
-	return PARSE_OK(parser.context.script.toScript(parser.options.CapturePositions, parser.source))
+	return PARSE_OK(
+		parser.context.script.toScript(
+			parser.options.CapturePositions,
+			parser.stream.Source(),
+		),
+	)
 }
 
 // Parse a single token
@@ -648,7 +649,7 @@ func (parser *Parser) parseBlock(token Token) ParseResult {
 
 // Open a block parsing context
 func (parser *Parser) openBlock(token Token) {
-	node := newBlockNode(token, parser.stream.currentIndex())
+	node := newBlockNode(token, parser.stream.CurrentIndex())
 	*parser.context.morphemes = append(*parser.context.morphemes, node)
 	parser.pushContext(node, context{
 		script: node.subscript,
@@ -658,7 +659,7 @@ func (parser *Parser) openBlock(token Token) {
 // Close the block parsing context
 func (parser *Parser) closeBlock() {
 	node := (parser.context.node).(*blockNode)
-	range_ := parser.stream.range_(node.start, parser.stream.currentIndex()-1)
+	range_ := parser.stream.Range(node.start, parser.stream.CurrentIndex()-1)
 	value := ""
 	for _, token := range range_ {
 		value += token.Literal
@@ -727,9 +728,9 @@ func (parser *Parser) parseWord(token Token) ParseResult {
 			// Regular strings
 			parser.openString(token)
 		} else if len(token.Literal) == 2 {
-			if !parser.stream.end() && parser.stream.current().Type == TokenType_TEXT {
+			if !parser.stream.End() && parser.stream.Current().Type == TokenType_TEXT {
 				// Tagged strings
-				next := parser.stream.current()
+				next := parser.stream.Current()
 				parser.openTaggedString(token, next.Literal)
 			} else {
 				// Special case for empty strings
@@ -957,7 +958,7 @@ func (parser *Parser) openTaggedString(token Token, tag string) {
 	parser.pushContext(node, context{})
 
 	// Discard everything until the next newline
-	for !parser.stream.end() && parser.stream.next().Type != TokenType_NEWLINE {
+	for !parser.stream.End() && parser.stream.Next().Type != TokenType_NEWLINE {
 	}
 }
 
@@ -969,14 +970,14 @@ func (parser *Parser) closeTaggedString(literal string) bool {
 	if literal != node.tag {
 		return false
 	}
-	next := parser.stream.current()
+	next := parser.stream.Current()
 	if next.Type != TokenType_STRING_DELIMITER {
 		return false
 	}
 	if len(next.Literal) != 2 {
 		return false
 	}
-	parser.stream.next()
+	parser.stream.Next()
 
 	parser.popContext()
 	return true
@@ -1046,7 +1047,7 @@ func (parser *Parser) parseBlockComment(token Token) ParseResult {
 
 // Attempt to open a block comment parsing context, report whether the context was open
 func (parser *Parser) openBlockComment(token Token, delimiter string, nested bool) bool {
-	if parser.stream.end() || parser.stream.current().Type != TokenType_OPEN_BLOCK {
+	if parser.stream.End() || parser.stream.Current().Type != TokenType_OPEN_BLOCK {
 		return false
 	}
 	if nested {
@@ -1056,7 +1057,7 @@ func (parser *Parser) openBlockComment(token Token, delimiter string, nested boo
 		}
 		return false
 	}
-	parser.stream.next()
+	parser.stream.Next()
 	node := newBlockCommentNode(token, delimiter)
 	*parser.context.morphemes = append(*parser.context.morphemes, node)
 	parser.pushContext(node, context{})
@@ -1066,7 +1067,7 @@ func (parser *Parser) openBlockComment(token Token, delimiter string, nested boo
 // Attempt to close the block comment parsing context, report whether the context was closed
 func (parser *Parser) closeBlockComment() bool {
 	node := parser.context.node.(*blockCommentNode)
-	token := parser.stream.current()
+	token := parser.stream.Current()
 	if token.Type != TokenType_COMMENT {
 		return false
 	}
@@ -1077,7 +1078,7 @@ func (parser *Parser) closeBlockComment() bool {
 	if node.nesting > 0 {
 		return false
 	}
-	parser.stream.next()
+	parser.stream.Next()
 	parser.popContext()
 	return true
 }
@@ -1094,7 +1095,7 @@ func (parser *Parser) addBlockCommentSequence(value string) {
 
 func (parser *Parser) beginSubstitution(token Token, value string) {
 	morpheme := newSubstituteNextNode(token, value)
-	if !parser.stream.end() && parser.stream.current().Type == TokenType_ASTERISK {
+	if !parser.stream.End() && parser.stream.Current().Type == TokenType_ASTERISK {
 		// Only expand the leading substitution
 		current := parser.context.currentMorpheme()
 		if current == nil {
@@ -1102,7 +1103,7 @@ func (parser *Parser) beginSubstitution(token Token, value string) {
 		} else if _, ok := current.(*substituteNextNode); !ok {
 			morpheme.expansion = true
 		}
-		morpheme.value += parser.stream.next().Literal
+		morpheme.value += parser.stream.Next().Literal
 	}
 	*parser.context.morphemes = append(*parser.context.morphemes, morpheme)
 	parser.context.substitutionMode = substitutionMode_EXPECT_SOURCE
