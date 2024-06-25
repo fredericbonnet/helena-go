@@ -442,9 +442,8 @@ func NewParser(options *ParserOptions) *Parser {
 	}
 }
 
-// Parse an array of tokens
-func (parser *Parser) Parse(tokens []Token, source *Source) ParseResult {
-	stream := NewArrayTokenStream(tokens, source)
+// Parse a token stream till the end
+func (parser *Parser) Parse(stream TokenStream) ParseResult {
 	result := parser.ParseStream(stream)
 	if !result.Success {
 		return result
@@ -452,7 +451,12 @@ func (parser *Parser) Parse(tokens []Token, source *Source) ParseResult {
 	return parser.CloseStream()
 }
 
-// Parse a token stream till the end
+// Parse an array of tokens
+func (parser *Parser) ParseTokens(tokens []Token, source *Source) ParseResult {
+	return parser.Parse(NewArrayTokenStream(tokens, source))
+}
+
+// Parse a token stream
 //
 // This method is useful when parsing incomplete scripts in interactive mode,
 // as getting an error at this stage is unrecoverable even if there is more

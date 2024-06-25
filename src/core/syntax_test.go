@@ -49,7 +49,7 @@ var _ = Describe("SyntaxChecker", func() {
 	var checker SyntaxChecker
 
 	parse := func(script string) *Script {
-		return parser.Parse(tokenizer.Tokenize(script), nil).Script
+		return parser.ParseTokens(tokenizer.Tokenize(script), nil).Script
 	}
 	firstWord := func(script *Script) Word {
 		return script.Sentences[0].Words[0].Word
