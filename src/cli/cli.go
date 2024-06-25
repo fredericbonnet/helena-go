@@ -41,10 +41,12 @@ func (sourceCmd) Execute(args []core.Value, context any) core.Result {
 	if err != nil {
 		return core.ERROR("error reading file: " + fmt.Sprint(err))
 	}
-	tokens := core.Tokenizer{}.Tokenize(string(data))
+	input := core.NewStringStreamFromFile(string(data), path)
+	output := core.NewArrayTokenStream([]core.Token{}, input.Source())
+	(&core.Tokenizer{}).TokenizeStream(input, output)
 	result := core.NewParser(&core.ParserOptions{
 		CapturePositions: true,
-	}).ParseTokens(tokens, nil)
+	}).Parse(output)
 	if !result.Success {
 		return core.ERROR(result.Message)
 	}
@@ -157,8 +159,8 @@ func prompt() {
 func run(scope *helena_dialect.Scope, cmd string) (core.Value, error) {
 	input := core.NewStringStream(cmd)
 	tokens := []core.Token{}
-	stream := core.NewArrayTokenStream(tokens, input.Source())
-	(&core.Tokenizer{}).TokenizeStream(input, stream)
+	output := core.NewArrayTokenStream(tokens, input.Source())
+	(&core.Tokenizer{}).TokenizeStream(input, output)
 	if len(tokens) > 0 &&
 		tokens[len(tokens)-1].Type == core.TokenType_CONTINUATION {
 		// Continuation, wait for next line
@@ -166,7 +168,7 @@ func run(scope *helena_dialect.Scope, cmd string) (core.Value, error) {
 	}
 
 	parser := core.NewParser(&core.ParserOptions{CapturePositions: true})
-	parseResult := parser.ParseStream(stream)
+	parseResult := parser.ParseStream(output)
 	if !parseResult.Success {
 		// Parse error
 		return nil, basicError{parseResult.Message}
@@ -206,14 +208,23 @@ func printErrorStack(errorStack *helena_dialect.ErrorStack) {
 	for level := uint(0); level < errorStack.Depth(); level++ {
 		l := errorStack.Level(level)
 		log := fmt.Sprintf(`[%v] `, level)
-		if l.Position != nil {
-			log += fmt.Sprintf(`:%v:%v: `, l.Position.Line, l.Position.Column)
+		if l.Source != nil && l.Source.Filename != nil {
+			log += *l.Source.Filename
+		} else {
+			log += "(script)"
 		}
-		for i, arg := range l.Frame {
-			if i > 0 {
-				log += " "
+		if l.Position != nil {
+			log += fmt.Sprintf(`:%v:%v: `, l.Position.Line+1, l.Position.Column+1)
+		} else {
+			log += ` `
+		}
+		if l.Frame != nil {
+			for i, arg := range l.Frame {
+				if i > 0 {
+					log += " "
+				}
+				log += displayErrorFrameArg(arg)
 			}
-			log += displayErrorFrameArg(arg)
 		}
 		os.Stdout.WriteString(grey.Sprintln(log))
 	}

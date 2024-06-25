@@ -78,6 +78,7 @@ func (processStack *ProcessStack) Pop() {
 
 type ErrorStackLevel struct {
 	Frame    []core.Value
+	Source   *core.Source
 	Position *core.SourcePosition
 }
 type ErrorStack struct {
@@ -95,6 +96,7 @@ func (errorStack *ErrorStack) Push(context ProcessContext) {
 	if context.program.OpCodePositions != nil {
 		level = ErrorStackLevel{
 			Frame:    append([]core.Value{}, context.state.LastFrame...),
+			Source:   context.program.Source,
 			Position: context.program.OpCodePositions[context.state.PC-1],
 		}
 	} else {

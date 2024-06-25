@@ -34,16 +34,18 @@ type Program struct {
 	// Constants the opcodes refer to
 	Constants []Value
 
+	// Program source
+	Source *Source
+
 	// Opcode positions
 	OpCodePositions []*SourcePosition
 }
 
-func NewProgram(capturePositions bool) *Program {
-	var opCodePositions []*SourcePosition = nil
+func NewProgram(capturePositions bool, source *Source) *Program {
 	if capturePositions {
-		opCodePositions = []*SourcePosition{}
+		return &Program{OpCodePositions: []*SourcePosition{}, Source: source}
 	}
-	return &Program{OpCodePositions: opCodePositions}
+	return &Program{}
 }
 
 // Push a new opcode
@@ -99,7 +101,10 @@ func NewCompiler(options *CompilerOptions) Compiler {
 
 // Compile the given script into a program
 func (compiler Compiler) CompileScript(script Script) *Program {
-	program := NewProgram(compiler.options.CapturePositions)
+	program := NewProgram(
+		compiler.options.CapturePositions,
+		script.Source,
+	)
 	if len(script.Sentences) == 0 {
 		return program
 	}
@@ -126,7 +131,7 @@ func (compiler Compiler) emitScript(program *Program, script Script) {
 
 // Flatten and compile the given sentences into a program
 func (compiler Compiler) CompileSentences(sentences []Sentence) *Program {
-	program := NewProgram(compiler.options.CapturePositions)
+	program := NewProgram(compiler.options.CapturePositions, nil)
 	compiler.emitSentences(program, sentences, nil)
 	program.PushOpCode(OpCode_MAKE_TUPLE, nil)
 	return program
@@ -145,7 +150,7 @@ func (compiler Compiler) emitSentences(
 
 // Compile the given sentence into a program
 func (compiler Compiler) CompileSentence(sentence Sentence) *Program {
-	program := NewProgram(compiler.options.CapturePositions)
+	program := NewProgram(compiler.options.CapturePositions, nil)
 	compiler.emitSentence(program, sentence)
 	return program
 }
@@ -165,14 +170,14 @@ func (compiler Compiler) emitSentence(program *Program, sentence Sentence) {
 
 // Compile the given word into a program
 func (compiler Compiler) CompileWord(word Word) *Program {
-	program := NewProgram(compiler.options.CapturePositions)
+	program := NewProgram(compiler.options.CapturePositions, nil)
 	compiler.emitWord(program, word)
 	return program
 }
 
 // Compile the given constant value into a program
 func (compiler Compiler) CompileConstant(value Value) *Program {
-	program := NewProgram(compiler.options.CapturePositions)
+	program := NewProgram(compiler.options.CapturePositions, nil)
 	compiler.emitConstant(program, value, nil)
 	return program
 }
@@ -645,6 +650,7 @@ func (state *ProgramState) Reset() {
 // Open a new frame
 func (state *ProgramState) OpenFrame() {
 	state.frames = append(state.frames, len(state.stack))
+	state.LastFrame = nil
 }
 
 // Close the current frame
