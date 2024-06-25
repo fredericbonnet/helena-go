@@ -15,7 +15,7 @@ var _ = Describe("Helena macros", func() {
 	var parser *core.Parser
 
 	parse := func(script string) *core.Script {
-		return parser.Parse(tokenizer.Tokenize(script), nil).Script
+		return parser.ParseTokens(tokenizer.Tokenize(script), nil).Script
 	}
 	prepareScript := func(script string) *Process {
 		return rootScope.PrepareProcess(rootScope.Compile(*parse(script)))
