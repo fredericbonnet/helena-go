@@ -37,7 +37,19 @@ func (sourceCmd) Execute(args []core.Value, context any) core.Result {
 		return helena_dialect.ARITY_ERROR("source path")
 	}
 	path := core.ValueToString(args[1]).Data
-	return sourceFile(path, scope)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return core.ERROR("error reading file: " + fmt.Sprint(err))
+	}
+	tokens := core.Tokenizer{}.Tokenize(string(data))
+	result := core.NewParser(&core.ParserOptions{
+		CapturePositions: true,
+	}).ParseTokens(tokens, nil)
+	if !result.Success {
+		return core.ERROR(result.Message)
+	}
+	program := scope.Compile(*result.Script)
+	return helena_dialect.CreateContinuationValue(scope, program, nil)
 }
 
 type exitCmd struct{}
@@ -70,7 +82,10 @@ func initScope() *helena_dialect.Scope {
 	if err != nil {
 		panic(err)
 	}
-	rootScope := helena_dialect.NewRootScope(nil)
+	rootScope := helena_dialect.NewRootScope(&helena_dialect.ScopeOptions{
+		CaptureErrorStack: true,
+		CapturePositions:  true,
+	})
 	helena_dialect.InitCommandsForModule(rootScope, moduleRegistry, cwd)
 	rootScope.RegisterNamedCommand("source", sourceCmd{})
 	rootScope.RegisterNamedCommand("exit", exitCmd{})
@@ -140,15 +155,17 @@ func prompt() {
 }
 
 func run(scope *helena_dialect.Scope, cmd string) (core.Value, error) {
-	tokens := core.Tokenizer{}.Tokenize(cmd)
+	input := core.NewStringStream(cmd)
+	tokens := []core.Token{}
+	stream := core.NewArrayTokenStream(tokens, input.Source())
+	(&core.Tokenizer{}).TokenizeStream(input, stream)
 	if len(tokens) > 0 &&
 		tokens[len(tokens)-1].Type == core.TokenType_CONTINUATION {
 		// Continuation, wait for next line
 		return nil, recoverableError{"continuation"}
 	}
 
-	stream := core.NewArrayTokenStream(tokens, nil)
-	parser := core.NewParser(nil)
+	parser := core.NewParser(&core.ParserOptions{CapturePositions: true})
 	parseResult := parser.ParseStream(stream)
 	if !parseResult.Success {
 		// Parse error
@@ -164,6 +181,9 @@ func run(scope *helena_dialect.Scope, cmd string) (core.Value, error) {
 	program := scope.Compile(*parseResult.Script)
 	process := scope.PrepareProcess(program)
 	result := process.Run()
+	if result.Code == core.ResultCode_ERROR {
+		printErrorStack(process.ErrorStack)
+	}
 	return processResult(result)
 }
 
@@ -182,6 +202,34 @@ type recoverableError struct {
 func (err recoverableError) Error() string {
 	return err.message
 }
+func printErrorStack(errorStack *helena_dialect.ErrorStack) {
+	for level := uint(0); level < errorStack.Depth(); level++ {
+		l := errorStack.Level(level)
+		log := fmt.Sprintf(`[%v] `, level)
+		if l.Position != nil {
+			log += fmt.Sprintf(`:%v:%v: `, l.Position.Line, l.Position.Column)
+		}
+		for i, arg := range l.Frame {
+			if i > 0 {
+				log += " "
+			}
+			log += displayErrorFrameArg(arg)
+		}
+		os.Stdout.WriteString(grey.Sprintln(log))
+	}
+}
+func displayErrorFrameArg(displayable any) string {
+	if _, ok := displayable.(core.ListValue); ok {
+		return `[list (...)]`
+	}
+	if _, ok := displayable.(core.DictionaryValue); ok {
+		return `[dict (...)]`
+	}
+	if _, ok := displayable.(core.ScriptValue); ok {
+		return `{...}`
+	}
+	return core.Display(displayable, displayErrorFrameArg)
+}
 
 func processResult(result core.Result) (core.Value, error) {
 	switch result.Code {
@@ -194,21 +242,23 @@ func processResult(result core.Result) (core.Value, error) {
 	}
 }
 
+var grey = color.New(color.FgBlack)
 var italicGrey = color.New(color.FgBlack).Add(color.Italic)
 
+func displayResult(displayable any) string {
+	if v, ok := displayable.(core.ListValue); ok {
+		return helena_dialect.DisplayListValue(v, displayResult)
+	}
+	if v, ok := displayable.(core.DictionaryValue); ok {
+		return helena_dialect.DisplayDictionaryValue(v, displayResult)
+	}
+	return core.DefaultDisplayFunction(displayable)
+}
 func resultWriter(output any) string {
 	if err, ok := output.(error); ok {
 		return color.RedString(err.Error())
 	}
-	value := core.Display(output, func(displayable any) string {
-		if v, ok := displayable.(core.ListValue); ok {
-			return helena_dialect.DisplayListValue(v, nil)
-		}
-		if v, ok := displayable.(core.DictionaryValue); ok {
-			return helena_dialect.DisplayDictionaryValue(v, nil)
-		}
-		return core.DefaultDisplayFunction(displayable)
-	})
+	value := core.Display(output, displayResult)
 	var type_ string
 	if v, ok := output.(core.Value); ok {
 		if v.Type() == core.ValueType_CUSTOM {
