@@ -76,50 +76,12 @@ func (processStack *ProcessStack) Pop() {
 	processStack.stack = processStack.stack[:len(processStack.stack)-1]
 }
 
-type ErrorStackLevel struct {
-	Frame    []core.Value
-	Source   *core.Source
-	Position *core.SourcePosition
-}
-type ErrorStack struct {
-	stack []ErrorStackLevel
-}
-
-func NewErrorStack() *ErrorStack {
-	return &ErrorStack{[]ErrorStackLevel{}}
-}
-func (errorStack *ErrorStack) Depth() uint {
-	return uint(len(errorStack.stack))
-}
-func (errorStack *ErrorStack) Push(context ProcessContext) {
-	var level ErrorStackLevel
-	if context.program.OpCodePositions != nil {
-		level = ErrorStackLevel{
-			Frame:    append([]core.Value{}, context.state.LastFrame...),
-			Source:   context.program.Source,
-			Position: context.program.OpCodePositions[context.state.PC-1],
-		}
-	} else {
-		level = ErrorStackLevel{
-			Frame: append([]core.Value{}, context.state.LastFrame...),
-		}
-	}
-	errorStack.stack = append(errorStack.stack, level)
-}
-func (errorStack *ErrorStack) Clear() {
-	errorStack.stack = errorStack.stack[:0]
-}
-func (errorStack *ErrorStack) Level(level uint) ErrorStackLevel {
-	return errorStack.stack[level]
-}
-
 type ProcessOptions struct {
 	CaptureErrorStack bool
 }
 type Process struct {
-	options    ProcessOptions
-	stack      ProcessStack
-	ErrorStack *ErrorStack
+	options ProcessOptions
+	stack   ProcessStack
 }
 
 func NewProcess(scope *Scope, program *core.Program, options *ProcessOptions) *Process {
@@ -130,9 +92,6 @@ func NewProcess(scope *Scope, program *core.Program, options *ProcessOptions) *P
 		process.options = *options
 	}
 	process.stack = NewProcessStack()
-	if process.options.CaptureErrorStack {
-		process.ErrorStack = NewErrorStack()
-	}
 	process.stack.PushProgram(scope, program)
 	return process
 }
@@ -146,37 +105,75 @@ func (process *Process) Run() core.Result {
 				// End and replace current context
 				process.stack.Pop()
 			}
+
+			// Push and execute result continuation context
 			context = process.stack.PushContinuation(continuation)
 			result = context.scope.Execute(context.program, context.state)
 			continue
 		}
+
 		if result.Code == core.ResultCode_YIELD {
-			// Yield to caller
+			// Yield result to caller
 			break
 		}
 		if context.callback != nil {
+			// Process result with callback
 			result = context.callback(result)
 		}
-		if process.options.CaptureErrorStack {
-			if result.Code == core.ResultCode_ERROR {
-				process.ErrorStack.Push(process.stack.CurrentContext())
-			} else {
-				process.ErrorStack.Clear()
+
+		if result.Code == core.ResultCode_ERROR {
+			if process.options.CaptureErrorStack {
+				// Push to error stack
+				if result.Data == nil {
+					result = core.Result{
+						Code:  result.Code,
+						Value: result.Value,
+						Data:  core.NewErrorStack(),
+					}
+				}
+				errorStack := result.Data.(*core.ErrorStack)
+				var level core.ErrorStackLevel
+				var frame = append([]core.Value{}, context.state.LastFrame...)
+				if context.program.OpCodePositions != nil {
+					level = core.ErrorStackLevel{
+						Frame:    &frame,
+						Source:   context.program.Source,
+						Position: context.program.OpCodePositions[context.state.PC-1],
+					}
+				} else {
+					level = core.ErrorStackLevel{
+						Frame: &frame,
+					}
+				}
+				errorStack.Push(level)
+			} else if result.Data != nil {
+				// Erase error stack from result
+				result = core.Result{
+					Code:  result.Code,
+					Value: result.Value,
+				}
 			}
 		}
+
 		if process.stack.Depth() == 1 {
+			// Reached bottom of stack, stop there
 			break
 		}
 		process.stack.Pop()
+
+		context = process.stack.CurrentContext()
 		if _, ok := result.Value.(ContinuationValue); ok {
+			// Process continuation above
 			continue
 		}
-		context = process.stack.CurrentContext()
-		if result.Code == core.ResultCode_OK {
-			// Yield back and resume current context
-			context.state.Result = result
-			result = context.scope.Execute(context.program, context.state)
+		if result.Code != core.ResultCode_OK {
+			// Pass result down to previous context
+			continue
 		}
+
+		// Yield back and resume current context
+		context.state.Result = result
+		result = context.scope.Execute(context.program, context.state)
 	}
 	return result
 }

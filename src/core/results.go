@@ -89,6 +89,13 @@ func ERROR(message string) Result {
 		Value: STR(message),
 	}
 }
+func ERROR_STACK(message string, errorStack *ErrorStack) Result {
+	return Result{
+		Code:  ResultCode_ERROR,
+		Value: STR(message),
+		Data:  errorStack,
+	}
+}
 func ERROR_T[T any](message string) TypedResult[T] {
 	return TypedResult[T]{
 		Code:  ResultCode_ERROR,
