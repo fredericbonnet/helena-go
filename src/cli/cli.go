@@ -184,7 +184,7 @@ func run(scope *helena_dialect.Scope, cmd string) (core.Value, error) {
 	process := scope.PrepareProcess(program)
 	result := process.Run()
 	if result.Code == core.ResultCode_ERROR {
-		printErrorStack(process.ErrorStack)
+		printErrorStack(result.Data.(*core.ErrorStack))
 	}
 	return processResult(result)
 }
@@ -204,7 +204,7 @@ type recoverableError struct {
 func (err recoverableError) Error() string {
 	return err.message
 }
-func printErrorStack(errorStack *helena_dialect.ErrorStack) {
+func printErrorStack(errorStack *core.ErrorStack) {
 	for level := uint(0); level < errorStack.Depth(); level++ {
 		l := errorStack.Level(level)
 		log := fmt.Sprintf(`[%v] `, level)
@@ -219,7 +219,7 @@ func printErrorStack(errorStack *helena_dialect.ErrorStack) {
 			log += ` `
 		}
 		if l.Frame != nil {
-			for i, arg := range l.Frame {
+			for i, arg := range *l.Frame {
 				if i > 0 {
 					log += " "
 				}
