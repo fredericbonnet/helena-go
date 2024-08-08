@@ -8,9 +8,9 @@ import (
 type SlogCmd struct{}
 
 func asString(value core.Value) (s string, ok bool) {
-	result := core.ValueToString(value)
+	result, s := core.ValueToString(value)
 	if result.Code == core.ResultCode_OK {
-		return result.Data, true
+		return s, true
 	}
 	return "", false
 }

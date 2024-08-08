@@ -20,11 +20,10 @@ func (metacommand *closureMetacommand) Execute(args []core.Value, _ any) core.Re
 	if len(args) == 1 {
 		return core.OK(metacommand.closure.value)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
@@ -44,10 +43,11 @@ func (metacommand *closureMetacommand) Execute(args []core.Value, _ any) core.Re
 }
 
 func CLOSURE_COMMAND_SIGNATURE(name core.Value, help string) string {
+	_, s := core.ValueToStringOrDefault(name, "<closure>")
 	if help != "" {
-		return core.ValueToStringOrDefault(name, "<closure>").Data + " " + help
+		return s + " " + help
 	} else {
-		return core.ValueToStringOrDefault(name, "<closure>").Data
+		return s
 	}
 }
 
@@ -159,11 +159,10 @@ func (closureCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script")
 	}
 
-	result := ArgspecValueFromValue(specs)
+	result, argspec := ArgspecValueFromValue(specs)
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	argspec := result.Data
 	closure := newClosureCommand(
 		scope.NewLocalScope(),
 		argspec,

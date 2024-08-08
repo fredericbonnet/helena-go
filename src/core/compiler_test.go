@@ -790,8 +790,8 @@ var _ = Describe("Compilation and execution", func() {
 
 					Describe("custom selectors", func() {
 						builder := func(selector Selector) builderFn {
-							return func(_ []Value) TypedResult[Selector] {
-								return OK_T(NIL, selector)
+							return func(_ []Value) (Result, Selector) {
+								return OK(NIL), selector
 							}
 						}
 						Specify("simple substitution", func() {
@@ -1979,8 +1979,8 @@ var _ = Describe("Compilation and execution", func() {
 
 				Describe("custom selectors", func() {
 					builder := func(selector Selector) builderFn {
-						return func(_ []Value) TypedResult[Selector] {
-							return OK_T(NIL, selector)
+						return func(_ []Value) (Result, Selector) {
+							return OK(NIL), selector
 						}
 					}
 					Specify("simple substitution", func() {
@@ -2248,7 +2248,7 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arg2"),
 						}))
 
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
@@ -2336,7 +2336,7 @@ var _ = Describe("Compilation and execution", func() {
 							"cmd3",
 							functionCommand{func(_ []Value) Value { return STR("key3") }},
 						)
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
@@ -2452,7 +2452,7 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arg2"),
 						}))
 
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
@@ -2556,7 +2556,7 @@ var _ = Describe("Compilation and execution", func() {
 							"cmd4",
 							functionCommand{func(_ []Value) Value { return STR("index2") }},
 						)
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
@@ -2660,7 +2660,7 @@ var _ = Describe("Compilation and execution", func() {
 							STR("arg2"),
 						}))
 
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
@@ -2748,7 +2748,7 @@ var _ = Describe("Compilation and execution", func() {
 							"cmd3",
 							functionCommand{func(_ []Value) Value { return STR("key3") }},
 						)
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						Expect(evaluate(program)).To(Equal(
@@ -3067,7 +3067,7 @@ var _ = Describe("Compilation and execution", func() {
 				commandResolver.register(
 					"repeat",
 					functionCommand{func(args []Value) Value {
-						nb := ValueToInteger(args[1]).Data
+						_, nb := ValueToInteger(args[1])
 						block := args[2]
 						var script Script
 						if block.Type() == ValueType_SCRIPT {

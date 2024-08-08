@@ -105,7 +105,7 @@ func (errorCmd) Execute(args []core.Value, _ any) core.Result {
 		return ARITY_ERROR(ERROR_SIGNATURE)
 	}
 	// TODO accept non-string messages?
-	if core.ValueToString(args[1]).Code != core.ResultCode_OK {
+	if result, _ := core.ValueToString(args[1]); result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid message")
 	}
 	return core.Result{
@@ -193,9 +193,8 @@ func (helpCmd) Execute(args []core.Value, context any) core.Result {
 	}
 	command := scope.ResolveCommand(args[1])
 	if command == nil {
-		result := core.ValueToString(args[1])
+		result, cmdname := core.ValueToString(args[1])
 		if result.Code == core.ResultCode_OK {
-			cmdname := result.Data
 			return core.ERROR(`unknown command "` + cmdname + `"`)
 		} else {
 			return core.ERROR("invalid command name")
@@ -204,9 +203,8 @@ func (helpCmd) Execute(args []core.Value, context any) core.Result {
 	if c, ok := command.(core.CommandWithHelp); ok {
 		return c.Help(args[1:], core.CommandHelpOptions{}, scope)
 	} else {
-		result := core.ValueToString(args[1])
+		result, cmdname := core.ValueToString(args[1])
 		if result.Code == core.ResultCode_OK {
-			cmdname := result.Data
 			return core.ERROR(`no help for command "` + cmdname + `"`)
 		} else {
 			return core.ERROR("no help for command")

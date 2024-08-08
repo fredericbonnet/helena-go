@@ -131,7 +131,7 @@ var _ = Describe("CompilingEvaluator", func() {
 				})
 				Describe("generic selectors", func() {
 					BeforeEach(func() {
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 					})
@@ -179,8 +179,8 @@ var _ = Describe("CompilingEvaluator", func() {
 				})
 				Describe("custom selectors", func() {
 					builder := func(selector Selector) builderFn {
-						return func(_ []Value) TypedResult[Selector] {
-							return OK_T(NIL, selector)
+						return func(_ []Value) (Result, Selector) {
+							return OK(NIL), selector
 						}
 					}
 					BeforeEach(func() {
@@ -206,7 +206,7 @@ var _ = Describe("CompilingEvaluator", func() {
 				})
 
 				Specify("multiple selectors", func() {
-					selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+					selectorResolver.register(func(rules []Value) (Result, Selector) {
 						return CreateGenericSelector(append([]Value{}, rules...))
 					})
 					word := firstWord(
@@ -242,7 +242,7 @@ var _ = Describe("CompilingEvaluator", func() {
 						))
 					})
 					Specify("empty generic selector", func() {
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						word := firstWord(parse("var{rule}{}"))
@@ -277,7 +277,7 @@ var _ = Describe("CompilingEvaluator", func() {
 				})
 				Describe("generic selectors", func() {
 					BeforeEach(func() {
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 					})
@@ -326,7 +326,7 @@ var _ = Describe("CompilingEvaluator", func() {
 					})
 				})
 				Specify("multiple selectors", func() {
-					selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+					selectorResolver.register(func(rules []Value) (Result, Selector) {
 						return CreateGenericSelector(append([]Value{}, rules...))
 					})
 					word := firstWord(
@@ -362,7 +362,7 @@ var _ = Describe("CompilingEvaluator", func() {
 						))
 					})
 					Specify("empty generic selector", func() {
-						selectorResolver.register(func(rules []Value) TypedResult[Selector] {
+						selectorResolver.register(func(rules []Value) (Result, Selector) {
 							return CreateGenericSelector(append([]Value{}, rules...))
 						})
 						word := firstWord(parse("(var1 var2 (var3 var4)){rule}{}"))
@@ -741,8 +741,8 @@ var _ = Describe("CompilingEvaluator", func() {
 
 			Describe("custom selectors", func() {
 				builder := func(selector Selector) builderFn {
-					return func(_ []Value) TypedResult[Selector] {
-						return OK_T(NIL, selector)
+					return func(_ []Value) (Result, Selector) {
+						return OK(NIL), selector
 					}
 				}
 				BeforeEach(func() {
@@ -1070,7 +1070,7 @@ var _ = Describe("CompilingEvaluator", func() {
 			commandResolver.register(
 				"repeat",
 				functionCommand{func(args []Value) Value {
-					nb := ValueToInteger(args[1]).Data
+					_, nb := ValueToInteger(args[1])
 					block := args[2]
 					var value Value = NIL
 					for i := 0; int64(i) < nb; i++ {

@@ -41,11 +41,10 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 	if len(args) == 1 {
 		return core.OK(metacommand.value)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
@@ -77,11 +76,10 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		if len(args) < 3 {
 			return ARITY_ERROR("<namespace> call cmdname ?arg ...?")
 		}
-		result := core.ValueToString(args[2])
+		result, subcommand := core.ValueToString(args[2])
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid command name")
 		}
-		subcommand := result.Data
 		if !metacommand.namespace.scope.HasLocalCommand(subcommand) {
 			return core.ERROR(`unknown command "` + subcommand + `"`)
 		}
@@ -94,18 +92,17 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		if len(args) != 3 && len(args) != 4 {
 			return ARITY_ERROR("<namespace> import name ?alias?")
 		}
-		result := core.ValueToString(args[2])
+		result, name := core.ValueToString(args[2])
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid import name")
 		}
-		name := result.Data
 		var alias string
 		if len(args) == 4 {
-			result := core.ValueToString(args[3])
+			result, s := core.ValueToString(args[3])
 			if result.Code != core.ResultCode_OK {
 				return core.ERROR("invalid alias name")
 			}
-			alias = result.Data
+			alias = s
 		} else {
 			alias = name
 		}
@@ -122,7 +119,8 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 }
 
 func NAMESPACE_COMMAND_PREFIX(name core.Value) string {
-	return core.ValueToStringOrDefault(name, "<namespace>").Data
+	_, s := core.ValueToStringOrDefault(name, "<namespace>")
+	return s
 }
 
 type namespaceCommand struct {
@@ -140,11 +138,10 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 	if len(args) == 1 {
 		return core.OK(namespace.metacommand.value)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	if subcommand == "subcommands" {
 		if len(args) != 2 {
 			return ARITY_ERROR(NAMESPACE_COMMAND_PREFIX(args[0]) + " subcommands")
@@ -188,11 +185,10 @@ func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandH
 	if len(args) <= 1 {
 		return core.OK(core.STR(signature + " ?subcommand? ?arg ...?"))
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	if subcommand == "subcommands" {
 		if len(args) > 2 {
 			return ARITY_ERROR(signature + " subcommands")

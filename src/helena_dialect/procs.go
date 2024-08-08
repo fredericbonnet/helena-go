@@ -20,11 +20,10 @@ func (metacommand *procMetacommand) Execute(args []core.Value, _ any) core.Resul
 	if len(args) == 1 {
 		return core.OK(metacommand.proc.value)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
@@ -44,10 +43,11 @@ func (metacommand *procMetacommand) Execute(args []core.Value, _ any) core.Resul
 }
 
 func PROC_COMMAND_SIGNATURE(name core.Value, help string) string {
+	_, s := core.ValueToStringOrDefault(name, "<proc>")
 	if help != "" {
-		return core.ValueToStringOrDefault(name, "<proc>").Data + " " + help
+		return s + " " + help
 	} else {
-		return core.ValueToStringOrDefault(name, "<proc>").Data
+		return s
 	}
 }
 
@@ -159,11 +159,10 @@ func (procCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script")
 	}
 
-	result := ArgspecValueFromValue(specs)
+	result, argspec := ArgspecValueFromValue(specs)
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	argspec := result.Data
 	program := scope.CompileScriptValue(body.(core.ScriptValue))
 	proc := newProcCommand(
 		scope.NewLocalScope(),

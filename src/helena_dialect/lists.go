@@ -10,13 +10,14 @@ type listCommand struct {
 func newListCommand(scope *Scope) *listCommand {
 	list := &listCommand{}
 	list.scope = scope.NewChildScope()
-	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	_, argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")}))
 	list.ensemble = NewEnsembleCommand(list.scope, argspec)
 	return list
 }
 func (list *listCommand) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 2 {
-		return ValueToList(args[1]).AsResult()
+		result, _ := ValueToList(args[1])
+		return result
 	}
 	return list.ensemble.Execute(args, context)
 }
@@ -32,11 +33,10 @@ func (listLengthCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(LIST_LENGTH_SIGNATURE)
 	}
-	result := ValueToArray(args[1])
+	result, values := ValueToArray(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	values := result.Data
 	return core.OK(core.INT(int64(len(values))))
 }
 func (listLengthCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
@@ -54,11 +54,10 @@ func (listAtCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 3 && len(args) != 4 {
 		return ARITY_ERROR(LIST_AT_SIGNATURE)
 	}
-	result := ValueToArray(args[1])
+	result, values := ValueToArray(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	values := result.Data
 	if len(args) == 4 {
 		return core.ListAtOrDefault(values, args[2], args[3])
 	} else {
@@ -80,28 +79,26 @@ func (listRangeCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 3 && len(args) != 4 {
 		return ARITY_ERROR(LIST_RANGE_SIGNATURE)
 	}
-	result := ValueToArray(args[1])
+	result, values := ValueToArray(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	values := result.Data
 	length := int64(len(values))
-	firstResult := core.ValueToInteger(args[2])
+	firstResult, i := core.ValueToInteger(args[2])
 	if firstResult.Code != core.ResultCode_OK {
-		return firstResult.AsResult()
+		return firstResult
 	}
-	first := max(0, firstResult.Data)
+	first := max(0, i)
 	if len(args) == 3 {
 		if first >= length {
 			return core.OK(core.LIST([]core.Value{}))
 		}
 		return core.OK(core.LIST(values[first:]))
 	} else {
-		lastResult := core.ValueToInteger(args[3])
+		lastResult, last := core.ValueToInteger(args[3])
 		if lastResult.Code != core.ResultCode_OK {
-			return lastResult.AsResult()
+			return lastResult
 		}
-		last := lastResult.Data
 		if first >= length || last < first || last < 0 {
 			return core.OK(core.LIST([]core.Value{}))
 		}
@@ -120,18 +117,16 @@ const LIST_APPEND_SIGNATURE = "list value append ?list ...?"
 type listAppendCmd struct{}
 
 func (listAppendCmd) Execute(args []core.Value, _ any) core.Result {
-	result := ValueToArray(args[1])
+	result, values := ValueToArray(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	values := result.Data
 	values2 := append([]core.Value{}, values...)
 	for i := 2; i < len(args); i++ {
-		result := ValueToArray(args[i])
+		result, values := ValueToArray(args[i])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		values := result.Data
 		values2 = append(values2, values...)
 	}
 	return core.OK(core.LIST(values2))
@@ -148,22 +143,20 @@ func (listRemoveCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 4 && len(args) != 5 {
 		return ARITY_ERROR(LIST_REMOVE_SIGNATURE)
 	}
-	result := ValueToArray(args[1])
+	result, values := ValueToArray(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	values := result.Data
 	length := int64(len(values))
-	firstResult := core.ValueToInteger(args[2])
+	firstResult, i := core.ValueToInteger(args[2])
 	if firstResult.Code != core.ResultCode_OK {
-		return firstResult.AsResult()
+		return firstResult
 	}
-	first := max(0, firstResult.Data)
-	lastResult := core.ValueToInteger(args[3])
+	first := max(0, i)
+	lastResult, last := core.ValueToInteger(args[3])
 	if lastResult.Code != core.ResultCode_OK {
-		return lastResult.AsResult()
+		return lastResult
 	}
-	last := lastResult.Data
 	head := values[0:min(first, length)]
 	tail := values[min(max(first, last+1), length):]
 	return core.OK(core.LIST(append(append([]core.Value{}, head...), tail...)))
@@ -183,22 +176,20 @@ func (listInsertCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 4 {
 		return ARITY_ERROR(LIST_INSERT_SIGNATURE)
 	}
-	result := ValueToArray(args[1])
+	result, values := ValueToArray(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	values := result.Data
 	length := int64(len(values))
-	indexResult := core.ValueToInteger(args[2])
+	indexResult, i := core.ValueToInteger(args[2])
 	if indexResult.Code != core.ResultCode_OK {
-		return indexResult.AsResult()
+		return indexResult
 	}
-	index := max(0, indexResult.Data)
-	result2 := ValueToArray(args[3])
+	index := max(0, i)
+	result2, insert := ValueToArray(args[3])
 	if result2.Code != core.ResultCode_OK {
-		return result2.AsResult()
+		return result2
 	}
-	insert := result2.Data
 	head := values[0:min(index, length)]
 	tail := values[min(index, length):]
 	return core.OK(core.LIST(append(append(append([]core.Value{}, head...), insert...), tail...)))
@@ -218,29 +209,26 @@ func (listReplaceCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 5 {
 		return ARITY_ERROR(LIST_REPLACE_SIGNATURE)
 	}
-	result := ValueToArray(args[1])
+	result, values := ValueToArray(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	values := result.Data
 	length := int64(len(values))
-	firstResult := core.ValueToInteger(args[2])
+	firstResult, i := core.ValueToInteger(args[2])
 	if firstResult.Code != core.ResultCode_OK {
-		return firstResult.AsResult()
+		return firstResult
 	}
-	first := max(0, firstResult.Data)
-	lastResult := core.ValueToInteger(args[3])
+	first := max(0, i)
+	lastResult, last := core.ValueToInteger(args[3])
 	if lastResult.Code != core.ResultCode_OK {
-		return lastResult.AsResult()
+		return lastResult
 	}
-	last := lastResult.Data
 	head := values[0:min(first, length)]
 	tail := values[min(max(first, last+1), length):]
-	result2 := ValueToArray(args[4])
+	result2, insert := ValueToArray(args[4])
 	if result2.Code != core.ResultCode_OK {
-		return result2.AsResult()
+		return result2
 	}
-	insert := result2.Data
 	return core.OK(core.LIST(append(append(append([]core.Value{}, head...), insert...), tail...)))
 }
 func (listReplaceCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
@@ -259,11 +247,10 @@ func (listForeachCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) != 4 {
 		return ARITY_ERROR(LIST_FOREACH_SIGNATURE)
 	}
-	result := ValueToList(args[1])
+	result, list := ValueToList(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	list := result.Data
 	varname := args[2]
 	body := args[3]
 	if body.Type() != core.ValueType_SCRIPT {
@@ -312,20 +299,19 @@ func (listForeachCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) 
 	return core.OK(core.STR(LIST_FOREACH_SIGNATURE))
 }
 
-func ValueToList(value core.Value) core.TypedResult[core.ListValue] {
+func ValueToList(value core.Value) (core.Result, core.ListValue) {
 	if value.Type() == core.ValueType_SCRIPT {
-		result := ValueToArray(value)
+		result, values := ValueToArray(value)
 		if result.Code != core.ResultCode_OK {
-			return core.ResultAs[core.ListValue](result.AsResult())
+			return result, core.ListValue{}
 		}
-		data := result.Data
-		list := core.LIST(data)
-		return core.OK_T(list, list)
+		list := core.LIST(values)
+		return core.OK(list), list
 	}
 	return core.ListValueFromValue(value)
 }
 
-func ValueToArray(value core.Value) core.TypedResult[[]core.Value] {
+func ValueToArray(value core.Value) (core.Result, []core.Value) {
 	if value.Type() == core.ValueType_SCRIPT {
 		program := core.NewCompiler(nil).CompileSentences(
 			value.(core.ScriptValue).Script.Sentences,
@@ -333,9 +319,9 @@ func ValueToArray(value core.Value) core.TypedResult[[]core.Value] {
 		listExecutor := core.Executor{}
 		result := listExecutor.Execute(program, nil)
 		if result.Code != core.ResultCode_OK {
-			return core.ERROR_T[[]core.Value]("invalid list")
+			return core.ERROR("invalid list"), nil
 		}
-		return core.OK_T(core.NIL, result.Value.(core.TupleValue).Values)
+		return core.OK(core.NIL), result.Value.(core.TupleValue).Values
 	}
 	return core.ValueToValues(value)
 }

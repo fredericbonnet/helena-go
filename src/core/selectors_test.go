@@ -77,7 +77,7 @@ var _ = Describe("selectors", func() {
 		Describe("exceptions", func() {
 			Specify("invalid index", func() {
 				Expect(func() { _ = NewIndexedSelector(NIL) }).To(PanicWith("invalid index"))
-				Expect(CreateIndexedSelector(NIL)).To(Equal(ERROR_T[Selector]("invalid index")))
+				Expect(CreateIndexedSelector(NIL)).To(Equal(ERROR("invalid index")))
 			})
 			Specify("non-selectable value", func() {
 				selector := NewIndexedSelector(INT(1))
@@ -126,7 +126,7 @@ var _ = Describe("selectors", func() {
 		Describe("exceptions", func() {
 			Specify("empty key list", func() {
 				Expect(func() { _ = NewKeyedSelector([]Value{}) }).To(PanicWith("empty selector"))
-				Expect(CreateKeyedSelector([]Value{})).To(Equal(ERROR_T[Selector]("empty selector")))
+				Expect(CreateKeyedSelector([]Value{})).To(Equal(ERROR("empty selector")))
 			})
 			Specify("non-selectable value", func() {
 				selector := NewKeyedSelector([]Value{INT(1)})
@@ -189,7 +189,7 @@ var _ = Describe("selectors", func() {
 		Describe("exceptions", func() {
 			Specify("empty rules", func() {
 				Expect(func() { _ = NewGenericSelector([]Value{}) }).To(PanicWith("empty selector"))
-				Expect(CreateGenericSelector([]Value{})).To(Equal(ERROR_T[Selector]("empty selector")))
+				Expect(CreateGenericSelector([]Value{})).To(Equal(ERROR("empty selector")))
 			})
 			Specify("non-selectable value", func() {
 				selector := NewGenericSelector([]Value{STR("rule")})

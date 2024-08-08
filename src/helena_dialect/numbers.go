@@ -23,20 +23,18 @@ var numberSubcommands = NewSubcommands([]string{
 type numberCommand struct{}
 
 func (numberCommand) Execute(args []core.Value, _ any) core.Result {
-	result := core.ValueToFloat(args[0])
+	result, operand1 := core.ValueToFloat(args[0])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	operand1 := result.Data
 	if len(args) == 1 {
 		return core.OK(floatToValue(operand1))
 	}
 
-	result2 := core.ValueToString(args[1])
+	result2, subcommand := core.ValueToString(args[1])
 	if result2.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result2.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
@@ -79,48 +77,43 @@ func arithmetics(args []core.Value, operand1 float64) core.Result {
 	total := 0.0
 	last := operand1
 	for i := 1; i < len(args); i += 2 {
-		result := core.ValueToString(args[i])
+		result, operator := core.ValueToString(args[i])
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR(`invalid operator`)
 		}
-		operator := result.Data
 		switch operator {
 		case "+":
 			{
-				result := core.ValueToFloat(args[i+1])
+				result, operand2 := core.ValueToFloat(args[i+1])
 				if result.Code != core.ResultCode_OK {
-					return result.AsResult()
+					return result
 				}
-				operand2 := result.Data
 				total += last
 				last = operand2
 			}
 		case "-":
 			{
-				result := core.ValueToFloat(args[i+1])
+				result, operand2 := core.ValueToFloat(args[i+1])
 				if result.Code != core.ResultCode_OK {
-					return result.AsResult()
+					return result
 				}
-				operand2 := result.Data
 				total += last
 				last = -operand2
 			}
 		case "*":
 			{
-				result := core.ValueToFloat(args[i+1])
+				result, operand2 := core.ValueToFloat(args[i+1])
 				if result.Code != core.ResultCode_OK {
-					return result.AsResult()
+					return result
 				}
-				operand2 := result.Data
 				last *= operand2
 			}
 		case "/":
 			{
-				result := core.ValueToFloat(args[i+1])
+				result, operand2 := core.ValueToFloat(args[i+1])
 				if result.Code != core.ResultCode_OK {
-					return result.AsResult()
+					return result
 				}
-				operand2 := result.Data
 				last /= operand2
 			}
 		default:
@@ -143,11 +136,10 @@ func binaryOp(
 		if args[0] == args[2] {
 			return core.OK(core.BOOL(whenEqual))
 		}
-		result := core.ValueToFloat(args[2])
+		result, operand2 := core.ValueToFloat(args[2])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		operand2 := result.Data
 		return core.OK(core.BOOL(fn(operand1, operand2)))
 	}
 }
@@ -176,13 +168,14 @@ type intCommand struct {
 func newIntCommand(scope *Scope) *intCommand {
 	cmd := &intCommand{}
 	cmd.scope = scope.NewChildScope()
-	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	_, argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")}))
 	cmd.ensemble = NewEnsembleCommand(cmd.scope, argspec)
 	return cmd
 }
 func (cmd *intCommand) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 2 {
-		return core.IntegerValueFromValue(args[1]).AsResult()
+		result, _ := core.IntegerValueFromValue(args[1])
+		return result
 	}
 	return cmd.ensemble.Execute(args, context)
 }
@@ -198,13 +191,14 @@ type realCommand struct {
 func newRealCommand(scope *Scope) *realCommand {
 	cmd := &realCommand{}
 	cmd.scope = scope.NewChildScope()
-	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	_, argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")}))
 	cmd.ensemble = NewEnsembleCommand(cmd.scope, argspec)
 	return cmd
 }
 func (cmd *realCommand) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 2 {
-		return core.RealValueFromValue(args[1]).AsResult()
+		result, _ := core.RealValueFromValue(args[1])
+		return result
 	}
 	return cmd.ensemble.Execute(args, context)
 }

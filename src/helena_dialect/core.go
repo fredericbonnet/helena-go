@@ -323,11 +323,10 @@ func (scope *Scope) ResolveCommand(value core.Value) core.Command {
 		core.ValueType_REAL:
 		return numberCmd
 	}
-	result := core.ValueToString(value)
+	result, cmdname := core.ValueToString(value)
 	if result.Code != core.ResultCode_OK {
 		return nil
 	}
-	cmdname := result.Data
 	command := scope.ResolveNamedCommand(cmdname)
 	if command != nil {
 		return command
@@ -353,11 +352,10 @@ func (scope *Scope) SetNamedLocal(name string, value core.Value) {
 	scope.locals[name] = value
 }
 func (scope *Scope) DestructureLocal(constant core.Value, value core.Value, check bool) core.Result {
-	result := core.ValueToString(constant)
+	result, name := core.ValueToString(constant)
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid local name")
 	}
-	name := result.Data
 	if check {
 		core.OK(core.NIL)
 	}
@@ -373,11 +371,10 @@ func (scope *Scope) SetNamedConstant(name string, value core.Value) core.Result 
 	return core.OK(value)
 }
 func (scope *Scope) DestructureConstant(constant core.Value, value core.Value, check bool) core.Result {
-	result := core.ValueToString(constant)
+	result, name := core.ValueToString(constant)
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid constant name")
 	}
-	name := result.Data
 	if check {
 		return scope.checkNamedConstant(name)
 	}
@@ -405,11 +402,10 @@ func (scope *Scope) SetNamedVariable(name string, value core.Value) core.Result 
 	return core.OK(value)
 }
 func (scope *Scope) DestructureVariable(variable core.Value, value core.Value, check bool) core.Result {
-	result := core.ValueToString(variable)
+	result, name := core.ValueToString(variable)
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid variable name")
 	}
-	name := result.Data
 	if check {
 		return scope.checkNamedVariable(name)
 	}
@@ -426,11 +422,10 @@ func (scope *Scope) checkNamedVariable(name string) core.Result {
 	return core.OK(core.NIL)
 }
 func (scope *Scope) UnsetVariable(variable core.Value, check bool) core.Result {
-	result := core.ValueToString(variable)
+	result, name := core.ValueToString(variable)
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid variable name")
 	}
-	name := result.Data
 	if scope.locals[name] != nil {
 		return core.ERROR(`cannot unset local "` + name + `"`)
 	}
@@ -447,11 +442,10 @@ func (scope *Scope) UnsetVariable(variable core.Value, check bool) core.Result {
 	return core.OK(core.NIL)
 }
 func (scope *Scope) GetVariable(variable core.Value, def core.Value) core.Result {
-	result := core.ValueToString(variable)
+	result, name := core.ValueToString(variable)
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid variable name")
 	}
-	name := result.Data
 	value := scope.ResolveVariable(name)
 	if value != nil {
 		return core.OK(value)
@@ -470,11 +464,10 @@ func (scope *Scope) ResolveValue(value core.Value) core.Result {
 }
 
 func (scope *Scope) RegisterCommand(name core.Value, command core.Command) core.Result {
-	result := core.ValueToString(name)
+	result, cmdname := core.ValueToString(name)
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid command name")
 	}
-	cmdname := result.Data
 	scope.RegisterNamedCommand(cmdname, command)
 	return core.OK(core.NIL)
 }
@@ -505,11 +498,10 @@ func (ExpandPrefixCommand) Execute(args []core.Value, context any) core.Result {
 		if len(args2) == 0 {
 			return core.OK(core.NIL)
 		}
-		result := core.ValueToString(args2[0])
+		result, cmdname := core.ValueToString(args2[0])
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR(`invalid command name`)
 		} else {
-			cmdname := result.Data
 			return core.ERROR(`cannot resolve command "` + cmdname + `"`)
 
 		}

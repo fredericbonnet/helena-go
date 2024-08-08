@@ -10,11 +10,10 @@ func (trueCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(core.TRUE)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
@@ -46,11 +45,10 @@ func (trueCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Re
 	if len(args) == 1 {
 		return core.OK(core.STR("true ?subcommand?"))
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) > 2 {
@@ -81,11 +79,10 @@ func (falseCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(core.FALSE)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
@@ -117,11 +114,10 @@ func (falseCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.R
 	if len(args) == 1 {
 		return core.OK(core.STR("false ?subcommand?"))
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) > 2 {
@@ -154,13 +150,14 @@ type boolCommand struct {
 func newBoolCommand(scope *Scope) *boolCommand {
 	cmd := &boolCommand{}
 	cmd.scope = scope.NewChildScope()
-	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	_, argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")}))
 	cmd.ensemble = NewEnsembleCommand(cmd.scope, argspec)
 	return cmd
 }
 func (cmd *boolCommand) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 2 {
-		return core.BooleanValueFromValue(args[1]).AsResult()
+		result, _ := core.BooleanValueFromValue(args[1])
+		return result
 	}
 	return cmd.ensemble.Execute(args, context)
 }
@@ -177,11 +174,11 @@ func (notCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(NOT_SIGNATURE)
 	}
-	return ExecuteCondition(scope, args[1], func(result core.TypedResult[bool]) core.Result {
+	return ExecuteCondition(scope, args[1], func(result core.Result, b bool) core.Result {
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		if result.Data {
+		if b {
 			return core.OK(core.FALSE)
 		} else {
 			return core.OK(core.TRUE)
@@ -205,12 +202,12 @@ func (andCmd) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(AND_SIGNATURE)
 	}
 	i := 1
-	var callback func(result core.TypedResult[bool]) core.Result
-	callback = func(result core.TypedResult[bool]) core.Result {
+	var callback func(result core.Result, b bool) core.Result
+	callback = func(result core.Result, b bool) core.Result {
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		if !result.Data {
+		if !b {
 			return core.OK(core.FALSE)
 		}
 		i++
@@ -235,12 +232,12 @@ func (orCmd) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(OR_SIGNATURE)
 	}
 	i := 1
-	var callback func(result core.TypedResult[bool]) core.Result
-	callback = func(result core.TypedResult[bool]) core.Result {
+	var callback func(result core.Result, b bool) core.Result
+	callback = func(result core.Result, b bool) core.Result {
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		if result.Data {
+		if b {
 			return core.OK(core.TRUE)
 		}
 		i++
@@ -258,7 +255,7 @@ func (orCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Resu
 func ExecuteCondition(
 	scope *Scope,
 	value core.Value,
-	callback func(result core.TypedResult[bool]) core.Result,
+	callback func(result core.Result, b bool) core.Result,
 ) core.Result {
 	if value.Type() == core.ValueType_SCRIPT {
 		program := scope.CompileScriptValue(value.(core.ScriptValue))

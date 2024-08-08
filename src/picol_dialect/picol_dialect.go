@@ -44,7 +44,8 @@ func (scope *PicolScope) resolveVariable(name string) core.Value {
 	return scope.Variables[name]
 }
 func (scope *PicolScope) resolveCommand(name core.Value) core.Command {
-	return scope.resolveNamedCommand(core.ValueToString(name).Data)
+	_, s := core.ValueToString(name)
+	return scope.resolveNamedCommand(s)
 }
 func (scope *PicolScope) resolveNamedCommand(name string) core.Command {
 	cmd := scope.Commands[name]
@@ -57,7 +58,7 @@ func (scope *PicolScope) resolveNamedCommand(name string) core.Command {
 	return nil
 }
 
-func asString(value core.Value) string { return core.ValueToString(value).Data }
+func asString(value core.Value) (s string) { _, s = core.ValueToString(value); return }
 
 var EMPTY = core.OK(core.STR(""))
 
@@ -82,21 +83,20 @@ var addCmd = makeCommand(
 		if len(args) < 2 {
 			return ARITY_ERROR("+ arg ?arg ...?")
 		}
-		result := core.ValueToFloat(args[1])
+		result, first := core.ValueToFloat(args[1])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		first := result.Data
 		if len(args) == 2 {
 			return core.OK(core.REAL(first))
 		}
 		total := first
 		for i := 2; i < len(args); i++ {
-			result := core.ValueToFloat(args[i])
+			result, n := core.ValueToFloat(args[i])
 			if result.Code != core.ResultCode_OK {
-				return result.AsResult()
+				return result
 			}
-			total += result.Data
+			total += n
 		}
 		return core.OK(core.REAL(total))
 	},
@@ -106,21 +106,20 @@ var subtractCmd = makeCommand(
 		if len(args) < 2 {
 			return ARITY_ERROR("- arg ?arg ...?")
 		}
-		result := core.ValueToFloat(args[1])
+		result, first := core.ValueToFloat(args[1])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		first := result.Data
 		if len(args) == 2 {
 			return core.OK(core.REAL(-first))
 		}
 		total := first
 		for i := 2; i < len(args); i++ {
-			result := core.ValueToFloat(args[i])
+			result, n := core.ValueToFloat(args[i])
 			if result.Code != core.ResultCode_OK {
-				return result.AsResult()
+				return result
 			}
-			total -= result.Data
+			total -= n
 		}
 		return core.OK(core.REAL(total))
 	},
@@ -130,21 +129,20 @@ var multiplyCmd = makeCommand(
 		if len(args) < 2 {
 			return ARITY_ERROR("* arg ?arg ...?")
 		}
-		result := core.ValueToFloat(args[1])
+		result, first := core.ValueToFloat(args[1])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		first := result.Data
 		if len(args) == 2 {
 			return core.OK(core.REAL(first))
 		}
 		total := first
 		for i := 2; i < len(args); i++ {
-			result := core.ValueToFloat(args[i])
+			result, n := core.ValueToFloat(args[i])
 			if result.Code != core.ResultCode_OK {
-				return result.AsResult()
+				return result
 			}
-			total *= result.Data
+			total *= n
 		}
 		return core.OK(core.REAL(total))
 	},
@@ -154,18 +152,17 @@ var divideCmd = makeCommand(
 		if len(args) < 3 {
 			return ARITY_ERROR("/ arg arg ?arg ...?")
 		}
-		result := core.ValueToFloat(args[1])
+		result, first := core.ValueToFloat(args[1])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		first := result.Data
 		total := first
 		for i := 2; i < len(args); i++ {
-			result := core.ValueToFloat(args[i])
+			result, n := core.ValueToFloat(args[i])
 			if result.Code != core.ResultCode_OK {
-				return result.AsResult()
+				return result
 			}
-			total /= result.Data
+			total /= n
 		}
 		return core.OK(core.REAL(total))
 	},
@@ -204,16 +201,14 @@ func compareNumbersCmd(
 		if len(args) != 3 {
 			return ARITY_ERROR(name + ` arg arg`)
 		}
-		result1 := core.ValueToFloat(args[1])
+		result1, op1 := core.ValueToFloat(args[1])
 		if result1.Code != core.ResultCode_OK {
-			return result1.AsResult()
+			return result1
 		}
-		op1 := result1.Data
-		result2 := core.ValueToFloat(args[2])
+		result2, op2 := core.ValueToFloat(args[2])
 		if result2.Code != core.ResultCode_OK {
-			return result2.AsResult()
+			return result2
 		}
-		op2 := result2.Data
 		if fn(op1, op2) {
 			return core.OK(core.TRUE)
 		} else {
@@ -411,11 +406,10 @@ func evaluateCondition(value core.Value, scope *PicolScope) core.Result {
 	if value.Type() == core.ValueType_SCRIPT {
 		result := scope.Evaluator.EvaluateScript(value.(core.ScriptValue).Script)
 		if result.Code != core.ResultCode_OK {
-			{
-			}
 			return result
 		}
-		return core.BooleanValueFromValue(result.Value).AsResult()
+		result, _ = core.BooleanValueFromValue(result.Value)
+		return result
 	}
 	s := asString(value)
 	if s == "true" || s == "yes" || s == "1" {
@@ -461,11 +455,11 @@ var incrCmd = makeCommand(
 			increment = 1
 		case 3:
 			{
-				result := core.ValueToInteger(args[2])
+				result, i := core.ValueToInteger(args[2])
 				if result.Code != core.ResultCode_OK {
-					return result.AsResult()
+					return result
 				}
-				increment = result.Data
+				increment = i
 			}
 		default:
 			return ARITY_ERROR("incr varName ?increment?")
@@ -474,11 +468,11 @@ var incrCmd = makeCommand(
 		value, ok := scope.Variables[varName]
 		var incremented core.Value
 		if ok {
-			result := core.ValueToInteger(value)
+			result, i := core.ValueToInteger(value)
 			if result.Code != core.ResultCode_OK {
-				return result.AsResult()
+				return result
 			}
-			incremented = core.INT(result.Data + increment)
+			incremented = core.INT(i + increment)
 		} else {
 			incremented = core.INT(increment)
 		}
@@ -531,10 +525,10 @@ func (proc procCommand) Execute(args []core.Value, context any) core.Result {
 	}
 }
 
-func valueToArray(value core.Value) core.TypedResult[[]core.Value] {
+func valueToArray(value core.Value) (core.Result, []core.Value) {
 	switch value.Type() {
 	case core.ValueType_TUPLE:
-		return core.OK_T(core.NIL, value.(core.TupleValue).Values)
+		return core.OK(core.NIL), value.(core.TupleValue).Values
 	case core.ValueType_SCRIPT:
 		{
 			evaluator := core.NewCompilingEvaluator(nil, nil, nil, nil)
@@ -544,7 +538,7 @@ func valueToArray(value core.Value) core.TypedResult[[]core.Value] {
 					if word.Value == nil {
 						result := evaluator.EvaluateWord(word.Word)
 						if result.Code != core.ResultCode_OK {
-							return core.ResultAs[[]core.Value](result)
+							return result, nil
 						}
 						values = append(values, result.Value)
 					} else {
@@ -552,60 +546,57 @@ func valueToArray(value core.Value) core.TypedResult[[]core.Value] {
 					}
 				}
 			}
-			return core.OK_T(core.NIL, values)
+			return core.OK(core.NIL), values
 		}
 	default:
-		return core.ERROR_T[[]core.Value]("unsupported list format")
+		return core.ERROR("unsupported list format"), nil
 	}
 }
 
-func valueToArgspec(value core.Value) core.TypedResult[argSpec] {
+func valueToArgspec(value core.Value) (core.Result, argSpec) {
 	switch value.Type() {
 	case core.ValueType_SCRIPT:
 		{
-			result := valueToArray(value)
+			result, values := valueToArray(value)
 			if result.Code != core.ResultCode_OK {
-				return core.ResultAs[argSpec](result.AsResult())
+				return result, argSpec{}
 			}
-			values := result.Data
 			if len(values) == 0 {
-				return core.ERROR_T[argSpec]("argument with no name")
+				return core.ERROR("argument with no name"), argSpec{}
 			}
 			name := asString(values[0])
 			if name == "" {
-				return core.ERROR_T[argSpec]("argument with no name")
+				return core.ERROR("argument with no name"), argSpec{}
 			}
 			switch len(values) {
 			case 1:
-				return core.OK_T(core.NIL, argSpec{name: name})
+				return core.OK(core.NIL), argSpec{name: name}
 			case 2:
-				return core.OK_T(core.NIL, argSpec{name: name, default_: values[1]})
+				return core.OK(core.NIL), argSpec{name: name, default_: values[1]}
 			default:
-				return core.ERROR_T[argSpec](
+				return core.ERROR(
 					`too many fields in argument specifier "` + asString(value) + `"`,
-				)
+				), argSpec{}
 			}
 		}
 	default:
-		return core.OK_T(core.NIL, argSpec{name: asString(value)})
+		return core.OK(core.NIL), argSpec{name: asString(value)}
 	}
 }
-func valueToArgspecs(value core.Value) core.TypedResult[[]argSpec] {
-	result := valueToArray(value)
+func valueToArgspecs(value core.Value) (core.Result, []argSpec) {
+	result, values := valueToArray(value)
 	if result.Code != core.ResultCode_OK {
-		return core.ResultAs[[]argSpec](result.AsResult())
+		return result, nil
 	}
-	values := result.Data
 	argspecs := make([]argSpec, len(values))
 	for i, value := range values {
-		result := valueToArgspec(value)
+		result, argspec := valueToArgspec(value)
 		if result.Code != core.ResultCode_OK {
-			return core.ResultAs[[]argSpec](result.AsResult())
+			return result, nil
 		}
-		argspec := result.Data
 		argspecs[i] = argspec
 	}
-	return core.OK_T(core.NIL, argspecs)
+	return core.OK(core.NIL), argspecs
 }
 func argspecsToSignature(name core.Value, argspecs []argSpec) string {
 	result := asString(name)
@@ -629,11 +620,10 @@ var procCmd = makeCommand(
 			return ARITY_ERROR("proc name args body")
 		}
 		name, _argspecs, body := args[1], args[2], args[3]
-		result := valueToArgspecs(_argspecs)
+		result, argspecs := valueToArgspecs(_argspecs)
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		argspecs := result.Data
 		scope.Commands[asString(name)] = procCommand{argspecs, body.(core.ScriptValue)}
 		return EMPTY
 	},

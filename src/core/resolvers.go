@@ -25,5 +25,5 @@ type CommandResolver interface {
 //
 type SelectorResolver interface {
 	// Resolve a selector from a set of rules
-	Resolve(rules []Value) TypedResult[Selector]
+	Resolve(rules []Value) (Result, Selector)
 }
