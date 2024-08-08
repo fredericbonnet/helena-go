@@ -10,13 +10,14 @@ type stringCommand struct {
 func newStringCommand(scope *Scope) *stringCommand {
 	cmd := &stringCommand{}
 	cmd.scope = scope.NewChildScope()
-	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	_, argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")}))
 	cmd.ensemble = NewEnsembleCommand(cmd.scope, argspec)
 	return cmd
 }
 func (cmd *stringCommand) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 2 {
-		return core.StringValueFromValue(args[1]).AsResult()
+		result, _ := core.StringValueFromValue(args[1])
+		return result
 	}
 	return cmd.ensemble.Execute(args, context)
 }
@@ -32,11 +33,10 @@ func (stringLengthCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(STRING_LENGTH_SIGNATURE)
 	}
-	result := core.ValueToString(args[1])
+	result, str := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	str := result.Data
 	return core.OK(core.INT(int64(len(str))))
 }
 func (stringLengthCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
@@ -54,11 +54,10 @@ func (stringAtCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 3 && len(args) != 4 {
 		return ARITY_ERROR(STRING_AT_SIGNATURE)
 	}
-	result := core.ValueToString(args[1])
+	result, str := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	str := result.Data
 	if len(args) == 4 {
 		return core.StringAtOrDefault(str, args[2], args[3])
 	} else {
@@ -80,28 +79,26 @@ func (stringRangeCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 3 && len(args) != 4 {
 		return ARITY_ERROR(STRING_RANGE_SIGNATURE)
 	}
-	result := core.ValueToString(args[1])
+	result, str := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	str := result.Data
 	length := int64(len(str))
-	firstResult := core.ValueToInteger(args[2])
+	firstResult, i := core.ValueToInteger(args[2])
 	if firstResult.Code != core.ResultCode_OK {
-		return firstResult.AsResult()
+		return firstResult
 	}
-	first := max(0, firstResult.Data)
+	first := max(0, i)
 	if len(args) == 3 {
 		if first >= length {
 			return core.OK(core.STR(""))
 		}
 		return core.OK(core.STR(str[first:]))
 	} else {
-		lastResult := core.ValueToInteger(args[3])
+		lastResult, last := core.ValueToInteger(args[3])
 		if lastResult.Code != core.ResultCode_OK {
-			return lastResult.AsResult()
+			return lastResult
 		}
-		last := lastResult.Data
 		if first >= length || last < first || last < 0 {
 			return core.OK(core.STR(""))
 		}
@@ -120,18 +117,16 @@ const STRING_APPEND_SIGNATURE = "string value append ?string ...?"
 type stringAppendCmd struct{}
 
 func (stringAppendCmd) Execute(args []core.Value, _ any) core.Result {
-	result := core.ValueToString(args[1])
+	result, str := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	str := result.Data
 	str2 := str
 	for i := 2; i < len(args); i++ {
-		result := core.ValueToString(args[i])
+		result, append := core.ValueToString(args[i])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		append := result.Data
 		str2 += append
 	}
 	return core.OK(core.STR(str2))
@@ -148,22 +143,20 @@ func (stringRemoveCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 4 && len(args) != 5 {
 		return ARITY_ERROR(STRING_REMOVE_SIGNATURE)
 	}
-	result := core.ValueToString(args[1])
+	result, str := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	str := result.Data
 	length := int64(len(str))
-	firstResult := core.ValueToInteger(args[2])
+	firstResult, i := core.ValueToInteger(args[2])
 	if firstResult.Code != core.ResultCode_OK {
-		return firstResult.AsResult()
+		return firstResult
 	}
-	first := max(0, firstResult.Data)
-	lastResult := core.ValueToInteger(args[3])
+	first := max(0, i)
+	lastResult, last := core.ValueToInteger(args[3])
 	if lastResult.Code != core.ResultCode_OK {
-		return lastResult.AsResult()
+		return lastResult
 	}
-	last := lastResult.Data
 	head := str[0:min(first, length)]
 	tail := str[min(max(first, last+1), length):]
 	return core.OK(core.STR(head + tail))
@@ -183,22 +176,20 @@ func (stringInsertCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 4 {
 		return ARITY_ERROR(STRING_INSERT_SIGNATURE)
 	}
-	result := core.ValueToString(args[1])
+	result, str := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	str := result.Data
 	length := int64(len(str))
-	indexResult := core.ValueToInteger(args[2])
+	indexResult, i := core.ValueToInteger(args[2])
 	if indexResult.Code != core.ResultCode_OK {
-		return indexResult.AsResult()
+		return indexResult
 	}
-	index := max(0, indexResult.Data)
-	result2 := core.ValueToString(args[3])
+	index := max(0, i)
+	result2, insert := core.ValueToString(args[3])
 	if result2.Code != core.ResultCode_OK {
-		return result2.AsResult()
+		return result2
 	}
-	insert := result2.Data
 	head := str[0:min(index, length)]
 	tail := str[min(index, length):]
 	return core.OK(core.STR(head + insert + tail))
@@ -218,29 +209,26 @@ func (stringReplaceCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 5 {
 		return ARITY_ERROR(STRING_REPLACE_SIGNATURE)
 	}
-	result := core.ValueToString(args[1])
+	result, str := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	str := result.Data
 	length := int64(len(str))
-	firstResult := core.ValueToInteger(args[2])
+	firstResult, i := core.ValueToInteger(args[2])
 	if firstResult.Code != core.ResultCode_OK {
-		return firstResult.AsResult()
+		return firstResult
 	}
-	first := max(0, firstResult.Data)
-	lastResult := core.ValueToInteger(args[3])
+	first := max(0, i)
+	lastResult, last := core.ValueToInteger(args[3])
 	if lastResult.Code != core.ResultCode_OK {
-		return lastResult.AsResult()
+		return lastResult
 	}
-	last := lastResult.Data
 	head := str[0:min(first, length)]
 	tail := str[min(max(first, last+1), length):]
-	result2 := core.ValueToString(args[4])
+	result2, insert := core.ValueToString(args[4])
 	if result2.Code != core.ResultCode_OK {
-		return result2.AsResult()
+		return result2
 	}
-	insert := result2.Data
 	return core.OK(core.STR(head + insert + tail))
 }
 
@@ -272,16 +260,14 @@ func (cmd binaryCmd) Execute(args []core.Value, context any) core.Result {
 	if args[1] == args[2] {
 		return core.OK(core.BOOL(cmd.whenEqual))
 	}
-	result1 := core.ValueToString(args[1])
+	result1, operand1 := core.ValueToString(args[1])
 	if result1.Code != core.ResultCode_OK {
-		return result1.AsResult()
+		return result1
 	}
-	operand1 := result1.Data
-	result2 := core.ValueToString(args[2])
+	result2, operand2 := core.ValueToString(args[2])
 	if result2.Code != core.ResultCode_OK {
-		return result2.AsResult()
+		return result2
 	}
-	operand2 := result2.Data
 	return core.OK(core.BOOL(cmd.fn(operand1, operand2)))
 }
 func (cmd binaryCmd) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {

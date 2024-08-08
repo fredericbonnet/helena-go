@@ -26,11 +26,10 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 	if len(args) == 1 {
 		return core.OK(metacommand.value)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
@@ -62,11 +61,10 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 		if len(args) < 3 {
 			return ARITY_ERROR("<ensemble> call cmdname ?arg ...?")
 		}
-		result := core.ValueToString(args[2])
+		result, subcommand := core.ValueToString(args[2])
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid command name")
 		}
-		subcommand := result.Data
 		if !metacommand.ensemble.scope.HasLocalCommand(subcommand) {
 			return core.ERROR(`unknown command "` + subcommand + `"`)
 		}
@@ -87,10 +85,11 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 }
 
 func ENSEMBLE_COMMAND_PREFIX(name core.Value, args string) string {
+	_, s := core.ValueToStringOrDefault(name, "<ensemble>")
 	if args != "" {
-		return core.ValueToStringOrDefault(name, "<ensemble>").Data + " " + args
+		return s + " " + args
 	} else {
-		return core.ValueToStringOrDefault(name, "<ensemble>").Data
+		return s
 	}
 }
 
@@ -136,11 +135,10 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 	if uint(len(args)) == minArgs {
 		return core.OK(core.TUPLE(ensembleArgs))
 	}
-	result2 := core.ValueToString(args[minArgs])
+	result2, subcommand := core.ValueToString(args[minArgs])
 	if result2.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result2.Data
 	if subcommand == "subcommands" {
 		if uint(len(args)) != minArgs+1 {
 			return ARITY_ERROR(
@@ -188,11 +186,10 @@ func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHel
 	if uint(len(args)) <= minArgs {
 		return core.OK(core.STR(signature + " ?subcommand? ?arg ...?"))
 	}
-	result := core.ValueToString(args[minArgs])
+	result, subcommand := core.ValueToString(args[minArgs])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	if subcommand == "subcommands" {
 		if uint(len(args)) > minArgs+1 {
 			return ARITY_ERROR(signature + " subcommands")
@@ -235,11 +232,10 @@ func (ensembleCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script")
 	}
 
-	result := ArgspecValueFromValue(specs)
+	result, argspec := ArgspecValueFromValue(specs)
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	argspec := result.Data
 	if argspec.Argspec.IsVariadic() {
 		return core.ERROR("ensemble arguments cannot be variadic")
 	}

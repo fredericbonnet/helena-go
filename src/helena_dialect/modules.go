@@ -23,11 +23,10 @@ func (cmd exportCommand) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(EXPORT_SIGNATURE)
 	}
-	result := core.ValueToString(args[1])
+	result, name := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid export name")
 	}
-	name := result.Data
 	(*cmd.exports)[name] = core.STR(name)
 	return core.OK(core.NIL)
 }
@@ -63,11 +62,10 @@ func (module *Module) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 1 {
 		return core.OK(module.value)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
@@ -117,16 +115,14 @@ func importCommand(
 	source *Scope,
 	destination *Scope,
 ) core.Result {
-	result := core.ValueToString(importName)
+	result, name := core.ValueToString(importName)
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid import name")
 	}
-	name := result.Data
-	result2 := core.ValueToString(aliasName)
+	result2, alias := core.ValueToString(aliasName)
 	if result2.Code != core.ResultCode_OK {
 		return core.ERROR("invalid alias name")
 	}
-	alias := result2.Data
 	if (*exports)[name] == nil {
 		return core.ERROR(`unknown export "` + name + `"`)
 	}
@@ -197,15 +193,14 @@ func (cmd *moduleCommand) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script")
 	}
 
-	result := createModule(
+	result, module := createModule(
 		cmd.moduleRegistry,
 		cmd.rootDir,
 		body.(core.ScriptValue).Script,
 	)
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	module := result.Data
 	if name != nil {
 		result := scope.RegisterCommand(name, module)
 		if result.Code != core.ResultCode_OK {
@@ -225,10 +220,10 @@ func resolveModule(
 	moduleRegistry *ModuleRegistry,
 	rootDir string,
 	nameOrPath string,
-) core.TypedResult[*Module] {
+) (core.Result, *Module) {
 	if moduleRegistry.IsRegistered(nameOrPath) {
 		module := moduleRegistry.Get(nameOrPath)
-		return core.OK_T(module.value, module)
+		return core.OK(module.value), module
 	}
 	return resolveFileBasedModule(moduleRegistry, rootDir, nameOrPath)
 }
@@ -237,57 +232,53 @@ func resolveFileBasedModule(
 	moduleRegistry *ModuleRegistry,
 	rootDir string,
 	filePath string,
-) core.TypedResult[*Module] {
+) (core.Result, *Module) {
 	modulePath := filepath.Join(rootDir, filePath)
 	if moduleRegistry.IsRegistered(modulePath) {
 		module := moduleRegistry.Get(modulePath)
-		return core.OK_T(module.value, module)
+		return core.OK(module.value), module
 	}
 
-	result := loadFileBasedModule(
-		moduleRegistry,
-		modulePath,
-	)
+	result, module := loadFileBasedModule(moduleRegistry, modulePath)
 	if result.Code != core.ResultCode_OK {
-		return result
+		return result, nil
 	}
-	module := result.Data
 	moduleRegistry.Register(modulePath, module)
-	return core.OK_T(module.value, module)
+	return core.OK(module.value), module
 }
 
 func loadFileBasedModule(
 	moduleRegistry *ModuleRegistry,
 	modulePath string,
-) core.TypedResult[*Module] {
+) (core.Result, *Module) {
 	if moduleRegistry.IsReserved(modulePath) {
-		return core.ERROR_T[*Module]("circular imports are forbidden")
+		return core.ERROR("circular imports are forbidden"), nil
 	}
 	moduleRegistry.Reserve(modulePath)
 
 	data, err := os.ReadFile(modulePath)
 	if err != nil {
 		moduleRegistry.Release(modulePath)
-		return core.ERROR_T[*Module]("error reading module: " + fmt.Sprint(err))
+		return core.ERROR("error reading module: " + fmt.Sprint(err)), nil
 	}
 	tokens := core.Tokenizer{}.Tokenize(string(data))
 	parser := core.NewParser(nil)
 	parseResult := parser.ParseTokens(tokens, nil)
 	if !parseResult.Success {
 		moduleRegistry.Release(modulePath)
-		return core.ERROR_T[*Module](parseResult.Message)
+		return core.ERROR(parseResult.Message), nil
 	}
 
-	result := createModule(moduleRegistry, filepath.Dir(modulePath), *parseResult.Script)
+	result, module := createModule(moduleRegistry, filepath.Dir(modulePath), *parseResult.Script)
 	moduleRegistry.Release(modulePath)
-	return result
+	return result, module
 }
 
 func createModule(
 	moduleRegistry *ModuleRegistry,
 	rootDir string,
 	script core.Script,
-) core.TypedResult[*Module] {
+) (core.Result, *Module) {
 	rootScope := NewRootScope(nil)
 	InitCommandsForModule(rootScope, moduleRegistry, rootDir)
 
@@ -298,14 +289,14 @@ func createModule(
 	process := rootScope.PrepareProcess(program)
 	result := process.Run()
 	if result.Code == core.ResultCode_ERROR {
-		return core.ResultAs[*Module](result)
+		return result, nil
 	}
 	if result.Code != core.ResultCode_OK {
-		return core.ERROR_T[*Module]("unexpected " + core.RESULT_CODE_NAME(result))
+		return core.ERROR("unexpected " + core.RESULT_CODE_NAME(result)), nil
 	}
 
 	module := NewModule(rootScope, exports)
-	return core.OK_T(module.value, module)
+	return core.OK(module.value), module
 }
 
 const IMPORT_SIGNATURE = "import path ?name|imports?"
@@ -325,21 +316,19 @@ func (cmd *importCmd) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(IMPORT_SIGNATURE)
 	}
 
-	result := core.ValueToString(args[1])
+	result, path := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid path")
 	}
-	path := result.Data
 
-	result2 := resolveModule(
+	result2, module := resolveModule(
 		cmd.moduleRegistry,
 		cmd.rootDir,
 		path,
 	)
 	if result2.Code != core.ResultCode_OK {
-		return result2.AsResult()
+		return result2
 	}
-	module := result2.Data
 
 	if len(args) >= 3 {
 		switch args[2].Type() {
@@ -348,11 +337,10 @@ func (cmd *importCmd) Execute(args []core.Value, context any) core.Result {
 			core.ValueType_SCRIPT:
 			{
 				// Import names
-				result := ValueToArray(args[2])
+				result, names := ValueToArray(args[2])
 				if result.Code != core.ResultCode_OK {
-					return result.AsResult()
+					return result
 				}
-				names := result.Data
 				for _, name := range names {
 					if name.Type() == core.ValueType_TUPLE {
 						values := name.(core.TupleValue).Values

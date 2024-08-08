@@ -20,11 +20,10 @@ func (metacommand *aliasMetacommand) Execute(args []core.Value, _ any) core.Resu
 	if len(args) == 1 {
 		return core.OK(metacommand.alias.value)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {

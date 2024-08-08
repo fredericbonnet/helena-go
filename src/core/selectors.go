@@ -83,11 +83,11 @@ func NewIndexedSelector(index Value) IndexedSelector {
 }
 
 // Factory function, returns a result instead of panicking like the constructor.
-func CreateIndexedSelector(index Value) TypedResult[Selector] {
+func CreateIndexedSelector(index Value) (Result, Selector) {
 	if index == NIL {
-		return ERROR_T[Selector]("invalid index")
+		return ERROR("invalid index"), nil
 	}
-	return OK_T(NIL, Selector(NewIndexedSelector(index)))
+	return OK(NIL), Selector(NewIndexedSelector(index))
 }
 
 func (selector IndexedSelector) Apply(value Value) Result {
@@ -127,11 +127,11 @@ func NewKeyedSelector(keys []Value) KeyedSelector {
 }
 
 // Factory function, returns a result instead of panicking like the constructor.
-func CreateKeyedSelector(keys []Value) TypedResult[Selector] {
+func CreateKeyedSelector(keys []Value) (Result, Selector) {
 	if len(keys) == 0 {
-		return ERROR_T[Selector]("empty selector")
+		return ERROR("empty selector"), nil
 	}
-	return OK_T(NIL, Selector(NewKeyedSelector(keys)))
+	return OK(NIL), Selector(NewKeyedSelector(keys))
 }
 
 func (selector KeyedSelector) Apply(value Value) Result {
@@ -177,11 +177,11 @@ func NewGenericSelector(rules []Value) GenericSelector {
 }
 
 // Factory function, returns a result instead of panicking like the constructor.
-func CreateGenericSelector(rules []Value) TypedResult[Selector] {
+func CreateGenericSelector(rules []Value) (Result, Selector) {
 	if len(rules) == 0 {
-		return ERROR_T[Selector]("empty selector")
+		return ERROR("empty selector"), nil
 	}
-	return OK_T(NIL, Selector(NewGenericSelector(rules)))
+	return OK(NIL), Selector(NewGenericSelector(rules))
 }
 
 func (selector GenericSelector) Apply(value Value) Result {

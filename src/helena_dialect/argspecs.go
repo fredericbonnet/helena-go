@@ -59,17 +59,16 @@ func (ArgspecValue) CustomType() core.CustomValueType {
 func NewArgspecValue(argspec Argspec) ArgspecValue {
 	return ArgspecValue{argspec}
 }
-func ArgspecValueFromValue(value core.Value) core.TypedResult[ArgspecValue] {
+func ArgspecValueFromValue(value core.Value) (core.Result, ArgspecValue) {
 	if v, ok := value.(ArgspecValue); ok {
-		return core.OK_T(v, v)
+		return core.OK(v), v
 	}
-	result := buildArguments(value)
+	result, args := buildArguments(value)
 	if result.Code != core.ResultCode_OK {
-		return core.ResultAs[ArgspecValue](result.AsResult())
+		return result, ArgspecValue{}
 	}
-	args := result.Data
 	v := NewArgspecValue(NewArgspec(args))
-	return core.OK_T(v, v)
+	return core.OK(v), v
 }
 func (argspec ArgspecValue) Usage(skip uint) string {
 	return BuildUsage(argspec.Argspec.Args, skip)
@@ -94,12 +93,12 @@ func (argspec ArgspecValue) ApplyArguments(
 		// Use faster algorithm for the common case with all positionals
 		return argspec.applyPositionals(scope, values, skip, setArgument)
 	}
-	result := argspec.findSlots(values, skip)
+	result, data := argspec.findSlots(values, skip)
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	slots := result.Data.slots
-	remainders := result.Data.remainders
+	slots := data.slots
+	remainders := data.remainders
 	for slot, arg := range argspec.Argspec.Args {
 		var value core.Value
 		switch arg.Type {
@@ -176,7 +175,7 @@ type findSlotsResult = struct {
 func (argspec ArgspecValue) findSlots(
 	values []core.Value,
 	skip uint,
-) core.TypedResult[findSlotsResult] {
+) (core.Result, findSlotsResult) {
 	nbRequired := argspec.Argspec.NbRequired
 	nbOptional := argspec.Argspec.NbOptional
 	remainders := uint(0)
@@ -241,35 +240,34 @@ func (argspec ArgspecValue) findSlots(
 		}
 		nbOptions := uint(0)
 		for i < len(values) && nbOptions < lastSlot-firstSlot {
-			result := core.ValueToString(values[i])
+			result, optname := core.ValueToString(values[i])
 			if result.Code != core.ResultCode_OK {
 				if requiredOptions == 0 {
 					break
 				}
-				return core.ERROR_T[findSlotsResult]("invalid option")
+				return core.ERROR("invalid option"), findSlotsResult{}
 			}
-			optname := result.Data
 			if optname == "--" {
 				if requiredOptions == 0 {
 					break
 				}
-				return core.ERROR_T[findSlotsResult]("unexpected option terminator")
+				return core.ERROR("unexpected option terminator"), findSlotsResult{}
 			}
 			if _, ok := argspec.Argspec.OptionSlots[optname]; !ok {
 				if requiredOptions == 0 {
 					break
 				}
-				return core.ERROR_T[findSlotsResult](`unknown option "` + optname + `"`)
+				return core.ERROR(`unknown option "` + optname + `"`), findSlotsResult{}
 			}
 			optionSlot := argspec.Argspec.OptionSlots[optname]
 			if optionSlot < firstSlot || optionSlot >= lastSlot {
-				return core.ERROR_T[findSlotsResult](`unexpected option "` + optname + `"`)
+				return core.ERROR(`unexpected option "` + optname + `"`), findSlotsResult{}
 			}
 			arg := argspec.Argspec.Args[optionSlot]
 			if slots[optionSlot] >= 0 {
-				return core.ERROR_T[findSlotsResult](
+				return core.ERROR(
 					`duplicate values for option "` + OptionName(arg.Option.Names) + `"`,
-				)
+				), findSlotsResult{}
 			}
 			nbOptions++
 			switch arg.Option.Type {
@@ -293,8 +291,8 @@ func (argspec ArgspecValue) findSlots(
 		}
 		if i < len(values) {
 			// Skip first trailing terminator
-			result := core.ValueToString(values[i])
-			if result.Code == core.ResultCode_OK && result.Data == "--" {
+			result, optname := core.ValueToString(values[i])
+			if result.Code == core.ResultCode_OK && optname == "--" {
 				i++
 			}
 		}
@@ -304,9 +302,9 @@ func (argspec ArgspecValue) findSlots(
 		}
 	}
 	if i < len(values) {
-		return core.ERROR_T[findSlotsResult]("extra values after arguments")
+		return core.ERROR("extra values after arguments"), findSlotsResult{}
 	}
-	return core.OK_T(core.NIL, findSlotsResult{slots, remainders})
+	return core.OK(core.NIL), findSlotsResult{slots, remainders}
 }
 func (argspec ArgspecValue) applyPositionals(
 	scope *Scope,
@@ -391,14 +389,15 @@ type argspecCommand struct {
 
 func newArgspecCommand(scope *Scope) argspecCommand {
 	subscope := scope.NewChildScope()
-	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	_, argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")}))
 	ensemble := NewEnsembleCommand(subscope, argspec)
 	return argspecCommand{subscope, ensemble}
 }
 func (argspec argspecCommand) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if len(args) == 2 {
-		return ArgspecValueFromValue(args[1]).AsResult()
+		result, _ := ArgspecValueFromValue(args[1])
+		return result
 	}
 	return argspec.ensemble.Execute(args, scope)
 }
@@ -414,11 +413,10 @@ func (argspecUsageCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(ARGSPEC_USAGE_SIGNATURE)
 	}
-	result := ArgspecValueFromValue(args[1])
+	result, value := ArgspecValueFromValue(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	value := result.Data
 	return core.OK(core.STR(value.Usage(0)))
 }
 func (argspecUsageCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
@@ -437,16 +435,14 @@ func (argspecSetCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) != 3 {
 		return ARITY_ERROR(ARGSPEC_SET_SIGNATURE)
 	}
-	result := ArgspecValueFromValue(args[1])
+	result, value := ArgspecValueFromValue(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	value := result.Data
-	result2 := ValueToArray(args[2])
+	result2, values := ValueToArray(args[2])
 	if result2.Code != core.ResultCode_OK {
-		return result2.AsResult()
+		return result2
 	}
-	values := result2.Data
 	if !value.CheckArity(values, 0) {
 		return core.ERROR(`wrong # values: should be "` + value.Usage(0) + `"`)
 	}

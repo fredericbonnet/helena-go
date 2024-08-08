@@ -29,22 +29,22 @@ func (whileCmd) Execute(args []core.Value, context any) core.Result {
 				if result.Code != core.ResultCode_OK {
 					return result
 				}
-				result2 := core.ValueToBoolean(result.Value)
+				result2, b := core.ValueToBoolean(result.Value)
 				if result2.Code != core.ResultCode_OK {
-					return result2.AsResult()
+					return result2
 				}
-				if !result2.Data {
+				if !b {
 					return lastResult
 				}
 				return callBody()
 			})
 		}
 	} else {
-		result := core.ValueToBoolean(test)
+		result, b := core.ValueToBoolean(test)
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		if !result.Data {
+		if !b {
 			return lastResult
 		}
 		callTest = callBody
@@ -90,7 +90,7 @@ func (cmd ifCmd) Execute(args []core.Value, context any) core.Result {
 		if i >= len(args) {
 			return core.OK(core.NIL)
 		}
-		keyword := core.ValueToString(args[i]).Data
+		_, keyword := core.ValueToString(args[i])
 		if keyword == "else" {
 			return callBody()
 		}
@@ -101,22 +101,22 @@ func (cmd ifCmd) Execute(args []core.Value, context any) core.Result {
 				if result.Code != core.ResultCode_OK {
 					return result
 				}
-				result2 := core.ValueToBoolean(result.Value)
+				result2, b := core.ValueToBoolean(result.Value)
 				if result2.Code != core.ResultCode_OK {
-					return result2.AsResult()
+					return result2
 				}
-				if result2.Data {
+				if b {
 					return callBody()
 				}
 				i += 3
 				return callTest()
 			})
 		} else {
-			result := core.ValueToBoolean(test)
+			result, b := core.ValueToBoolean(test)
 			if result.Code != core.ResultCode_OK {
-				return result.AsResult()
+				return result
 			}
-			if result.Data {
+			if b {
 				return callBody()
 			}
 			i += 3
@@ -125,7 +125,7 @@ func (cmd ifCmd) Execute(args []core.Value, context any) core.Result {
 	}
 	callBody = func() core.Result {
 		var body core.Value
-		if core.ValueToString(args[i]).Data == "else" {
+		if _, s := core.ValueToString(args[i]); s == "else" {
 			body = args[i+1]
 		} else {
 			body = args[i+2]
@@ -147,11 +147,10 @@ func (ifCmd) checkArgs(args []core.Value) core.Result {
 	}
 	i := 3
 	for i < len(args) {
-		result := core.ValueToString(args[i])
+		result, keyword := core.ValueToString(args[i])
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid keyword")
 		}
-		keyword := result.Data
 		switch keyword {
 		case "elseif":
 			switch len(args) - i {
@@ -194,11 +193,10 @@ func (whenCmd) Execute(args []core.Value, context any) core.Result {
 	default:
 		return ARITY_ERROR(WHEN_SIGNATURE)
 	}
-	result := ValueToArray(casesBody)
+	result, cases := ValueToArray(casesBody)
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	cases := result.Data
 	if len(cases) == 0 {
 		return core.OK(core.NIL)
 	}
@@ -250,11 +248,11 @@ func (whenCmd) Execute(args []core.Value, context any) core.Result {
 			}
 		default:
 			{
-				result := core.ValueToBoolean(test)
+				result, b := core.ValueToBoolean(test)
 				if result.Code != core.ResultCode_OK {
-					return result.AsResult()
+					return result
 				}
-				if result.Data {
+				if b {
 					return callBody()
 				}
 				i += 2
@@ -265,11 +263,11 @@ func (whenCmd) Execute(args []core.Value, context any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
-			result2 := core.ValueToBoolean(result.Value)
+			result2, b := core.ValueToBoolean(result.Value)
 			if result2.Code != core.ResultCode_OK {
-				return result2.AsResult()
+				return result2
 			}
-			if result2.Data {
+			if b {
 				return callBody()
 			}
 			i += 2
@@ -395,7 +393,7 @@ func (cmd catchCmd) run(state *catchState, scope *Scope) core.Result {
 					core.ResultCode_YIELD,
 					core.ResultCode_ERROR:
 					{
-						varname := core.ValueToString(state.args[i+1]).Data
+						_, varname := core.ValueToString(state.args[i+1])
 						handler := state.args[i+2]
 						subscope := scope.NewLocalScope()
 						subscope.SetNamedLocal(varname, state.bodyResult.Value)
@@ -467,7 +465,7 @@ func (catchCmd) findHandlerIndex(
 ) int {
 	i := 2
 	for i < len(args) {
-		keyword := core.ValueToString(args[i]).Data
+		_, keyword := core.ValueToString(args[i])
 		switch keyword {
 		case "return":
 			if code == core.ResultCode_RETURN {
@@ -503,7 +501,7 @@ func (catchCmd) findHandlerIndex(
 func (catchCmd) findFinallyIndex(args []core.Value) int {
 	i := 2
 	for i < len(args) {
-		keyword := core.ValueToString(args[i]).Data
+		_, keyword := core.ValueToString(args[i])
 		switch keyword {
 		case "return",
 			"yield",
@@ -521,11 +519,10 @@ func (catchCmd) findFinallyIndex(args []core.Value) int {
 func (catchCmd) checkArgs(args []core.Value) core.Result {
 	i := 2
 	for i < len(args) {
-		result := core.ValueToString(args[i])
+		result, keyword := core.ValueToString(args[i])
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid keyword")
 		}
-		keyword := result.Data
 		switch keyword {
 		case "return",
 			"yield",
@@ -537,7 +534,7 @@ func (catchCmd) checkArgs(args []core.Value) core.Result {
 				return core.ERROR(`wrong #args: missing ` + keyword + ` handler body`)
 			default:
 				{
-					if core.ValueToString(args[i+1]).Code != core.ResultCode_OK {
+					if result, _ := core.ValueToString(args[i+1]); result.Code != core.ResultCode_OK {
 						return core.ERROR(`invalid ` + keyword + ` handler parameter name`)
 					}
 					i += 3

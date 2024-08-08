@@ -24,7 +24,7 @@ type CustomResultCode struct {
 }
 
 // Helena result
-type TypedResult[T any] struct {
+type Result struct {
 	// Result code
 	Code ResultCode
 
@@ -32,16 +32,7 @@ type TypedResult[T any] struct {
 	Value Value
 
 	// Extra data
-	Data T
-}
-type Result TypedResult[any]
-
-func (result TypedResult[any]) AsResult() Result {
-	return Result{Code: result.Code, Value: result.Value, Data: nil}
-}
-
-func ResultAs[To any](result Result) TypedResult[To] {
-	return TypedResult[To]{Code: result.Code, Value: result.Value}
+	Data any
 }
 
 //
@@ -52,13 +43,6 @@ func OK(value Value) Result {
 	return Result{
 		Code:  ResultCode_OK,
 		Value: value,
-	}
-}
-func OK_T[T any](value Value, data T) TypedResult[T] {
-	return TypedResult[T]{
-		Code:  ResultCode_OK,
-		Value: value,
-		Data:  data,
 	}
 }
 
@@ -94,12 +78,6 @@ func ERROR_STACK(message string, errorStack *ErrorStack) Result {
 		Code:  ResultCode_ERROR,
 		Value: STR(message),
 		Data:  errorStack,
-	}
-}
-func ERROR_T[T any](message string) TypedResult[T] {
-	return TypedResult[T]{
-		Code:  ResultCode_ERROR,
-		Value: STR(message),
 	}
 }
 

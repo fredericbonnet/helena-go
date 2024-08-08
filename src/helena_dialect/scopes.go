@@ -26,11 +26,10 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 	if len(args) == 1 {
 		return core.OK(scope.value)
 	}
-	result := core.ValueToString(args[1])
+	result, subcommand := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
 		return INVALID_SUBCOMMAND_ERROR()
 	}
-	subcommand := result.Data
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
@@ -58,11 +57,10 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 		if len(args) < 3 {
 			return ARITY_ERROR("<scope> call cmdname ?arg ...?")
 		}
-		result := core.ValueToString(args[2])
+		result, command := core.ValueToString(args[2])
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid command name")
 		}
-		command := result.Data
 		if !scope.scope.HasLocalCommand(command) {
 			return core.ERROR(`unknown command "` + command + `"`)
 		}

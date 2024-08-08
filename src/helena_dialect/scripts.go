@@ -10,11 +10,10 @@ func (parseCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(PARSE_SIGNATURE)
 	}
-	result := core.ValueToString(args[1])
+	result, source := core.ValueToString(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	source := result.Data
 	tokenizer := core.Tokenizer{}
 	parser := core.NewParser(nil)
 	parseResult := parser.ParseTokens(
@@ -40,7 +39,7 @@ type scriptCommand struct {
 func newScriptCommand(scope *Scope) *scriptCommand {
 	list := &scriptCommand{}
 	list.scope = scope.NewChildScope()
-	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	_, argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")}))
 	list.ensemble = NewEnsembleCommand(list.scope, argspec)
 	return list
 }

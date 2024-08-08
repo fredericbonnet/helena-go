@@ -36,7 +36,7 @@ func (sourceCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) != 2 {
 		return helena_dialect.ARITY_ERROR("source path")
 	}
-	path := core.ValueToString(args[1]).Data
+	_, path := core.ValueToString(args[1])
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return core.ERROR("error reading file: " + fmt.Sprint(err))
@@ -247,7 +247,8 @@ func processResult(result core.Result) (core.Value, error) {
 	case core.ResultCode_OK:
 		return result.Value, nil
 	case core.ResultCode_ERROR:
-		return nil, basicError{core.ValueToString(result.Value).Data}
+		_, s := core.ValueToString(result.Value)
+		return nil, basicError{s}
 	default:
 		return nil, (basicError{"unexpected " + core.RESULT_CODE_NAME(result)})
 	}

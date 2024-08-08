@@ -19,7 +19,7 @@ func TestCore(t *testing.T) {
 // Helpers
 //
 
-func asString(value Value) string { return ValueToString(value).Data }
+func asString(value Value) (s string) { _, s = ValueToString(value); return }
 
 type mockVariableResolver struct {
 	variables map[string]Value
@@ -104,18 +104,18 @@ func (command *captureContextCommand) Execute(args []Value, context any) Result 
 	return OK(NIL)
 }
 
-type builderFn func(rules []Value) TypedResult[Selector]
+type builderFn func(rules []Value) (Result, Selector)
 type mockSelectorResolver struct {
 	builder builderFn
 }
 
 func newMockSelectorResolver() *mockSelectorResolver {
 	return &mockSelectorResolver{
-		builder: func(rules []Value) TypedResult[Selector] { return OK_T[Selector](NIL, nil) },
+		builder: func(rules []Value) (Result, Selector) { return OK(NIL), nil },
 	}
 }
 
-func (resolver *mockSelectorResolver) Resolve(rules []Value) TypedResult[Selector] {
+func (resolver *mockSelectorResolver) Resolve(rules []Value) (Result, Selector) {
 	return resolver.builder(rules)
 }
 func (resolver *mockSelectorResolver) register(builder builderFn) {

@@ -41,46 +41,43 @@ func OptionName(names []string) string {
 	return strings.Join(names, "|")
 }
 
-func buildArguments(specs core.Value) core.TypedResult[[]Argument] {
+func buildArguments(specs core.Value) (core.Result, []Argument) {
 	args := []Argument{}
 	argnames := map[string]struct{}{}
 	optnames := map[string]struct{}{}
 	hasRemainder := false
-	result := ValueToArray(specs)
+	result, values := ValueToArray(specs)
 	if result.Code != core.ResultCode_OK {
-		return core.ERROR_T[[]Argument]("invalid argument list")
+		return core.ERROR("invalid argument list"), nil
 	}
-	values := result.Data
 	var lastOption *Option = nil
 	for _, value := range values {
-		result := isOption(value)
+		result, option := isOption(value)
 		if result.Code != core.ResultCode_OK {
-			return core.ResultAs[[]Argument](result.AsResult())
+			return result, nil
 		}
-		option := result.Data
 		if option != nil {
 			if hasRemainder {
-				return core.ERROR_T[[]Argument]("cannot use remainder argument before options")
+				return core.ERROR("cannot use remainder argument before options"), nil
 			}
 			for _, optname := range option.Names {
 				if _, ok := optnames[optname]; ok {
-					return core.ERROR_T[[]Argument](`duplicate option "` + optname + `"`)
+					return core.ERROR(`duplicate option "` + optname + `"`), nil
 				}
 				optnames[optname] = struct{}{}
 			}
 			lastOption = option
 			continue
 		}
-		result2 := buildArgument(value)
+		result2, arg := buildArgument(value)
 		if result2.Code != core.ResultCode_OK {
-			return core.ResultAs[[]Argument](result2.AsResult())
+			return result2, nil
 		}
-		arg := result2.Data
 		if lastOption != nil {
 			if lastOption.Type == OptionType_FLAG && arg.Type != ArgumentType_OPTIONAL {
-				return core.ERROR_T[[]Argument](
+				return core.ERROR(
 					`argument for flag "` + OptionName(lastOption.Names) + `" must be optional`,
-				)
+				), nil
 			}
 			arg.Option = lastOption
 			args = append(args, arg)
@@ -89,48 +86,47 @@ func buildArguments(specs core.Value) core.TypedResult[[]Argument] {
 		}
 
 		if arg.Type == ArgumentType_REMAINDER && hasRemainder {
-			return core.ERROR_T[[]Argument]("only one remainder argument is allowed")
+			return core.ERROR("only one remainder argument is allowed"), nil
 		}
 		if _, ok := argnames[arg.Name]; ok {
-			return core.ERROR_T[[]Argument](`duplicate argument "` + arg.Name + `"`)
+			return core.ERROR(`duplicate argument "` + arg.Name + `"`), nil
 		}
 		hasRemainder = arg.Type == ArgumentType_REMAINDER
 		argnames[arg.Name] = struct{}{}
 		args = append(args, arg)
 	}
 	if lastOption != nil {
-		return core.ERROR_T[[]Argument](`missing argument for option "` + OptionName(lastOption.Names) + `"`)
+		return core.ERROR(`missing argument for option "` + OptionName(lastOption.Names) + `"`), nil
 	}
-	return core.OK_T(core.NIL, args)
+	return core.OK(core.NIL), args
 }
-func isOption(value core.Value) core.TypedResult[*Option] {
+func isOption(value core.Value) (core.Result, *Option) {
 	var options []core.Value
 	switch value.Type() {
 	case core.ValueType_LIST,
 		core.ValueType_TUPLE,
 		core.ValueType_SCRIPT:
 		{
-			result := ValueToArray(value)
+			result, values := ValueToArray(value)
 			if result.Code != core.ResultCode_OK {
-				return core.ResultAs[*Option](result.AsResult())
+				return result, nil
 			}
-			options = result.Data
+			options = values
 		}
 	default:
 		options = []core.Value{value}
 	}
 	if len(options) == 0 {
-		return core.OK_T[*Option](core.NIL, nil)
+		return core.OK(core.NIL), nil
 	}
 
 	var type_ OptionType
 	names := []string{}
 	for _, option := range options {
-		result := core.ValueToString(option)
+		result, name := core.ValueToString(option)
 		if result.Code != core.ResultCode_OK {
 			break
 		}
-		name := result.Data
 		if len(name) < 1 {
 			break
 		}
@@ -140,7 +136,7 @@ func isOption(value core.Value) core.TypedResult[*Option] {
 				break
 			}
 			if name == "--" {
-				return core.ERROR_T[*Option]("cannot use option terminator as option name")
+				return core.ERROR("cannot use option terminator as option name"), nil
 			}
 			if len(names) > 0 && type_ != OptionType_OPTION {
 				break
@@ -156,7 +152,7 @@ func isOption(value core.Value) core.TypedResult[*Option] {
 				break
 			}
 			if name == "?--" {
-				return core.ERROR_T[*Option]("cannot use option terminator as option name")
+				return core.ERROR("cannot use option terminator as option name"), nil
 			}
 			if len(names) > 0 && type_ != OptionType_FLAG {
 				break
@@ -168,127 +164,120 @@ func isOption(value core.Value) core.TypedResult[*Option] {
 		}
 	}
 	if len(names) == 0 {
-		return core.OK_T[*Option](core.NIL, nil)
+		return core.OK(core.NIL), nil
 	}
 	if len(names) != len(options) {
-		return core.ERROR_T[*Option](`incompatible aliases for option "` + OptionName(names) + `"`)
+		return core.ERROR(`incompatible aliases for option "` + OptionName(names) + `"`), nil
 	}
-	return core.OK_T(core.NIL, &Option{names, type_})
+	return core.OK(core.NIL), &Option{names, type_}
 }
-func buildArgument(value core.Value) core.TypedResult[Argument] {
+func buildArgument(value core.Value) (core.Result, Argument) {
 	switch value.Type() {
 	case core.ValueType_LIST,
 		core.ValueType_TUPLE,
 		core.ValueType_SCRIPT:
 		{
-			result := ValueToArray(value)
+			result, specs := ValueToArray(value)
 			if result.Code != core.ResultCode_OK {
-				return core.ResultAs[Argument](result.AsResult())
+				return result, Argument{}
 			}
-			specs := result.Data
 			switch len(specs) {
 			case 0:
-				return core.ERROR_T[Argument]("empty argument specifier")
+				return core.ERROR("empty argument specifier"), Argument{}
 			case 1:
 				{
-					result := core.ValueToString(specs[0])
+					result, name := core.ValueToString(specs[0])
 					if result.Code != core.ResultCode_OK {
-						return core.ERROR_T[Argument]("invalid argument name")
+						return core.ERROR("invalid argument name"), Argument{}
 					}
-					name := result.Data
 					if name == "" || name == "?" {
-						return core.ERROR_T[Argument]("empty argument name")
+						return core.ERROR("empty argument name"), Argument{}
 					}
 					if name[0] == '?' {
-						return core.OK_T(core.NIL, Argument{Name: name[1:], Type: ArgumentType_OPTIONAL})
+						return core.OK(core.NIL), Argument{Name: name[1:], Type: ArgumentType_OPTIONAL}
 					} else {
-						return core.OK_T(core.NIL, Argument{Name: name, Type: ArgumentType_REQUIRED})
+						return core.OK(core.NIL), Argument{Name: name, Type: ArgumentType_REQUIRED}
 					}
 				}
 			case 2:
 				{
-					result1 := core.ValueToString(specs[0])
-					result2 := core.ValueToString(specs[1])
+					result1, nameOrGuard := core.ValueToString(specs[0])
+					result2, nameOrDefault := core.ValueToString(specs[1])
 					if result1.Code != core.ResultCode_OK && result2.Code != core.ResultCode_OK {
-						return core.ERROR_T[Argument]("invalid argument name")
+						return core.ERROR("invalid argument name"), Argument{}
 					}
-					nameOrGuard := result1.Data
-					nameOrDefault := result2.Data
 					if (nameOrGuard == "" || nameOrGuard == "?") &&
 						(nameOrDefault == "" || nameOrDefault == "?") {
-						return core.ERROR_T[Argument]("empty argument name")
+						return core.ERROR("empty argument name"), Argument{}
 					}
 					if result1.Code == core.ResultCode_OK && nameOrGuard[0] == '?' {
-						return core.OK_T(core.NIL, Argument{
+						return core.OK(core.NIL), Argument{
 							Name:    nameOrGuard[1:],
 							Type:    ArgumentType_OPTIONAL,
 							Default: specs[1],
-						})
+						}
 					} else if nameOrDefault[0] == '?' {
-						return core.OK_T(core.NIL, Argument{
+						return core.OK(core.NIL), Argument{
 							Name:  nameOrDefault[1:],
 							Type:  ArgumentType_OPTIONAL,
 							Guard: specs[0],
-						})
+						}
 					} else {
-						return core.OK_T[Argument](core.NIL, Argument{
+						return core.OK(core.NIL), Argument{
 							Name:  nameOrDefault,
 							Type:  ArgumentType_REQUIRED,
 							Guard: specs[0],
-						})
+						}
 					}
 				}
 			case 3:
 				{
-					result := core.ValueToString(specs[1])
+					result, name := core.ValueToString(specs[1])
 					if result.Code != core.ResultCode_OK {
-						return core.ERROR_T[Argument]("invalid argument name")
+						return core.ERROR("invalid argument name"), Argument{}
 					}
-					name := result.Data
 					if name == "" || name == "?" {
-						return core.ERROR_T[Argument]("empty argument name")
+						return core.ERROR("empty argument name"), Argument{}
 					}
 					if name[0] != '?' {
-						return core.ERROR_T[Argument](`default argument "` + name + `" must be optional`)
+						return core.ERROR(`default argument "` + name + `" must be optional`), Argument{}
 					}
-					return core.OK_T(core.NIL, Argument{
+					return core.OK(core.NIL), Argument{
 						Name:    name[1:],
 						Type:    ArgumentType_OPTIONAL,
 						Default: specs[2],
 						Guard:   specs[0],
-					})
+					}
 				}
 			default:
 				{
-					result := core.ValueToString(specs[0])
+					result, name := core.ValueToString(specs[0])
 					if result.Code != core.ResultCode_OK {
-						return core.ERROR_T[Argument]("invalid argument name")
+						return core.ERROR("invalid argument name"), Argument{}
 					}
-					name := result.Data
-					return core.ERROR_T[Argument](`too many specifiers for argument "` + name + `"`)
+					return core.ERROR(`too many specifiers for argument "` + name + `"`), Argument{}
 				}
 			}
 		}
 	default:
 		{
-			result := core.ValueToString(value)
+			result, name := core.ValueToString(value)
 			if result.Code != core.ResultCode_OK {
-				return core.ERROR_T[Argument]("invalid argument name")
+				return core.ERROR("invalid argument name"), Argument{}
 			}
-			name := result.Data
 			if name == "" || name == "?" {
-				return core.ERROR_T[Argument]("empty argument name")
+				return core.ERROR("empty argument name"), Argument{}
 			}
 			if name[0] == '*' {
 				if len(name) == 1 {
-					return core.OK_T(core.NIL, Argument{Name: name, Type: ArgumentType_REMAINDER})
+					return core.OK(core.NIL), Argument{Name: name, Type: ArgumentType_REMAINDER}
 				} else {
-					return core.OK_T(core.NIL, Argument{Name: name[1:], Type: ArgumentType_REMAINDER})
+					return core.OK(core.NIL), Argument{Name: name[1:], Type: ArgumentType_REMAINDER}
 				}
 			} else if name[0] == '?' {
-				return core.OK_T(core.NIL, Argument{Name: name[1:], Type: ArgumentType_OPTIONAL})
+				return core.OK(core.NIL), Argument{Name: name[1:], Type: ArgumentType_OPTIONAL}
 			} else {
-				return core.OK_T(core.NIL, Argument{Name: name, Type: ArgumentType_REQUIRED})
+				return core.OK(core.NIL), Argument{Name: name, Type: ArgumentType_REQUIRED}
 			}
 		}
 	}

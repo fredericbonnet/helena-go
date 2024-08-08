@@ -10,7 +10,7 @@ type tupleCommand struct {
 func newTupleCommand(scope *Scope) *tupleCommand {
 	tuple := &tupleCommand{}
 	tuple.scope = scope.NewChildScope()
-	argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")})).Data
+	_, argspec := ArgspecValueFromValue(core.LIST([]core.Value{core.STR("value")}))
 	tuple.ensemble = NewEnsembleCommand(tuple.scope, argspec)
 	return tuple
 }
@@ -32,11 +32,10 @@ func (tupleLengthCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(TUPLE_LENGTH_SIGNATURE)
 	}
-	result := ValueToArray(args[1])
+	result, values := ValueToArray(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	values := result.Data
 	return core.OK(core.INT(int64(len(values))))
 }
 func (tupleLengthCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
@@ -54,11 +53,10 @@ func (tupleAtCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) != 3 && len(args) != 4 {
 		return ARITY_ERROR(TUPLE_AT_SIGNATURE)
 	}
-	result := ValueToArray(args[1])
+	result, values := ValueToArray(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	values := result.Data
 	if len(args) == 4 {
 		return core.ListAtOrDefault(values, args[2], args[3])
 	} else {
@@ -79,11 +77,10 @@ func ValueToTuple(value core.Value) core.Result {
 	case core.ValueType_LIST,
 		core.ValueType_SCRIPT:
 		{
-			result := ValueToArray(value)
+			result, values := ValueToArray(value)
 			if result.Code != core.ResultCode_OK {
-				return result.AsResult()
+				return result
 			}
-			values := result.Data
 			return core.OK(core.TUPLE(values))
 		}
 	default:

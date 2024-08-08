@@ -797,11 +797,10 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 			{
 				index := state.Pop()
 				value := state.Pop()
-				result2 := CreateIndexedSelector(index)
+				result2, selector := CreateIndexedSelector(index)
 				if result2.Code != ResultCode_OK {
-					return result2.AsResult()
+					return result2
 				}
-				selector := result2.Data
 				result := selector.Apply(value)
 				if result.Code != ResultCode_OK {
 					return result
@@ -813,11 +812,10 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 			{
 				keys := state.LastFrame
 				value := state.Pop()
-				result2 := CreateKeyedSelector(append([]Value{}, keys...))
+				result2, selector := CreateKeyedSelector(append([]Value{}, keys...))
 				if result2.Code != ResultCode_OK {
-					return result2.AsResult()
+					return result2
 				}
-				selector := result2.Data
 				result := selector.Apply(value)
 				if result.Code != ResultCode_OK {
 					return result
@@ -829,11 +827,10 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 			{
 				rules := state.LastFrame
 				value := state.Pop()
-				result := executor.resolveSelector(rules)
+				result, selector := executor.resolveSelector(rules)
 				if result.Code != ResultCode_OK {
-					return result.AsResult()
+					return result
 				}
-				selector := result.Data
 				result2 := ApplySelector(value, selector)
 				if result2.Code != ResultCode_OK {
 					return result2
@@ -846,11 +843,10 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 				args := state.LastFrame
 				if len(args) > 0 {
 					cmdname := args[0]
-					result := executor.resolveCommand(cmdname)
+					result, command := executor.resolveCommand(cmdname)
 					if result.Code != ResultCode_OK {
-						return result.AsResult()
+						return result
 					}
-					command := result.Data
 					state.Command = command
 					state.Result = state.Command.Execute(args, executor.Context)
 					if state.Result.Code != ResultCode_OK {
@@ -867,11 +863,11 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 				values := state.LastFrame
 				s := ""
 				for _, value := range values {
-					result := ValueToString(value)
+					result, s2 := ValueToString(value)
 					if result.Code != ResultCode_OK {
-						return result.AsResult()
+						return result
 					}
-					s += result.Data
+					s += s2
 				}
 				state.Push(NewStringValue(s))
 			}
@@ -902,11 +898,10 @@ func (executor *Executor) resolveValue(source Value) Result {
 		return executor.resolveQualified(source.(QualifiedValue))
 	default:
 		{
-			result := ValueToString(source)
+			result, varname := ValueToString(source)
 			if result.Code != ResultCode_OK {
 				return ERROR("invalid variable name")
 			}
-			varname := result.Data
 			return executor.resolveVariable(varname)
 		}
 	}
@@ -956,32 +951,31 @@ func (executor *Executor) resolveVariable(varname string) Result {
 	return OK(value)
 }
 
-func (executor *Executor) resolveCommand(cmdname Value) TypedResult[Command] {
+func (executor *Executor) resolveCommand(cmdname Value) (Result, Command) {
 	if executor.CommandResolver == nil {
-		return ERROR_T[Command]("no command resolver")
+		return ERROR("no command resolver"), nil
 	}
 	command := executor.CommandResolver.Resolve(cmdname)
 	if command == nil {
-		result := ValueToString(cmdname)
+		result, name := ValueToString(cmdname)
 		if result.Code != ResultCode_OK {
-			return ERROR_T[Command]("invalid command name")
+			return ERROR("invalid command name"), nil
 		}
-		name := result.Data
-		return ERROR_T[Command](`cannot resolve command "` + name + `"`)
+		return ERROR(`cannot resolve command "` + name + `"`), nil
 	}
-	return OK_T(NIL, command)
+	return OK(NIL), command
 }
 
-func (executor *Executor) resolveSelector(rules []Value) TypedResult[Selector] {
+func (executor *Executor) resolveSelector(rules []Value) (Result, Selector) {
 	if executor.SelectorResolver == nil {
-		return ERROR_T[Selector]("no selector resolver")
+		return ERROR("no selector resolver"), nil
 	}
-	result := executor.SelectorResolver.Resolve(rules)
+	result, s := executor.SelectorResolver.Resolve(rules)
 	if result.Code != ResultCode_OK {
-		return result
+		return result, nil
 	}
-	if result.Data == nil {
-		return ERROR_T[Selector](`cannot resolve selector {` + DisplayList(rules, nil) + `}`)
+	if s == nil {
+		return ERROR(`cannot resolve selector {` + DisplayList(rules, nil) + `}`), nil
 	}
-	return result
+	return result, s
 }

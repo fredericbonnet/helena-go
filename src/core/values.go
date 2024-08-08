@@ -147,40 +147,39 @@ func NewBooleanValue(value bool) BooleanValue {
 }
 
 // Convert value to BooleanValue
-func BooleanValueFromValue(value Value) TypedResult[BooleanValue] {
+func BooleanValueFromValue(value Value) (Result, BooleanValue) {
 	if value.Type() == ValueType_BOOLEAN {
-		return OK_T(value, BooleanValue(value.(BooleanValue)))
+		return OK(value), BooleanValue(value.(BooleanValue))
 	}
-	result := ValueToBoolean(value)
+	result, b := ValueToBoolean(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[BooleanValue](result.AsResult())
+		return result, FALSE
 	}
-	if result.Data {
-		return OK_T(TRUE, TRUE)
+	if b {
+		return OK(TRUE), TRUE
 	} else {
-		return OK_T(FALSE, FALSE)
+		return OK(FALSE), FALSE
 	}
 }
 
 // Convert value to boolean:
 // - Booleans: use boolean value
 // - Strings: true, false
-func ValueToBoolean(value Value) TypedResult[bool] {
+func ValueToBoolean(value Value) (Result, bool) {
 	if value.Type() == ValueType_BOOLEAN {
-		return OK_T(NIL, BooleanValue(value.(BooleanValue)).Value)
+		return OK(NIL), BooleanValue(value.(BooleanValue)).Value
 	}
-	result := ValueToString(value)
+	result, s := ValueToString(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[bool](result.AsResult())
+		return result, false
 	}
-	s := result.Data
 	if s == "true" {
-		return OK_T(NIL, true)
+		return OK(NIL), true
 	}
 	if s == "false" {
-		return OK_T(NIL, false)
+		return OK(NIL), false
 	}
-	return ERROR_T[bool](`invalid boolean "` + s + `"`)
+	return ERROR(`invalid boolean "` + s + `"`), false
 }
 
 func (value BooleanValue) Display(_ DisplayFunction) string {
@@ -216,16 +215,16 @@ func NewIntegerValue(value int64) IntegerValue {
 }
 
 // Convert value to IntegerValue
-func IntegerValueFromValue(value Value) TypedResult[IntegerValue] {
+func IntegerValueFromValue(value Value) (Result, IntegerValue) {
 	if value.Type() == ValueType_INTEGER {
-		return OK_T(value, value.(IntegerValue))
+		return OK(value), value.(IntegerValue)
 	}
-	result := ValueToInteger(value)
+	result, i := ValueToInteger(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[IntegerValue](result.AsResult())
+		return result, IntegerValue{}
 	}
-	v := NewIntegerValue(result.Data)
-	return OK_T(v, v)
+	v := NewIntegerValue(i)
+	return OK(v), v
 }
 
 // Report whether string value is convertible to integer
@@ -238,9 +237,9 @@ func StringIsInteger(value string) bool {
 // - Integers: use integer value
 // - Reals: any safe integer number
 // - Strings: any integer Number()-accepted string
-func ValueToInteger(value Value) TypedResult[int64] {
+func ValueToInteger(value Value) (Result, int64) {
 	if value.Type() == ValueType_INTEGER {
-		return OK_T(NIL, value.(IntegerValue).Value)
+		return OK(NIL), value.(IntegerValue).Value
 	}
 	// TODO: is it needed? strconv.ParseInt would work but maybe converting int to float is more efficient
 	// if (value.Type() == ValueType_REAL) {
@@ -248,16 +247,15 @@ func ValueToInteger(value Value) TypedResult[int64] {
 	//     return ERROR(`invalid integer "${(value as RealValue).value}"`);
 	//   return OK(NIL, (value as RealValue).value);
 	// }
-	result := ValueToString(value)
+	result, s := ValueToString(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[int64](result.AsResult())
+		return result, 0
 	}
-	s := result.Data
 	n, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return ERROR_T[int64](`invalid integer "` + s + `"`)
+		return ERROR(`invalid integer "` + s + `"`), 0
 	}
-	return OK_T(NIL, n)
+	return OK(NIL), n
 }
 
 func (value IntegerValue) Display(_ DisplayFunction) string {
@@ -283,20 +281,20 @@ func NewRealValue(value float64) RealValue {
 }
 
 // Convert value to RealValue
-func RealValueFromValue(value Value) TypedResult[RealValue] {
+func RealValueFromValue(value Value) (Result, RealValue) {
 	if value.Type() == ValueType_REAL {
-		return OK_T(value, value.(RealValue))
+		return OK(value), value.(RealValue)
 	}
 	if value.Type() == ValueType_INTEGER {
 		v := NewRealValue(float64(value.(IntegerValue).Value))
-		return OK_T(v, v)
+		return OK(v), v
 	}
-	result := ValueToFloat(value)
+	result, f := ValueToFloat(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[RealValue](result.AsResult())
+		return result, RealValue{}
 	}
-	v := NewRealValue(result.Data)
-	return OK_T(v, v)
+	v := NewRealValue(f)
+	return OK(v), v
 }
 
 // Report whether string value is convertible to number
@@ -309,23 +307,22 @@ func StringIsNumber(value string) bool {
 // - Reals: use float value
 // - Integers: use int value
 // - Strings: any strconv.ParseFloat()-accepted string
-func ValueToFloat(value Value) TypedResult[float64] {
+func ValueToFloat(value Value) (Result, float64) {
 	if value.Type() == ValueType_REAL {
-		return OK_T(NIL, value.(RealValue).Value)
+		return OK(NIL), value.(RealValue).Value
 	}
 	if value.Type() == ValueType_INTEGER {
-		return OK_T(NIL, float64(value.(IntegerValue).Value))
+		return OK(NIL), float64(value.(IntegerValue).Value)
 	}
-	result := ValueToString(value)
+	result, s := ValueToString(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[float64](result.AsResult())
+		return result, 0
 	}
-	s := result.Data
 	n, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return ERROR_T[float64](`invalid number "` + s + `"`)
+		return ERROR(`invalid number "` + s + `"`), 0
 	}
-	return OK_T(NIL, n)
+	return OK(NIL), n
 }
 
 func (value RealValue) Display(_ DisplayFunction) string {
@@ -351,54 +348,54 @@ func (value StringValue) Type() ValueType {
 }
 
 // Convert value to StringValue
-func StringValueFromValue(value Value) TypedResult[StringValue] {
+func StringValueFromValue(value Value) (Result, StringValue) {
 	if value.Type() == ValueType_STRING {
-		return OK_T(value, value.(StringValue))
+		return OK(value), value.(StringValue)
 	}
-	result := ValueToString(value)
+	result, s := ValueToString(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[StringValue](result.AsResult())
+		return result, StringValue{}
 	}
-	v := NewStringValue(result.Data)
-	return OK_T(v, v)
+	v := NewStringValue(s)
+	return OK(v), v
 }
 
 // Convert value to string
-func ValueToString(value Value) TypedResult[string] {
+func ValueToString(value Value) (Result, string) {
 	return valueToString(value, nil)
 }
 
 // Convert value to string, or default value if value has no string representation
-func ValueToStringOrDefault(value Value, def string) TypedResult[string] {
+func ValueToStringOrDefault(value Value, def string) (Result, string) {
 	return valueToString(value, &def)
 }
 
-func valueToString(value Value, def *string) TypedResult[string] {
+func valueToString(value Value, def *string) (Result, string) {
 	switch value.Type() {
 	case ValueType_STRING:
-		return OK_T(NIL, value.(StringValue).Value)
+		return OK(NIL), value.(StringValue).Value
 	case ValueType_BOOLEAN:
 		if value.(BooleanValue).Value {
-			return OK_T(NIL, "true")
+			return OK(NIL), "true"
 		} else {
-			return OK_T(NIL, "false")
+			return OK(NIL), "false"
 		}
 	case ValueType_INTEGER:
-		return OK_T(NIL, fmt.Sprint(value.(IntegerValue).Value))
+		return OK(NIL), fmt.Sprint(value.(IntegerValue).Value)
 	case ValueType_REAL:
-		return OK_T(NIL, fmt.Sprint(value.(RealValue).Value))
+		return OK(NIL), fmt.Sprint(value.(RealValue).Value)
 	case ValueType_SCRIPT:
 		{
 			source := value.(ScriptValue).Source
 			if source != nil {
-				return OK_T(NIL, *source)
+				return OK(NIL), *source
 			}
 		}
 	}
 	if def != nil {
-		return OK_T(NIL, *def)
+		return OK(NIL), *def
 	}
-	return ERROR_T[string]("value has no string representation")
+	return ERROR("value has no string representation"), ""
 }
 
 // Return index-th string character as StringValue
@@ -409,11 +406,10 @@ func StringAt(value string, index Value) Result {
 // Return index-th string character as StringValue, or default value for
 // out-of-range index
 func StringAtOrDefault(value string, index Value, def Value) Result {
-	result := ValueToInteger(index)
+	result, i := ValueToInteger(index)
 	if result.Code != ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	i := result.Data
 	if i < 0 || i >= int64(len(value)) {
 		if def != nil {
 			return OK(def)
@@ -453,29 +449,29 @@ func NewListValue(values []Value) ListValue {
 }
 
 // Convert value to ListValue
-func ListValueFromValue(value Value) TypedResult[ListValue] {
+func ListValueFromValue(value Value) (Result, ListValue) {
 	if value.Type() == ValueType_LIST {
-		return OK_T(value, value.(ListValue))
+		return OK(value), value.(ListValue)
 	}
-	result := ValueToValues(value)
+	result, l := ValueToValues(value)
 	if result.Code != ResultCode_OK {
-		return ResultAs[ListValue](result.AsResult())
+		return result, ListValue{}
 	}
-	v := NewListValue(result.Data)
-	return OK_T(v, v)
+	v := NewListValue(l)
+	return OK(v), v
 }
 
 // Convert value to array of values:
 // - Lists
 // - Tuples
-func ValueToValues(value Value) TypedResult[[]Value] {
+func ValueToValues(value Value) (Result, []Value) {
 	switch value.Type() {
 	case ValueType_LIST:
-		return OK_T(NIL, value.(ListValue).Values)
+		return OK(NIL), value.(ListValue).Values
 	case ValueType_TUPLE:
-		return OK_T(NIL, value.(TupleValue).Values)
+		return OK(NIL), value.(TupleValue).Values
 	default:
-		return ERROR_T[[]Value]("invalid list")
+		return ERROR("invalid list"), nil
 	}
 }
 
@@ -486,11 +482,10 @@ func ListAt(values []Value, index Value) Result {
 
 // Return index-th element in list, or default value for out-of-range index
 func ListAtOrDefault(values []Value, index Value, def Value) Result {
-	result := ValueToInteger(index)
+	result, i := ValueToInteger(index)
 	if result.Code != ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	i := result.Data
 	if i < 0 || i >= int64(len(values)) {
 		if def != nil {
 			return OK(def)
@@ -526,12 +521,11 @@ func NewDictionaryValue(value map[string]Value) DictionaryValue {
 }
 
 func (value DictionaryValue) SelectKey(key Value) Result {
-	result := ValueToString(key)
+	result, s := ValueToString(key)
 	if result.Code != ResultCode_OK {
 		return ERROR("invalid key")
 	}
-	k := result.Data
-	v, ok := value.Map[k]
+	v, ok := value.Map[s]
 	if !ok {
 		return ERROR("unknown key")
 	}
@@ -712,9 +706,9 @@ func (value QualifiedValue) Display(fn DisplayFunction) string {
 	if value.Source.Type() == ValueType_TUPLE {
 		source = Display(value.Source, fn)
 	} else {
-		result := ValueToString(value.Source)
+		result, s := ValueToString(value.Source)
 		if result.Code == ResultCode_OK {
-			source = DisplayLiteralOrBlock(result.Data)
+			source = DisplayLiteralOrBlock(s)
 		} else {
 			source = UndisplayableValueWithLabel("source")
 		}

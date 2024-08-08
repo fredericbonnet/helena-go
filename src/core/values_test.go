@@ -9,6 +9,9 @@ import (
 	. "helena/core"
 )
 
+func result(result Result, converted any) Result    { return result }
+func converted[T any](result Result, converted T) T { return converted }
+
 var _ = Describe("values", func() {
 	Describe("NIL", func() {
 		Specify("type should be NIL", func() {
@@ -49,31 +52,31 @@ var _ = Describe("values", func() {
 		})
 		Describe("BooleanValueFromValue()", func() {
 			It("should return the passed BooleanValue", func() {
-				Expect(BooleanValueFromValue(TRUE).Value).To(Equal(TRUE))
-				Expect(BooleanValueFromValue(FALSE).Value).To(Equal(FALSE))
+				Expect(result(BooleanValueFromValue(TRUE)).Value).To(Equal(TRUE))
+				Expect(result(BooleanValueFromValue(FALSE)).Value).To(Equal(FALSE))
 			})
 			It("should accept boolean strings", func() {
-				Expect(BooleanValueFromValue(NewStringValue("false")).Value).To(Equal(FALSE))
-				Expect(BooleanValueFromValue(NewStringValue("true")).Value).To(Equal(TRUE))
+				Expect(result(BooleanValueFromValue(NewStringValue("false"))).Value).To(Equal(FALSE))
+				Expect(result(BooleanValueFromValue(NewStringValue("true"))).Value).To(Equal(TRUE))
 			})
 			It("should reject non-boolean strings", func() {
 				Expect(BooleanValueFromValue(NIL)).To(Equal(
-					ERROR_T[BooleanValue]("value has no string representation"),
+					ERROR("value has no string representation"),
 				))
 				Expect(BooleanValueFromValue(NewIntegerValue(0))).To(Equal(
-					ERROR_T[BooleanValue](`invalid boolean "0"`),
+					ERROR(`invalid boolean "0"`),
 				))
 				Expect(BooleanValueFromValue(NewStringValue("1"))).To(Equal(
-					ERROR_T[BooleanValue](`invalid boolean "1"`),
+					ERROR(`invalid boolean "1"`),
 				))
 				Expect(BooleanValueFromValue(NewStringValue("no"))).To(Equal(
-					ERROR_T[BooleanValue](`invalid boolean "no"`),
+					ERROR(`invalid boolean "no"`),
 				))
 				Expect(BooleanValueFromValue(NewStringValue("yes"))).To(Equal(
-					ERROR_T[BooleanValue](`invalid boolean "yes"`),
+					ERROR(`invalid boolean "yes"`),
 				))
 				Expect(BooleanValueFromValue(NewStringValue("a"))).To(Equal(
-					ERROR_T[BooleanValue](`invalid boolean "a"`),
+					ERROR(`invalid boolean "a"`),
 				))
 			})
 		})
@@ -125,31 +128,31 @@ var _ = Describe("values", func() {
 		Describe("IntegerValueFromValue()", func() {
 			It("should return the passed IntegerValue", func() {
 				value := NewIntegerValue(1234)
-				Expect(IntegerValueFromValue(value).Value).To(Equal(value))
+				Expect(result(IntegerValueFromValue(value)).Value).To(Equal(value))
 			})
 			It("should accept integer strings", func() {
 				value := NewStringValue("1234")
-				Expect(IntegerValueFromValue(value).Data.Value).To(Equal(int64(1234)))
+				Expect(converted(IntegerValueFromValue(value)).Value).To(Equal(int64(1234)))
 			})
 			It("should accept round reals", func() {
 				value := NewRealValue(1)
-				Expect(IntegerValueFromValue(value).Data.Value).To(Equal(int64(1)))
+				Expect(converted(IntegerValueFromValue(value)).Value).To(Equal(int64(1)))
 			})
 			It("should reject non-integer strings", func() {
 				Expect(IntegerValueFromValue(NIL)).To(Equal(
-					ERROR_T[IntegerValue]("value has no string representation")),
+					ERROR("value has no string representation")),
 				)
 				Expect(IntegerValueFromValue(NewRealValue(1e100))).To(Equal(
-					ERROR_T[IntegerValue](`invalid integer "1e+100"`)),
+					ERROR(`invalid integer "1e+100"`)),
 				)
 				Expect(IntegerValueFromValue(NewRealValue(1.1))).To(Equal(
-					ERROR_T[IntegerValue](`invalid integer "1.1"`)),
+					ERROR(`invalid integer "1.1"`)),
 				)
 				Expect(IntegerValueFromValue(NewStringValue("a"))).To(Equal(
-					ERROR_T[IntegerValue](`invalid integer "a"`)),
+					ERROR(`invalid integer "a"`)),
 				)
 				Expect(IntegerValueFromValue(NewStringValue("1.2"))).To(Equal(
-					ERROR_T[IntegerValue](`invalid integer "1.2"`)),
+					ERROR(`invalid integer "1.2"`)),
 				)
 			})
 		})
@@ -191,22 +194,22 @@ var _ = Describe("values", func() {
 		Describe("RealValueFromValue()", func() {
 			It("should return the passed RealValue", func() {
 				value := NewRealValue(12.34)
-				Expect(RealValueFromValue(value).Value).To(Equal(value))
+				Expect(result(RealValueFromValue(value)).Value).To(Equal(value))
 			})
 			It("should accept integer values", func() {
 				value := NewIntegerValue(4567)
-				Expect(RealValueFromValue(value).Data.Value).To(Equal(float64(4567)))
+				Expect(converted(RealValueFromValue(value)).Value).To(Equal(float64(4567)))
 			})
 			It("should accept float strings", func() {
 				value := NewStringValue("12.34")
-				Expect(RealValueFromValue(value).Data.Value).To(Equal(12.34))
+				Expect(converted(RealValueFromValue(value)).Value).To(Equal(12.34))
 			})
 			It("should reject non-number strings", func() {
 				Expect(RealValueFromValue(NIL)).To(Equal(
-					ERROR_T[RealValue]("value has no string representation"),
+					ERROR("value has no string representation"),
 				))
 				Expect(RealValueFromValue(NewStringValue("a"))).To(Equal(
-					ERROR_T[RealValue](`invalid number "a"`),
+					ERROR(`invalid number "a"`),
 				))
 			})
 		})
@@ -262,48 +265,48 @@ var _ = Describe("values", func() {
 		Describe("StringValueFromValue()", func() {
 			It("should return the passed StringValue", func() {
 				value := NewStringValue("some string")
-				Expect(StringValueFromValue(value).Value).To(Equal(value))
+				Expect(result(StringValueFromValue(value)).Value).To(Equal(value))
 			})
 			It("should accept booleans as true/false strings", func() {
-				Expect(StringValueFromValue(FALSE).Data.Value).To(Equal("false"))
-				Expect(StringValueFromValue(TRUE).Data.Value).To(Equal("true"))
+				Expect(converted(StringValueFromValue(FALSE)).Value).To(Equal("false"))
+				Expect(converted(StringValueFromValue(TRUE)).Value).To(Equal("true"))
 				Expect(
-					StringValueFromValue(NewBooleanValue(false)).Data.Value,
+					converted(StringValueFromValue(NewBooleanValue(false))).Value,
 				).To(Equal("false"))
 				Expect(
-					StringValueFromValue(NewBooleanValue(true)).Data.Value,
+					converted(StringValueFromValue(NewBooleanValue(true))).Value,
 				).To(Equal("true"))
 			})
 			It("should accept integers as decimal strings", func() {
 				value := NewIntegerValue(1234)
-				Expect(StringValueFromValue(value).Data.Value).To(Equal("1234"))
+				Expect(converted(StringValueFromValue(value)).Value).To(Equal("1234"))
 			})
 			It("should accept reals as decimal strings", func() {
 				value := NewRealValue(1.1)
-				Expect(StringValueFromValue(value).Data.Value).To(Equal("1.1"))
+				Expect(converted(StringValueFromValue(value)).Value).To(Equal("1.1"))
 			})
 			It("should accept scripts with source", func() {
 				value := NewScriptValue(Script{}, "source")
-				Expect(StringValueFromValue(value).Data.Value).To(Equal("source"))
+				Expect(converted(StringValueFromValue(value)).Value).To(Equal("source"))
 			})
 			It("should reject other value types", func() {
 				Expect(StringValueFromValue(NIL)).To(Equal(
-					ERROR_T[StringValue]("value has no string representation")),
+					ERROR("value has no string representation")),
 				)
 				Expect(StringValueFromValue(NewListValue([]Value{}))).To(Equal(
-					ERROR_T[StringValue]("value has no string representation")),
+					ERROR("value has no string representation")),
 				)
 				Expect(StringValueFromValue(NewDictionaryValue(map[string]Value{}))).To(Equal(
-					ERROR_T[StringValue]("value has no string representation")),
+					ERROR("value has no string representation")),
 				)
 				Expect(StringValueFromValue(NewTupleValue([]Value{}))).To(Equal(
-					ERROR_T[StringValue]("value has no string representation")),
+					ERROR("value has no string representation")),
 				)
 				Expect(StringValueFromValue(NewScriptValueWithNoSource(Script{}))).To(Equal(
-					ERROR_T[StringValue]("value has no string representation")),
+					ERROR("value has no string representation")),
 				)
 				Expect(StringValueFromValue(NewQualifiedValue(NewStringValue("name"), []Selector{}))).To(Equal(
-					ERROR_T[StringValue]("value has no string representation")),
+					ERROR("value has no string representation")),
 				)
 			})
 		})
@@ -372,7 +375,7 @@ var _ = Describe("values", func() {
 		Describe("ListValueFromValue()", func() {
 			It("should return the passed ListValue", func() {
 				value := NewListValue([]Value{})
-				Expect(ListValueFromValue(value).Value).To(Equal(value))
+				Expect(result(ListValueFromValue(value)).Value).To(Equal(value))
 			})
 			It("should accept tuples", func() {
 				value := NewTupleValue([]Value{
@@ -380,28 +383,28 @@ var _ = Describe("values", func() {
 					TRUE,
 					NewIntegerValue(10),
 				})
-				Expect(ListValueFromValue(value).Value).To(Equal(
+				Expect(result(ListValueFromValue(value)).Value).To(Equal(
 					NewListValue(value.Values),
 				))
 			})
 			It("should reject other value types", func() {
 				Expect(ListValueFromValue(TRUE)).To(Equal(
-					ERROR_T[ListValue]("invalid list"),
+					ERROR("invalid list"),
 				))
 				Expect(ListValueFromValue(NewStringValue("a"))).To(Equal(
-					ERROR_T[ListValue]("invalid list"),
+					ERROR("invalid list"),
 				))
 				Expect(ListValueFromValue(NewIntegerValue(10))).To(Equal(
-					ERROR_T[ListValue]("invalid list"),
+					ERROR("invalid list"),
 				))
 				Expect(ListValueFromValue(NewRealValue(10))).To(Equal(
-					ERROR_T[ListValue]("invalid list"),
+					ERROR("invalid list"),
 				))
 				Expect(ListValueFromValue(NewScriptValue(Script{}, ""))).To(Equal(
-					ERROR_T[ListValue]("invalid list"),
+					ERROR("invalid list"),
 				))
 				Expect(ListValueFromValue(NewDictionaryValue(map[string]Value{}))).To(Equal(
-					ERROR_T[ListValue]("invalid list"),
+					ERROR("invalid list"),
 				))
 			})
 		})

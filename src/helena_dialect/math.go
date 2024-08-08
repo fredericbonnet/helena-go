@@ -12,11 +12,10 @@ func (addCmd) Execute(args []core.Value, _ any) core.Result {
 	}
 	total := 0.0
 	for i := 1; i < len(args); i++ {
-		result := core.ValueToFloat(args[i])
+		result, operand := core.ValueToFloat(args[i])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		operand := result.Data
 		total += operand
 	}
 	return core.OK(floatToValue(total))
@@ -33,21 +32,20 @@ func (subtractCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) < 2 {
 		return ARITY_ERROR(SUBTRACT_SIGNATURE)
 	}
-	result := core.ValueToFloat(args[1])
+	result, first := core.ValueToFloat(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	first := result.Data
 	if len(args) == 2 {
 		return core.OK(floatToValue(-first))
 	}
 	total := first
 	for i := 2; i < len(args); i++ {
-		result := core.ValueToFloat(args[i])
+		result, f := core.ValueToFloat(args[i])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		total -= result.Data
+		total -= f
 	}
 	return core.OK(floatToValue(total))
 }
@@ -63,21 +61,20 @@ func (multiplyCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) < 2 {
 		return ARITY_ERROR(MULTIPLY_SIGNATURE)
 	}
-	result := core.ValueToFloat(args[1])
+	result, first := core.ValueToFloat(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	first := result.Data
 	if len(args) == 2 {
 		return core.OK(floatToValue(first))
 	}
 	total := first
 	for i := 2; i < len(args); i++ {
-		result := core.ValueToFloat(args[i])
+		result, f := core.ValueToFloat(args[i])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		total *= result.Data
+		total *= f
 	}
 	return core.OK(floatToValue(total))
 }
@@ -93,18 +90,17 @@ func (divideCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) < 3 {
 		return ARITY_ERROR(DIVIDE_SIGNATURE)
 	}
-	result := core.ValueToFloat(args[1])
+	result, first := core.ValueToFloat(args[1])
 	if result.Code != core.ResultCode_OK {
-		return result.AsResult()
+		return result
 	}
-	first := result.Data
 	total := first
 	for i := 2; i < len(args); i++ {
-		result := core.ValueToFloat(args[i])
+		result, f := core.ValueToFloat(args[i])
 		if result.Code != core.ResultCode_OK {
-			return result.AsResult()
+			return result
 		}
-		total /= result.Data
+		total /= f
 	}
 	return core.OK(floatToValue(total))
 }
