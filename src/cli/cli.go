@@ -12,7 +12,10 @@ import (
 	"github.com/fatih/color"
 )
 
-var moduleRegistry = helena_dialect.NewModuleRegistry()
+var moduleRegistry = helena_dialect.NewModuleRegistry(&helena_dialect.ModuleOptions{
+	CaptureErrorStack: true,
+	CapturePositions:  true,
+})
 
 func sourceFile(path string, scope *helena_dialect.Scope) core.Result {
 	data, err := os.ReadFile(path)

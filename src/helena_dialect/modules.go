@@ -134,16 +134,31 @@ func importCommand(
 	return core.OK(core.NIL)
 }
 
+type ModuleOptions struct {
+	CapturePositions  bool
+	CaptureErrorStack bool
+}
 type ModuleRegistry struct {
+	options       ModuleOptions
 	modules       map[string]*Module
 	reservedNames map[string]struct{}
 }
 
-func NewModuleRegistry() *ModuleRegistry {
-	return &ModuleRegistry{
-		map[string]*Module{},
-		map[string]struct{}{},
+func NewModuleRegistry(
+	options *ModuleOptions,
+) *ModuleRegistry {
+	moduleRegistry := &ModuleRegistry{}
+	if options == nil {
+		moduleRegistry.options = ModuleOptions{
+			CaptureErrorStack: false,
+			CapturePositions:  false,
+		}
+	} else {
+		moduleRegistry.options = *options
 	}
+	moduleRegistry.modules = map[string]*Module{}
+	moduleRegistry.reservedNames = map[string]struct{}{}
+	return moduleRegistry
 }
 
 func (registry *ModuleRegistry) IsReserved(name string) bool {
@@ -262,8 +277,10 @@ func loadFileBasedModule(
 		return core.ERROR("error reading module: " + fmt.Sprint(err)), nil
 	}
 	tokens := core.Tokenizer{}.Tokenize(string(data))
-	parser := core.NewParser(nil)
-	parseResult := parser.ParseTokens(tokens, nil)
+	parser := core.NewParser(&core.ParserOptions{
+		CapturePositions: moduleRegistry.options.CapturePositions,
+	})
+	parseResult := parser.ParseTokens(tokens, &core.Source{Filename: &modulePath})
 	if !parseResult.Success {
 		moduleRegistry.Release(modulePath)
 		return core.ERROR(parseResult.Message), nil
@@ -279,7 +296,10 @@ func createModule(
 	rootDir string,
 	script core.Script,
 ) (core.Result, *Module) {
-	rootScope := NewRootScope(nil)
+	rootScope := NewRootScope(&ScopeOptions{
+		CaptureErrorStack: moduleRegistry.options.CaptureErrorStack,
+		CapturePositions:  moduleRegistry.options.CapturePositions,
+	})
 	InitCommandsForModule(rootScope, moduleRegistry, rootDir)
 
 	exports := &Exports{}
