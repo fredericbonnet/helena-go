@@ -34,7 +34,7 @@ var _ = Describe("Helena modules", func() {
 	}
 	init := func() {
 		rootScope = NewRootScope(nil)
-		moduleRegistry = NewModuleRegistry()
+		moduleRegistry = NewModuleRegistry(nil)
 		_, filename, _, _ := runtime.Caller(0)
 		dirname = filepath.Dir(filename)
 		InitCommandsForModule(rootScope, moduleRegistry, dirname)
@@ -572,4 +572,71 @@ var _ = Describe("Helena modules", func() {
 			})
 		})
 	})
+	Describe("error stack", func() {
+		BeforeEach(func() {
+			parser = core.NewParser(&core.ParserOptions{CapturePositions: true})
+			rootScope = NewRootScope(&ScopeOptions{
+				CapturePositions:  true,
+				CaptureErrorStack: true,
+			})
+			moduleRegistry = NewModuleRegistry(&ModuleOptions{
+				CapturePositions:  true,
+				CaptureErrorStack: true,
+			})
+			InitCommandsForModule(rootScope, moduleRegistry, dirname)
+		})
+		Specify("module", func() {
+			source := `
+module {
+  macro cmd {} {error msg}
+  cmd
+}
+`
+			process := prepareScript(source)
+			result := process.Run()
+			Expect(result.Code).To(Equal(core.ResultCode_ERROR))
+			Expect(result.Value).To(Equal(STR("msg")))
+			errorStack := result.Data.(*core.ErrorStack)
+			Expect(errorStack.Depth()).To(Equal(uint(3)))
+			Expect(errorStack.Level(0)).To(Equal(core.ErrorStackLevel{
+				Frame:    &[]core.Value{STR("error"), STR("msg")},
+				Position: &core.SourcePosition{Index: 26, Line: 2, Column: 16},
+			}))
+			Expect(errorStack.Level(1)).To(Equal(core.ErrorStackLevel{
+				Frame:    &[]core.Value{STR("cmd")},
+				Position: &core.SourcePosition{Index: 39, Line: 3, Column: 2},
+			}))
+			Expect((*errorStack.Level(2).Frame)[0]).To(Equal(STR("module")))
+			Expect(errorStack.Level(2).Position).To(Equal(&core.SourcePosition{
+				Index:  1,
+				Line:   1,
+				Column: 0,
+			}))
+		})
+		Specify("import", func() {
+			source := `import tests/error.lna`
+			process := prepareScript(source)
+			result := process.Run()
+			Expect(result.Code).To(Equal(core.ResultCode_ERROR))
+			Expect(result.Value).To(Equal(STR("msg")))
+			errorStack := result.Data.(*core.ErrorStack)
+			Expect(errorStack.Depth()).To(Equal(uint(2)))
+			Expect(errorStack.Level(1)).To(Equal(core.ErrorStackLevel{
+				Frame:    &[]core.Value{STR("import"), STR("tests/error.lna")},
+				Position: &core.SourcePosition{Index: 0, Line: 0, Column: 0},
+			}))
+		})
+		Specify("parsing error", func() {
+			result := execute(`import tests/error.txt`)
+			Expect(result.Code).To(Equal(core.ResultCode_ERROR))
+			Expect(result.Value).To(Equal(STR("unmatched left brace")))
+			errorStack := result.Data.(*core.ErrorStack)
+			Expect(errorStack.Depth()).To(Equal(uint(1)))
+			Expect(errorStack.Level(0)).To(Equal(core.ErrorStackLevel{
+				Frame:    &[]core.Value{STR("import"), STR("tests/error.txt")},
+				Position: &core.SourcePosition{Index: 0, Line: 0, Column: 0},
+			}))
+		})
+	})
+
 })

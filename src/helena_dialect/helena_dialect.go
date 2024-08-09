@@ -2,7 +2,7 @@ package helena_dialect
 
 import "os"
 
-var globalModuleRegistry = NewModuleRegistry()
+var globalModuleRegistry = NewModuleRegistry(nil)
 
 func InitCommands(scope *Scope) {
 	cwd, err := os.Getwd()
