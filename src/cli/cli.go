@@ -226,7 +226,7 @@ func printErrorStack(errorStack *core.ErrorStack) {
 				if i > 0 {
 					log += " "
 				}
-				log += displayErrorFrameArg(arg)
+				log += core.Display(arg, displayErrorFrameArg)
 			}
 		}
 		os.Stdout.WriteString(grey.Sprintln(log))
@@ -242,7 +242,7 @@ func displayErrorFrameArg(displayable any) string {
 	if _, ok := displayable.(core.ScriptValue); ok {
 		return `{...}`
 	}
-	return core.Display(displayable, displayErrorFrameArg)
+	return displayResult(displayable)
 }
 
 func processResult(result core.Result) (core.Value, error) {
@@ -266,6 +266,9 @@ func displayResult(displayable any) string {
 	}
 	if v, ok := displayable.(core.DictionaryValue); ok {
 		return helena_dialect.DisplayDictionaryValue(v, displayResult)
+	}
+	if _, ok := displayable.(core.CommandValue); ok {
+		return core.UndisplayableValueWithLabel("command")
 	}
 	return core.DefaultDisplayFunction(displayable)
 }
