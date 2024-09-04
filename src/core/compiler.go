@@ -609,6 +609,9 @@ type ProgramState struct {
 	// Execution frame start indexes; each frame is a slice of the stack
 	frames []int
 
+	// Execution results for each frame
+	frameResults []Result
+
 	// Last closed frame
 	LastFrame []Value
 
@@ -621,17 +624,18 @@ type ProgramState struct {
 	// Last executed command
 	Command Command
 
-	// Last executed result value
+	// Last execution result
 	Result Result
 }
 
 func NewProgramState() *ProgramState {
 	return &ProgramState{
-		stack:  []Value{},
-		frames: []int{0},
-		PC:     0,
-		CC:     0,
-		Result: OK(NIL),
+		stack:        []Value{},
+		frames:       []int{0},
+		frameResults: []Result{OK(NIL)},
+		PC:           0,
+		CC:           0,
+		Result:       OK(NIL),
 	}
 }
 
@@ -640,6 +644,8 @@ func (state *ProgramState) Reset() {
 	state.stack = state.stack[:0]
 	state.frames = state.frames[:1]
 	state.frames[0] = 0
+	state.frameResults = state.frameResults[:1]
+	state.frameResults[0] = OK(NIL)
 	state.LastFrame = nil
 	state.PC = 0
 	state.CC = 0
@@ -647,9 +653,21 @@ func (state *ProgramState) Reset() {
 	state.Result = OK(NIL)
 }
 
+// Set result for the current frame
+func (state *ProgramState) SetResult(result Result) {
+	state.Result = result
+	state.frameResults[len(state.frameResults)-1] = result
+}
+
+// Return result of the last frame
+func (state *ProgramState) lastFrameResult() Result {
+	return state.frameResults[len(state.frameResults)-1]
+}
+
 // Open a new frame
 func (state *ProgramState) OpenFrame() {
 	state.frames = append(state.frames, len(state.stack))
+	state.frameResults = append(state.frameResults, OK(NIL))
 	state.LastFrame = nil
 }
 
@@ -657,6 +675,7 @@ func (state *ProgramState) OpenFrame() {
 func (state *ProgramState) CloseFrame() {
 	length := state.frames[len(state.frames)-1]
 	state.frames = state.frames[:len(state.frames)-1]
+	state.frameResults = state.frameResults[:len(state.frameResults)-1]
 	state.LastFrame = state.stack[length:]
 	state.stack = state.stack[:length]
 }
@@ -679,7 +698,7 @@ func (state *ProgramState) Pop() Value {
 }
 
 // Return last value on current frame
-func (state *ProgramState) last() Value {
+func (state *ProgramState) lastValue() Value {
 	if len(state.stack) == 0 {
 		return nil
 	}
@@ -688,7 +707,7 @@ func (state *ProgramState) last() Value {
 
 // Expand last value in current frame
 func (state *ProgramState) Expand() {
-	last := state.last()
+	last := state.lastValue()
 	if last != nil && last.Type() == ValueType_TUPLE {
 		state.stack = state.stack[:len(state.stack)-1]
 		state.stack = append(state.stack, last.(TupleValue).Values...)
@@ -730,7 +749,7 @@ func (executor *Executor) Execute(program *Program, state *ProgramState) Result 
 		return result
 	}
 	if !state.Empty() {
-		state.Result = OK(state.Pop())
+		state.SetResult(OK(state.Pop()))
 	}
 	return state.Result
 }
@@ -749,9 +768,10 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 	}
 	if state.Result.Code == ResultCode_YIELD {
 		if resumable, ok := state.Command.(ResumableCommand); ok {
-			state.Result = resumable.Resume(state.Result, executor.Context)
-			if state.Result.Code != ResultCode_OK {
-				return state.Result
+			result := resumable.Resume(state.Result, executor.Context)
+			state.SetResult(result)
+			if result.Code != ResultCode_OK {
+				return result
 			}
 		}
 	}
@@ -841,17 +861,34 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 		case OpCode_EVALUATE_SENTENCE:
 			{
 				args := state.LastFrame
-				if len(args) > 0 {
+				for len(args) > 0 {
+					// Loop for successive command resolution
 					cmdname := args[0]
 					result, command := executor.resolveCommand(cmdname)
 					if result.Code != ResultCode_OK {
 						return result
 					}
+					lastCommand := state.Command
 					state.Command = command
-					state.Result = state.Command.Execute(args, executor.Context)
+					if command == LAST_RESULT {
+						// Intrinsic command: return last result = no-op
+					} else if command == SHIFT_LAST_FRAME_RESULT {
+						// // Intrinsic command: swap last frame result with argument 1
+						if len(args) < 2 || lastCommand == command {
+							// No-op
+						} else {
+							args[0] = args[1]
+							args[1] = state.lastFrameResult().Value
+							continue
+						}
+					} else {
+						// Execute regular command
+						state.SetResult(state.Command.Execute(args, executor.Context))
+					}
 					if state.Result.Code != ResultCode_OK {
 						return state.Result
 					}
+					break
 				}
 			}
 
