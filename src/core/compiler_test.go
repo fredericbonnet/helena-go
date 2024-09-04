@@ -3544,7 +3544,7 @@ var _ = Describe("Compilation and execution", func() {
 			}})
 			state := NewProgramState()
 			Expect(executor.Execute(program, state)).To(Equal(BREAK(STR("1"))))
-			state.Result = OK(STR("2"))
+			state.SetResult(OK(STR("2")))
 			Expect(executor.Execute(program, state)).To(Equal(OK(STR("2"))))
 		})
 		It("should support resumable commands", func() {
@@ -3616,6 +3616,146 @@ var _ = Describe("Compilation and execution", func() {
 				YIELD_STATE(STR("step three"), 4),
 			))
 			Expect(executor.Execute(program, state)).To(Equal(OK(STR("end"))))
+		})
+	})
+
+	Describe("Intrinsics", func() {
+		evaluateString := func(s string) Value {
+			return evaluate(compiler.CompileScript(*parse(s)))
+		}
+		BeforeEach(func() {
+			commandResolver.register("^", LAST_RESULT)
+			commandResolver.register("|>", SHIFT_LAST_FRAME_RESULT)
+		})
+
+		Describe("LAST_RESULT", func() {
+			Specify("initial", func() {
+				Expect(evaluateString("^")).To(Equal(NIL))
+			})
+			Specify("simple", func() {
+				commandResolver.register(
+					"cmd",
+					functionCommand{func(_ []Value) Value { return STR("value") }},
+				)
+				Expect(evaluateString("cmd; ^")).To(Equal(STR("value")))
+			})
+			Specify("multiple", func() {
+				commandResolver.register(
+					"cmd1",
+					functionCommand{func(_ []Value) Value { return STR("value1") }},
+				)
+				commandResolver.register(
+					"cmd2",
+					functionCommand{func(_ []Value) Value { return STR("value2") }},
+				)
+				commandResolver.register(
+					"join",
+					functionCommand{func(args []Value) Value {
+						str := asString(args[1])
+						for i := 2; i < len(args); i++ {
+							str += " " + asString(args[i])
+						}
+						return STR(str)
+					}},
+				)
+				Expect(evaluateString("cmd1; join [^] [cmd2] [^]")).To(Equal(
+					STR("value1 value2 value2"),
+				))
+			})
+		})
+		Describe("SHIFT_LAST_FRAME_RESULT", func() {
+			Specify("initial", func() {
+				Expect(evaluateString("|>")).To(Equal(NIL))
+			})
+			Specify("idempotent", func() {
+				commandResolver.register(
+					"cmd",
+					functionCommand{func(_ []Value) Value { return STR("value") }},
+				)
+				Expect(evaluateString("cmd; |>")).To(Equal(STR("value")))
+			})
+			Specify("simple", func() {
+				commandResolver.register(
+					"cmd",
+					functionCommand{func(_ []Value) Value { return STR("value") }},
+				)
+				commandResolver.register(
+					"quote",
+					functionCommand{func(args []Value) Value { return STR(`"` + asString(args[1]) + `"`) }},
+				)
+				Expect(evaluateString("cmd; |> quote")).To(Equal(STR(`"value"`)))
+			})
+			Specify("successive", func() {
+				commandResolver.register("cmd", functionCommand{func(_ []Value) Value { return INT(1) }})
+				commandResolver.register(
+					"double",
+					functionCommand{func(args []Value) Value {
+						_, i := ValueToInteger(args[1])
+						return INT(i * 2)
+					}},
+				)
+				Expect(evaluateString("cmd; |> double")).To(Equal(INT(2)))
+				Expect(evaluateString("cmd; |> double; |> double")).To(Equal(INT(4)))
+			})
+			Specify("trailing arguments", func() {
+				commandResolver.register("cmd", functionCommand{func(_ []Value) Value { return INT(1) }})
+				commandResolver.register(
+					"add",
+					functionCommand{func(args []Value) Value {
+						_, i1 := ValueToInteger(args[1])
+						_, i2 := ValueToInteger(args[2])
+						return INT(i1 + i2)
+					}},
+				)
+				Expect(evaluateString("cmd; |> add 2 ")).To(Equal(INT(3)))
+			})
+			Specify("recursive", func() {
+				commandResolver.register(
+					"cmd1",
+					functionCommand{func(_ []Value) Value { return STR("concat") }},
+				)
+				commandResolver.register(
+					"cmd2",
+					functionCommand{func(_ []Value) Value { return STR("|>") }},
+				)
+				commandResolver.register(
+					"concat",
+					functionCommand{func(args []Value) Value {
+						return STR(asString(args[1]) + asString(args[2]))
+					}},
+				)
+				Expect(evaluateString("cmd1; |>")).To(Equal(STR("concat")))
+				Expect(evaluateString("cmd1; |> |>")).To(Equal(STR("concat")))
+				Expect(evaluateString("cmd1; |> |> value")).To(Equal(STR("concat")))
+				Expect(evaluateString("cmd1; |> |> |>")).To(Equal(STR("concat")))
+				Expect(evaluateString("cmd2; |>")).To(Equal(STR("|>")))
+				Expect(evaluateString("cmd2; |> |>")).To(Equal(STR("|>")))
+				Expect(evaluateString("cmd2; |> |> value")).To(Equal(STR("|>")))
+				Expect(evaluateString("cmd2; |> |> |>")).To(Equal(STR("|>")))
+			})
+		})
+		Specify("combined", func() {
+			commandResolver.register(
+				"cmd1",
+				functionCommand{func(_ []Value) Value { return STR("value1") }},
+			)
+			commandResolver.register(
+				"cmd2",
+				functionCommand{func(_ []Value) Value { return STR("value2") }},
+			)
+			commandResolver.register(
+				"concat",
+				functionCommand{func(args []Value) Value {
+					return STR(asString(args[1]) + asString(args[2]))
+				}},
+			)
+			Expect(evaluateString("cmd1; |> concat [cmd2]")).To(Equal(
+				STR("value1value2"),
+			))
+			Expect(evaluateString("cmd1; |> concat [^]")).To(Equal(
+				STR("value1value1"),
+			))
+			Expect(evaluateString("cmd1; |> ^")).To(Equal(STR("value1")))
 		})
 	})
 
