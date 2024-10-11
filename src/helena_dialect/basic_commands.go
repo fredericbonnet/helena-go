@@ -225,4 +225,6 @@ func registerBasicCommands(scope *Scope) {
 	scope.RegisterNamedCommand("continue", continueCmd{})
 	scope.RegisterNamedCommand("eval", evalCmd{})
 	scope.RegisterNamedCommand("help", helpCmd{})
+	scope.RegisterNamedCommand("^", core.LAST_RESULT)
+	scope.RegisterNamedCommand("|>", core.SHIFT_LAST_FRAME_RESULT)
 }

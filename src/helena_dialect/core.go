@@ -172,14 +172,20 @@ func (process *Process) Run() core.Result {
 		}
 
 		// Yield back and resume current context
-		context.state.Result = result
+		context.state.SetResult(result)
 		result = context.scope.Execute(context.program, context.state)
 	}
 	return result
 }
+func (process *Process) SetResult(result core.Result) {
+	context := process.stack.CurrentContext()
+	context.state.SetResult(result)
+}
 func (process *Process) YieldBack(value core.Value) {
 	context := process.stack.CurrentContext()
-	context.state.Result.Value = value
+	result := context.state.Result
+	result.Value = value
+	context.state.SetResult(result)
 }
 
 type scopeContext struct {
