@@ -474,4 +474,53 @@ var _ = Describe("Helena basic commands", func() {
 			})
 		})
 	})
+
+	Describe("^", func() {
+		Describe("Specifications", func() {
+			It("should return nil by default", func() {
+				Expect(evaluate("^")).To(Equal(core.NIL))
+			})
+			It("should return the last result of the current script", func() {
+				Expect(evaluate("idem a; ^")).To(Equal(STR("a")))
+			})
+			It("should reset between scripts", func() {
+				Expect(evaluate("idem a; ^")).To(Equal(STR("a")))
+				Expect(evaluate(" ^")).To(Equal(NIL))
+			})
+			It("should ignore its arguments", func() {
+				Expect(evaluate("^ a b c")).To(Equal(NIL))
+			})
+		})
+	})
+
+	Describe("|>", func() {
+		Describe("Specifications", func() {
+			It("should return nil by default", func() {
+				Expect(evaluate("|>")).To(Equal(NIL))
+			})
+			It("should return the result of the previous sentence when used with no argument", func() {
+				Expect(evaluate("string a; |>")).To(Equal(STR("a")))
+			})
+			It("should accept a command as first argument to pipe the result into", func() {
+				Expect(execute("string a; |> return")).To(Equal(RETURN(STR("a"))))
+			})
+			It("should accept extra arguments to pipe after the result", func() {
+				Expect(evaluate("list (1 2 3); |> list length")).To(Equal(INT(3)))
+			})
+			It("should accept tuple commands", func() {
+				Expect(evaluate("idem length; |> (string foo)")).To(Equal(INT(3)))
+				Expect(evaluate("string a; |> (string b append) c")).To(Equal(STR("bac")))
+			})
+			It("should work sequentially", func() {
+				Expect(evaluate("list (1 2 3); |> list at 2; |> * 5")).To(Equal(INT(15)))
+			})
+			It("should reset between scripts", func() {
+				Expect(evaluate("list (1 2 3); |> list length")).To(Equal(INT(3)))
+				Expect(evaluate("|>")).To(Equal(NIL))
+			})
+			It("should not propagate within blocks", func() {
+				Expect(evaluate("string a; eval {|>}")).To(Equal(NIL))
+			})
+		})
+	})
 })

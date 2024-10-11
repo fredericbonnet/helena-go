@@ -159,6 +159,8 @@ func prompt() {
 
 }
 
+var lastResult = core.OK(core.NIL)
+
 func run(scope *helena_dialect.Scope, cmd string) (core.Value, error) {
 	input := core.NewStringStream(cmd)
 	tokens := []core.Token{}
@@ -185,7 +187,9 @@ func run(scope *helena_dialect.Scope, cmd string) (core.Value, error) {
 
 	program := scope.Compile(*parseResult.Script)
 	process := scope.PrepareProcess(program)
+	process.SetResult(lastResult)
 	result := process.Run()
+	lastResult = result
 	if result.Code == core.ResultCode_ERROR {
 		printErrorStack(result.Data.(*core.ErrorStack))
 	}
