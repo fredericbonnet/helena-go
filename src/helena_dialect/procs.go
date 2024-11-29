@@ -27,15 +27,40 @@ func (metacommand *procMetacommand) Execute(args []core.Value, _ any) core.Resul
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
-			return ARITY_ERROR("<proc> subcommands")
+			return ARITY_ERROR("<metacommand> subcommands")
 		}
 		return core.OK(procMetacommandSubcommands.List)
 
 	case "argspec":
 		if len(args) != 2 {
-			return ARITY_ERROR("<proc> argspec")
+			return ARITY_ERROR("<metacommand> argspec")
 		}
 		return core.OK(metacommand.proc.argspec)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
+}
+func (*procMetacommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+	if len(args) == 1 {
+		return core.OK(core.STR("<metacommand> ?subcommand? ?arg ...?"))
+	}
+	result, subcommand := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	switch subcommand {
+	case "subcommands":
+		if len(args) > 2 {
+			return ARITY_ERROR("<metacommand> subcommands")
+		}
+		return core.OK(core.STR("<metacommand> subcommands"))
+
+	case "argspec":
+		if len(args) != 2 {
+			return ARITY_ERROR("<metacommand> argspec")
+		}
+		return core.OK(core.STR("<metacommand> argspec"))
 
 	default:
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
@@ -120,12 +145,28 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 		})
 	}
 }
-func (proc *procCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+func (proc *procCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
+	var usage string
+	if options.Skip > 0 {
+		usage = proc.argspec.Usage(options.Skip - 1)
+	} else {
+		usage = PROC_COMMAND_SIGNATURE(args[0], proc.argspec.Usage(0))
+	}
+	signature := ""
+	if len(options.Prefix) > 0 {
+		signature += options.Prefix
+	}
+	if len(usage) > 0 {
+		if len(signature) > 0 {
+			signature += " "
+		}
+		signature += usage
+	}
 	if !proc.argspec.CheckArity(args, 1) &&
 		uint(len(args)) > proc.argspec.Argspec.NbRequired {
-		return ARITY_ERROR(PROC_COMMAND_SIGNATURE(args[0], proc.argspec.Usage(0)))
+		return ARITY_ERROR(signature)
 	}
-	return core.OK(core.STR(PROC_COMMAND_SIGNATURE(args[0], proc.argspec.Usage(0))))
+	return core.OK(core.STR(signature))
 }
 
 const PROC_SIGNATURE = "proc ?name? argspec body"
@@ -179,7 +220,7 @@ func (procCmd) Execute(args []core.Value, context any) core.Result {
 	}
 	return core.OK(proc.metacommand.value)
 }
-func (procCmd) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
+func (procCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 4 {
 		return ARITY_ERROR(PROC_SIGNATURE)
 	}

@@ -63,17 +63,9 @@ var _ = Describe("Helena modules", func() {
 				evaluate("module cmd {}")
 				Expect(execute("module cmd {}").Code).To(Equal(core.ResultCode_OK))
 			})
-			It("should return a command object", func() {
+			It("should return a module value", func() {
 				Expect(evaluate("module {}").Type()).To(Equal(core.ValueType_COMMAND))
 				Expect(evaluate("module cmd  {}").Type()).To(Equal(core.ValueType_COMMAND))
-			})
-			Specify("the named command should return its command object", func() {
-				value := evaluate("module cmd {}")
-				Expect(evaluate("cmd")).To(Equal(value))
-			})
-			Specify("the command object should return itself", func() {
-				value := evaluate("set cmd [module {}]")
-				Expect(evaluate("$cmd")).To(Equal(value))
 			})
 		})
 
@@ -203,6 +195,45 @@ var _ = Describe("Helena modules", func() {
 			})
 		})
 
+		Describe("Module value", func() {
+
+			Describe("Specifications", func() {
+				Specify("usage", func() {
+					evaluate("set cmd [module cmd {}]")
+					Expect(evaluate("help cmd")).To(Equal(
+						STR("cmd ?subcommand? ?arg ...?"),
+					))
+					Expect(evaluate("help $cmd")).To(Equal(
+						STR("<module> ?subcommand? ?arg ...?"),
+					))
+				})
+				Specify("calling the module value should return itself", func() {
+					value := evaluate("set cmd [module {}]")
+					Expect(evaluate("$cmd")).To(Equal(value))
+				})
+			})
+		})
+	})
+
+	Describe("Module commands", func() {
+		Describe("Specifications", func() {
+			Specify("usage", func() {
+				evaluate("set cmd [module cmd {}]")
+				Expect(evaluate("help cmd")).To(Equal(core.STR("cmd ?subcommand? ?arg ...?")))
+				Expect(evaluate("help $cmd")).To(Equal(
+					core.STR("<module> ?subcommand? ?arg ...?"),
+				))
+			})
+			It("should return its module value when called with no argument", func() {
+				/**
+				 * The typical application of this property is to pass around or call
+				 * the module command by value.
+				 */
+				value := evaluate("scope cmd {}")
+				Expect(evaluate("cmd")).To(Equal(value))
+			})
+		})
+
 		Describe("Subcommands", func() {
 			Describe("`subcommands`", func() {
 				It("should return list of subcommands", func() {
@@ -213,7 +244,17 @@ var _ = Describe("Helena modules", func() {
 
 				Describe("Exceptions", func() {
 					Specify("wrong arity", func() {
-						Expect(execute("[module {}] subcommands a")).To(Equal(
+						evaluate("set cmd [module cmd {}]")
+						Expect(execute("cmd subcommands a")).To(Equal(
+							ERROR(`wrong # args: should be "cmd subcommands"`),
+						))
+						Expect(execute("$cmd subcommands a")).To(Equal(
+							ERROR(`wrong # args: should be "<module> subcommands"`),
+						))
+						Expect(execute("help cmd subcommands a")).To(Equal(
+							ERROR(`wrong # args: should be "cmd subcommands"`),
+						))
+						Expect(execute("help $cmd subcommands a")).To(Equal(
 							ERROR(`wrong # args: should be "<module> subcommands"`),
 						))
 					})
@@ -233,7 +274,17 @@ var _ = Describe("Helena modules", func() {
 
 				Describe("Exceptions", func() {
 					Specify("wrong arity", func() {
-						Expect(execute("[module {}] exports a")).To(Equal(
+						evaluate("set cmd [module cmd {}]")
+						Expect(execute("cmd exports a")).To(Equal(
+							ERROR(`wrong # args: should be "cmd exports"`),
+						))
+						Expect(execute("$cmd exports a")).To(Equal(
+							ERROR(`wrong # args: should be "<module> exports"`),
+						))
+						Expect(execute("help cmd exports a")).To(Equal(
+							ERROR(`wrong # args: should be "cmd exports"`),
+						))
+						Expect(execute("help $cmd exports a")).To(Equal(
 							ERROR(`wrong # args: should be "<module> exports"`),
 						))
 					})
@@ -297,10 +348,23 @@ var _ = Describe("Helena modules", func() {
 
 				Describe("Exceptions", func() {
 					Specify("wrong arity", func() {
-						Expect(execute("[module {}] import")).To(Equal(
+						evaluate("set cmd [module cmd {}]")
+						Expect(execute("cmd import")).To(Equal(
+							ERROR(`wrong # args: should be "cmd import name ?alias?"`),
+						))
+						Expect(execute("$cmd import")).To(Equal(
 							ERROR(`wrong # args: should be "<module> import name ?alias?"`),
 						))
-						Expect(execute("[module {}] import a b c")).To(Equal(
+						Expect(execute("cmd import a b c")).To(Equal(
+							ERROR(`wrong # args: should be "cmd import name ?alias?"`),
+						))
+						Expect(execute("$cmd import a b c")).To(Equal(
+							ERROR(`wrong # args: should be "<module> import name ?alias?"`),
+						))
+						Expect(execute("help cmd import a b c")).To(Equal(
+							ERROR(`wrong # args: should be "cmd import name ?alias?"`),
+						))
+						Expect(execute("help $cmd import a b c")).To(Equal(
 							ERROR(`wrong # args: should be "<module> import name ?alias?"`),
 						))
 					})
@@ -424,7 +488,7 @@ var _ = Describe("Helena modules", func() {
 				))
 			})
 
-			It("should return a module object", func() {
+			It("should return a module value", func() {
 				value := evaluate(`set cmd [import ` + moduleAPathAbs + `]`)
 				Expect(value.Type()).To(Equal(core.ValueType_COMMAND))
 				Expect(evaluate("$cmd exports")).To(Equal(LIST([]core.Value{STR("name")})))
@@ -572,7 +636,8 @@ var _ = Describe("Helena modules", func() {
 			})
 		})
 	})
-	Describe("error stack", func() {
+
+	Describe("Error stack", func() {
 		BeforeEach(func() {
 			parser = core.NewParser(&core.ParserOptions{CapturePositions: true})
 			rootScope = NewRootScope(&ScopeOptions{

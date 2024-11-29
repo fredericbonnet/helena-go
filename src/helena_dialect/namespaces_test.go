@@ -56,6 +56,10 @@ var _ = Describe("Helena namespaces", func() {
 				evaluate("namespace cmd {}")
 				Expect(execute("namespace cmd {}").Code).To(Equal(core.ResultCode_OK))
 			})
+			It("should return a metacommand", func() {
+				Expect(evaluate("namespace {}").Type()).To(Equal(core.ValueType_COMMAND))
+				Expect(evaluate("namespace cmd {}").Type()).To(Equal(core.ValueType_COMMAND))
+			})
 		})
 
 		Describe("Exceptions", func() {
@@ -233,13 +237,17 @@ var _ = Describe("Helena namespaces", func() {
 		})
 
 		Describe("Metacommand", func() {
-			It("should return a metacommand", func() {
-				Expect(evaluate("namespace {}").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("namespace cmd {}").Type()).To(Equal(core.ValueType_COMMAND))
-			})
-			Specify("the metacommand should return itself", func() {
-				value := evaluate("set cmd [namespace {}]")
-				Expect(evaluate("$cmd")).To(Equal(value))
+			Describe("Specifications", func() {
+				Specify("usage", func() {
+					evaluate("set cmd [namespace {}]")
+					Expect(evaluate("help $cmd")).To(Equal(
+						core.STR("<metacommand> ?subcommand? ?arg ...?"),
+					))
+				})
+				Specify("the metacommand should return itself", func() {
+					value := evaluate("set cmd [namespace {}]")
+					Expect(evaluate("$cmd")).To(Equal(value))
+				})
 			})
 
 			Describe("Subcommands", func() {
@@ -253,7 +261,10 @@ var _ = Describe("Helena namespaces", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[namespace {}] subcommands a")).To(Equal(
-								ERROR(`wrong # args: should be "<namespace> subcommands"`),
+								ERROR(`wrong # args: should be "<metacommand> subcommands"`),
+							))
+							Expect(execute("help [namespace {}] subcommands a")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> subcommands"`),
 							))
 						})
 					})
@@ -373,10 +384,13 @@ var _ = Describe("Helena namespaces", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[namespace {}] eval")).To(Equal(
-								ERROR(`wrong # args: should be "<namespace> eval body"`),
+								ERROR(`wrong # args: should be "<metacommand> eval body"`),
 							))
 							Expect(execute("[namespace {}] eval a b")).To(Equal(
-								ERROR(`wrong # args: should be "<namespace> eval body"`),
+								ERROR(`wrong # args: should be "<metacommand> eval body"`),
+							))
+							Expect(execute("help [namespace {}] eval a b")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> eval body"`),
 							))
 						})
 						Specify("invalid body", func() {
@@ -489,7 +503,7 @@ var _ = Describe("Helena namespaces", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[namespace {}] call")).To(Equal(
 								ERROR(
-									`wrong # args: should be "<namespace> call cmdname ?arg ...?"`,
+									`wrong # args: should be "<metacommand> call cmdname ?arg ...?"`,
 								),
 							))
 						})
@@ -566,12 +580,17 @@ var _ = Describe("Helena namespaces", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[namespace {}] import")).To(Equal(
 								ERROR(
-									`wrong # args: should be "<namespace> import name ?alias?"`,
+									`wrong # args: should be "<metacommand> import name ?alias?"`,
 								),
 							))
 							Expect(execute("[namespace {}] import a b c")).To(Equal(
 								ERROR(
-									`wrong # args: should be "<namespace> import name ?alias?"`,
+									`wrong # args: should be "<metacommand> import name ?alias?"`,
+								),
+							))
+							Expect(execute("help [namespace {}] import a b c")).To(Equal(
+								ERROR(
+									`wrong # args: should be "<metacommand> import name ?alias?"`,
 								),
 							))
 						})
@@ -670,6 +689,10 @@ var _ = Describe("Helena namespaces", func() {
 						namespace cmd {
 							macro opt1 {a} {}
 							closure opt2 {b} {}
+							proc opt3 {c} {}
+							scope opt4 {}
+							ensemble opt5 {d} {}
+							module opt6 {}
 						}
 					`)
 					Expect(evaluate("help cmd")).To(Equal(
@@ -682,6 +705,26 @@ var _ = Describe("Helena namespaces", func() {
 					Expect(evaluate("help cmd opt1 1")).To(Equal(STR("cmd opt1 a")))
 					Expect(evaluate("help cmd opt2")).To(Equal(STR("cmd opt2 b")))
 					Expect(evaluate("help cmd opt2 2")).To(Equal(STR("cmd opt2 b")))
+					Expect(evaluate("help cmd opt3")).To(Equal(STR("cmd opt3 c")))
+					Expect(evaluate("help cmd opt3 3")).To(Equal(STR("cmd opt3 c")))
+					Expect(evaluate("help cmd opt4")).To(Equal(
+						STR("cmd opt4 ?subcommand? ?arg ...?"),
+					))
+					Expect(evaluate("help cmd opt4 subcommands")).To(Equal(
+						STR("cmd opt4 subcommands"),
+					))
+					Expect(evaluate("help cmd opt5")).To(Equal(
+						STR("cmd opt5 d ?subcommand? ?arg ...?"),
+					))
+					Expect(evaluate("help cmd opt5 5")).To(Equal(
+						STR("cmd opt5 d ?subcommand? ?arg ...?"),
+					))
+					Expect(evaluate("help cmd opt6")).To(Equal(
+						STR("cmd opt6 ?subcommand? ?arg ...?"),
+					))
+					Expect(evaluate("help cmd opt6 subcommands")).To(Equal(
+						STR("cmd opt6 subcommands"),
+					))
 				})
 				It("should work recursively", func() {
 					evaluate(`

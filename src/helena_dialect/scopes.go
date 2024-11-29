@@ -2,7 +2,10 @@ package helena_dialect
 
 import "helena/core"
 
-const SCOPE_SIGNATURE = "scope ?name? body"
+func SCOPE_COMMAND_PREFIX(name core.Value) string {
+	_, s := core.ValueToStringOrDefault(name, "<scope>")
+	return s
+}
 
 type scopeCommand struct {
 	value core.Value
@@ -33,13 +36,13 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
-			return ARITY_ERROR("<scope> subcommands")
+			return ARITY_ERROR(SCOPE_COMMAND_PREFIX(args[0]) + " subcommands")
 		}
 		return core.OK(scopeCommandSubcommands.List)
 
 	case "eval":
 		if len(args) != 3 {
-			return ARITY_ERROR("<scope> eval body")
+			return ARITY_ERROR(SCOPE_COMMAND_PREFIX(args[0]) + " eval body")
 		}
 		body := args[2]
 		var program *core.Program
@@ -55,7 +58,9 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 
 	case "call":
 		if len(args) < 3 {
-			return ARITY_ERROR("<scope> call cmdname ?arg ...?")
+			return ARITY_ERROR(
+				SCOPE_COMMAND_PREFIX(args[0]) + " call cmdname ?arg ...?",
+			)
 		}
 		result, command := core.ValueToString(args[2])
 		if result.Code != core.ResultCode_OK {
@@ -71,6 +76,56 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 }
+func (scope *scopeCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
+	var usage string
+	if options.Skip > 0 {
+		usage = ""
+	} else {
+		usage = SCOPE_COMMAND_PREFIX(args[0])
+	}
+	signature := ""
+	if len(options.Prefix) > 0 {
+		signature += options.Prefix
+	}
+	if len(usage) > 0 {
+		if len(signature) > 0 {
+			signature += " "
+		}
+		signature += usage
+	}
+	if len(args) == 1 {
+		return core.OK(
+			core.STR(signature + " ?subcommand? ?arg ...?"),
+		)
+	}
+	result, subcommand := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	switch subcommand {
+	case "subcommands":
+		if len(args) > 2 {
+			return ARITY_ERROR(signature + " subcommands")
+		}
+		return core.OK(core.STR(signature + " subcommands"))
+
+	case "eval":
+		if len(args) > 3 {
+			return ARITY_ERROR(signature + " eval body")
+		}
+		return core.OK(core.STR(signature + " eval body"))
+
+	case "call":
+		return core.OK(
+			core.STR(signature + " call cmdname ?arg ...?"),
+		)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
+}
+
+const SCOPE_SIGNATURE = "scope ?name? body"
 
 type scopeCmd struct{}
 

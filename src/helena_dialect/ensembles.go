@@ -33,13 +33,13 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
-			return ARITY_ERROR("<ensemble> subcommands")
+			return ARITY_ERROR("<metacommand> subcommands")
 		}
 		return core.OK(ensembleMetacommandSubcommands.List)
 
 	case "eval":
 		if len(args) != 3 {
-			return ARITY_ERROR("<ensemble> eval body")
+			return ARITY_ERROR("<metacommand> eval body")
 		}
 		body := args[2]
 		var program *core.Program
@@ -59,7 +59,7 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 
 	case "call":
 		if len(args) < 3 {
-			return ARITY_ERROR("<ensemble> call cmdname ?arg ...?")
+			return ARITY_ERROR("<metacommand> call cmdname ?arg ...?")
 		}
 		result, subcommand := core.ValueToString(args[2])
 		if result.Code != core.ResultCode_OK {
@@ -75,9 +75,43 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 
 	case "argspec":
 		if len(args) != 2 {
-			return ARITY_ERROR("<ensemble> argspec")
+			return ARITY_ERROR("<metacommand> argspec")
 		}
 		return core.OK(metacommand.ensemble.argspec)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
+}
+func (*ensembleMetacommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+	if len(args) == 1 {
+		return core.OK(core.STR("<metacommand> ?subcommand? ?arg ...?"))
+	}
+	result, subcommand := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	switch subcommand {
+	case "subcommands":
+		if len(args) > 2 {
+			return ARITY_ERROR("<metacommand> subcommands")
+		}
+		return core.OK(core.STR("<metacommand> subcommands"))
+
+	case "eval":
+		if len(args) > 3 {
+			return ARITY_ERROR("<metacommand> eval body")
+		}
+		return core.OK(core.STR("<metacommand> eval body"))
+
+	case "call":
+		return core.OK(core.STR("<metacommand> call cmdname ?arg ...?"))
+
+	case "argspec":
+		if len(args) > 2 {
+			return ARITY_ERROR("<metacommand> argspec")
+		}
+		return core.OK(core.STR("<metacommand> argspec"))
 
 	default:
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)

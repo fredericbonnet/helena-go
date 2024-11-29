@@ -48,13 +48,13 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
-			return ARITY_ERROR("<namespace> subcommands")
+			return ARITY_ERROR("<metacommand> subcommands")
 		}
 		return core.OK(namespaceMetacommandSubcommands.List)
 
 	case "eval":
 		if len(args) != 3 {
-			return ARITY_ERROR("<namespace> eval body")
+			return ARITY_ERROR("<metacommand> eval body")
 		}
 		body := args[2]
 		var program *core.Program
@@ -74,7 +74,7 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 
 	case "call":
 		if len(args) < 3 {
-			return ARITY_ERROR("<namespace> call cmdname ?arg ...?")
+			return ARITY_ERROR("<metacommand> call cmdname ?arg ...?")
 		}
 		result, subcommand := core.ValueToString(args[2])
 		if result.Code != core.ResultCode_OK {
@@ -90,7 +90,7 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 
 	case "import":
 		if len(args) != 3 && len(args) != 4 {
-			return ARITY_ERROR("<namespace> import name ?alias?")
+			return ARITY_ERROR("<metacommand> import name ?alias?")
 		}
 		result, name := core.ValueToString(args[2])
 		if result.Code != core.ResultCode_OK {
@@ -112,6 +112,40 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		}
 		scope.RegisterNamedCommand(alias, command)
 		return core.OK(core.NIL)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
+}
+func (*namespaceMetacommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+	if len(args) == 1 {
+		return core.OK(core.STR("<metacommand> ?subcommand? ?arg ...?"))
+	}
+	result, subcommand := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	switch subcommand {
+	case "subcommands":
+		if len(args) > 2 {
+			return ARITY_ERROR("<metacommand> subcommands")
+		}
+		return core.OK(core.STR("<metacommand> subcommands"))
+
+	case "eval":
+		if len(args) > 3 {
+			return ARITY_ERROR("<metacommand> eval body")
+		}
+		return core.OK(core.STR("<metacommand> eval body"))
+
+	case "call":
+		return core.OK(core.STR("<metacommand> call cmdname ?arg ...?"))
+
+	case "import":
+		if len(args) > 4 {
+			return ARITY_ERROR("<metacommand> import name ?alias?")
+		}
+		return core.OK(core.STR("<metacommand> import name ?alias?"))
 
 	default:
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)

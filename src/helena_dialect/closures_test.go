@@ -64,6 +64,10 @@ var _ = Describe("Helena closures", func() {
 				evaluate("closure cmd {} {}")
 				Expect(execute("closure cmd {} {}").Code).To(Equal(core.ResultCode_OK))
 			})
+			It("should return a metacommand", func() {
+				Expect(evaluate("closure {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+				Expect(evaluate("closure cmd {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+			})
 		})
 
 		Describe("Exceptions", func() {
@@ -99,15 +103,22 @@ var _ = Describe("Helena closures", func() {
 		})
 
 		Describe("Metacommand", func() {
-			It("should return a metacommand", func() {
-				Expect(evaluate("closure {} {}").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("closure cmd {} {}").Type()).To(Equal(core.ValueType_COMMAND))
-			})
-			Specify("the metacommand should return the closure", func() {
-				value := evaluate("set cmd [closure {val} {idem _${val}_}]")
-				Expect(evaluate("$cmd").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("$cmd")).NotTo(Equal(value))
-				Expect(evaluate("[$cmd] arg")).To(Equal(STR("_arg_")))
+			Describe("Specifications", func() {
+				Specify("usage", func() {
+					evaluate("set cmd [closure {} {}]")
+					Expect(evaluate("help $cmd")).To(Equal(
+						core.STR("<metacommand> ?subcommand? ?arg ...?"),
+					))
+				})
+				Specify(
+					"the metacommand should return the closure when called with no argument",
+					func() {
+						value := evaluate("set cmd [closure {val} {idem _${val}_}]")
+						Expect(evaluate("$cmd").Type()).To(Equal(core.ValueType_COMMAND))
+						Expect(evaluate("$cmd")).NotTo(Equal(value))
+						Expect(evaluate("[$cmd] arg")).To(Equal(STR("_arg_")))
+					},
+				)
 			})
 
 			Describe("Examples", func() {
@@ -141,7 +152,10 @@ var _ = Describe("Helena closures", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[closure {} {}] subcommands a")).To(Equal(
-								ERROR(`wrong # args: should be "<closure> subcommands"`),
+								ERROR(`wrong # args: should be "<metacommand> subcommands"`),
+							))
+							Expect(execute("help [closure {} {}] subcommands a")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> subcommands"`),
 							))
 						})
 					})
@@ -167,7 +181,10 @@ var _ = Describe("Helena closures", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[closure {} {}] argspec a")).To(Equal(
-								ERROR(`wrong # args: should be "<closure> argspec"`),
+								ERROR(`wrong # args: should be "<metacommand> argspec"`),
+							))
+							Expect(execute("help [closure {} {}] argspec a")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> argspec"`),
 							))
 						})
 					})

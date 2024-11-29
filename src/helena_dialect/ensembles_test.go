@@ -60,6 +60,10 @@ var _ = Describe("Helena ensembles", func() {
 				evaluate("ensemble cmd {} {}")
 				Expect(execute("ensemble cmd {} {}").Code).To(Equal(core.ResultCode_OK))
 			})
+			It("should return a metacommand", func() {
+				Expect(evaluate("ensemble {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+				Expect(evaluate("ensemble cmd {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+			})
 		})
 
 		Describe("Exceptions", func() {
@@ -250,13 +254,17 @@ var _ = Describe("Helena ensembles", func() {
 		})
 
 		Describe("Metacommand", func() {
-			It("should return a metacommand", func() {
-				Expect(evaluate("ensemble {} {}").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("ensemble cmd {} {}").Type()).To(Equal(core.ValueType_COMMAND))
-			})
-			Specify("the metacommand should return itself", func() {
-				value := evaluate("set cmd [ensemble {} {}]")
-				Expect(evaluate("$cmd")).To(Equal(value))
+			Describe("Specifications", func() {
+				Specify("usage", func() {
+					evaluate("set cmd [ensemble {} {}]")
+					Expect(evaluate("help $cmd")).To(Equal(
+						STR("<metacommand> ?subcommand? ?arg ...?"),
+					))
+				})
+				Specify("the metacommand should return itself", func() {
+					value := evaluate("set cmd [ensemble {} {}]")
+					Expect(evaluate("$cmd")).To(Equal(value))
+				})
 			})
 
 			Describe("Subcommands", func() {
@@ -270,7 +278,7 @@ var _ = Describe("Helena ensembles", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[ensemble {} {}] subcommands a")).To(Equal(
-								ERROR(`wrong # args: should be "<ensemble> subcommands"`),
+								ERROR(`wrong # args: should be "<metacommand> subcommands"`),
 							))
 						})
 					})
@@ -390,10 +398,13 @@ var _ = Describe("Helena ensembles", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[ensemble {} {}] eval")).To(Equal(
-								ERROR(`wrong # args: should be "<ensemble> eval body"`),
+								ERROR(`wrong # args: should be "<metacommand> eval body"`),
 							))
 							Expect(execute("[ensemble {} {}] eval a b")).To(Equal(
-								ERROR(`wrong # args: should be "<ensemble> eval body"`),
+								ERROR(`wrong # args: should be "<metacommand> eval body"`),
+							))
+							Expect(execute("help [ensemble {} {}] eval a b")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> eval body"`),
 							))
 						})
 						Specify("invalid body", func() {
@@ -509,7 +520,7 @@ var _ = Describe("Helena ensembles", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[ensemble {} {}] call")).To(Equal(
 								ERROR(
-									`wrong # args: should be "<ensemble> call cmdname ?arg ...?"`,
+									`wrong # args: should be "<metacommand> call cmdname ?arg ...?"`,
 								),
 							))
 						})
@@ -544,7 +555,10 @@ var _ = Describe("Helena ensembles", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[ensemble {} {}] argspec a")).To(Equal(
-								ERROR(`wrong # args: should be "<ensemble> argspec"`),
+								ERROR(`wrong # args: should be "<metacommand> argspec"`),
+							))
+							Expect(execute("help [ensemble {} {}] argspec a")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> argspec"`),
 							))
 						})
 					})
@@ -686,6 +700,7 @@ var _ = Describe("Helena ensembles", func() {
 						ensemble cmd {a} {
 							macro opt1 {a b} {}
 							closure opt2 {c d} {}
+							proc opt3 {e f} {}
 						}
 					`)
 					Expect(evaluate("help cmd")).To(Equal(
@@ -701,6 +716,8 @@ var _ = Describe("Helena ensembles", func() {
 					Expect(evaluate("help cmd 2 opt1 3")).To(Equal(STR("cmd a opt1 b")))
 					Expect(evaluate("help cmd 4 opt2")).To(Equal(STR("cmd a opt2 d")))
 					Expect(evaluate("help cmd 5 opt2 6")).To(Equal(STR("cmd a opt2 d")))
+					Expect(evaluate("help cmd 7 opt3")).To(Equal(STR("cmd a opt3 f")))
+					Expect(evaluate("help cmd 8 opt3 9")).To(Equal(STR("cmd a opt3 f")))
 				})
 				It("should work recursively", func() {
 					evaluate(`

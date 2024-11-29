@@ -52,17 +52,9 @@ var _ = Describe("Helena scopes", func() {
 				evaluate("scope cmd {}")
 				Expect(execute("scope cmd {}").Code).To(Equal(core.ResultCode_OK))
 			})
-			It("should return a command object", func() {
+			It("should return a scope value", func() {
 				Expect(evaluate("scope {}").Type()).To(Equal(core.ValueType_COMMAND))
 				Expect(evaluate("scope cmd  {}").Type()).To(Equal(core.ValueType_COMMAND))
-			})
-			Specify("the named command should return its command object", func() {
-				value := evaluate("scope cmd {}")
-				Expect(evaluate("cmd")).To(Equal(value))
-			})
-			Specify("the command object should return itself", func() {
-				value := evaluate("set cmd [scope {}]")
-				Expect(evaluate("$cmd")).To(Equal(value))
 			})
 		})
 
@@ -236,6 +228,40 @@ var _ = Describe("Helena scopes", func() {
 			})
 		})
 
+		Describe("Scope value", func() {
+			Describe("Specifications", func() {
+				Specify("usage", func() {
+					evaluate("set cmd [scope cmd {}]")
+					Expect(evaluate("help cmd")).To(Equal(
+						STR("cmd ?subcommand? ?arg ...?"),
+					))
+					Expect(evaluate("help $cmd")).To(Equal(
+						STR("<scope> ?subcommand? ?arg ...?"),
+					))
+				})
+				Specify("calling the scope value should return itself", func() {
+					value := evaluate("set cmd [scope {}]")
+					Expect(evaluate("$cmd")).To(Equal(value))
+				})
+			})
+		})
+	})
+
+	Describe("Scope commands", func() {
+		Describe("Specifications", func() {
+			Specify("usage", func() {
+				evaluate("set cmd [scope cmd {}]")
+				Expect(evaluate("help cmd")).To(Equal(STR("cmd ?subcommand? ?arg ...?")))
+				Expect(evaluate("help $cmd")).To(Equal(
+					STR("<scope> ?subcommand? ?arg ...?"),
+				))
+			})
+			It("should return its scope value when called with no argument", func() {
+				value := evaluate("scope cmd {}")
+				Expect(evaluate("cmd")).To(Equal(value))
+			})
+		})
+
 		Describe("Subcommands", func() {
 			Describe("`subcommands`", func() {
 				It("should return list of subcommands", func() {
@@ -246,7 +272,17 @@ var _ = Describe("Helena scopes", func() {
 
 				Describe("Exceptions", func() {
 					Specify("wrong arity", func() {
-						Expect(execute("[scope {}] subcommands a")).To(Equal(
+						evaluate("set cmd [scope cmd {}]")
+						Expect(execute("cmd subcommands a")).To(Equal(
+							ERROR(`wrong # args: should be "cmd subcommands"`),
+						))
+						Expect(execute("$cmd subcommands a")).To(Equal(
+							ERROR(`wrong # args: should be "<scope> subcommands"`),
+						))
+						Expect(execute("help cmd subcommands a")).To(Equal(
+							ERROR(`wrong # args: should be "cmd subcommands"`),
+						))
+						Expect(execute("help $cmd subcommands a")).To(Equal(
 							ERROR(`wrong # args: should be "<scope> subcommands"`),
 						))
 					})
@@ -362,10 +398,23 @@ var _ = Describe("Helena scopes", func() {
 
 				Describe("Exceptions", func() {
 					Specify("wrong arity", func() {
-						Expect(execute("[scope {}] eval")).To(Equal(
+						evaluate("set cmd [scope cmd {}]")
+						Expect(execute("cmd eval")).To(Equal(
+							ERROR(`wrong # args: should be "cmd eval body"`),
+						))
+						Expect(execute("$cmd eval")).To(Equal(
 							ERROR(`wrong # args: should be "<scope> eval body"`),
 						))
-						Expect(execute("[scope {}] eval a b")).To(Equal(
+						Expect(execute("cmd eval a b")).To(Equal(
+							ERROR(`wrong # args: should be "cmd eval body"`),
+						))
+						Expect(execute("$cmd eval a b")).To(Equal(
+							ERROR(`wrong # args: should be "<scope> eval body"`),
+						))
+						Expect(execute("help cmd eval a b")).To(Equal(
+							ERROR(`wrong # args: should be "cmd eval body"`),
+						))
+						Expect(execute("help $cmd eval a b")).To(Equal(
 							ERROR(`wrong # args: should be "<scope> eval body"`),
 						))
 					})
@@ -471,7 +520,11 @@ var _ = Describe("Helena scopes", func() {
 
 				Describe("Exceptions", func() {
 					Specify("wrong arity", func() {
-						Expect(execute("[scope {}] call")).To(Equal(
+						evaluate("set cmd [scope cmd {}]")
+						Expect(execute("cmd call")).To(Equal(
+							ERROR(`wrong # args: should be "cmd call cmdname ?arg ...?"`),
+						))
+						Expect(execute("$cmd call")).To(Equal(
 							ERROR(`wrong # args: should be "<scope> call cmdname ?arg ...?"`),
 						))
 					})

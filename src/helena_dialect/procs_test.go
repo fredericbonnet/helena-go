@@ -61,6 +61,10 @@ var _ = Describe("Helena procedures", func() {
 				evaluate("proc cmd {} {}")
 				Expect(execute("proc cmd {} {}").Code).To(Equal(core.ResultCode_OK))
 			})
+			It("should return a metacommand", func() {
+				Expect(evaluate("proc {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+				Expect(evaluate("proc cmd {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+			})
 		})
 
 		Describe("Exceptions", func() {
@@ -91,15 +95,22 @@ var _ = Describe("Helena procedures", func() {
 		})
 
 		Describe("Metacommand", func() {
-			It("should return a metacommand", func() {
-				Expect(evaluate("proc {} {}").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("proc cmd {} {}").Type()).To(Equal(core.ValueType_COMMAND))
-			})
-			Specify("the metacommand should return the procedure", func() {
-				value := evaluate("set cmd [proc {val} {idem _${val}_}]")
-				Expect(evaluate("$cmd").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("$cmd")).NotTo(Equal(value))
-				Expect(evaluate("[$cmd] arg")).To(Equal(STR("_arg_")))
+			Describe("Specifications", func() {
+				Specify("usage", func() {
+					evaluate("set cmd [proc {} {}]")
+					Expect(evaluate("help $cmd")).To(Equal(
+						core.STR("<metacommand> ?subcommand? ?arg ...?"),
+					))
+				})
+				Specify(
+					"the metacommand should return the procedure when called with no argument",
+					func() {
+						value := evaluate("set cmd [proc {val} {idem _${val}_}]")
+						Expect(evaluate("$cmd").Type()).To(Equal(core.ValueType_COMMAND))
+						Expect(evaluate("$cmd")).NotTo(Equal(value))
+						Expect(evaluate("[$cmd] arg")).To(Equal(STR("_arg_")))
+					},
+				)
 			})
 
 			Describe("Examples", func() {
@@ -133,7 +144,10 @@ var _ = Describe("Helena procedures", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[proc {} {}] subcommands a")).To(Equal(
-								ERROR(`wrong # args: should be "<proc> subcommands"`),
+								ERROR(`wrong # args: should be "<metacommand> subcommands"`),
+							))
+							Expect(execute("help [proc {} {}] subcommands a")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> subcommands"`),
 							))
 						})
 					})
@@ -159,7 +173,10 @@ var _ = Describe("Helena procedures", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[proc {} {}] argspec a")).To(Equal(
-								ERROR(`wrong # args: should be "<proc> argspec"`),
+								ERROR(`wrong # args: should be "<metacommand> argspec"`),
+							))
+							Expect(execute("[proc {} {}] argspec a")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> argspec"`),
 							))
 						})
 					})

@@ -61,6 +61,10 @@ var _ = Describe("Helena macros", func() {
 				evaluate("macro cmd {} {}")
 				Expect(execute("macro cmd {} {}").Code).To(Equal(core.ResultCode_OK))
 			})
+			It("should return a metacommand", func() {
+				Expect(evaluate("macro {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+				Expect(evaluate("macro cmd {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+			})
 		})
 
 		Describe("Exceptions", func() {
@@ -94,16 +98,21 @@ var _ = Describe("Helena macros", func() {
 		})
 
 		Describe("Metacommand", func() {
-			It("should return a metacommand", func() {
-				Expect(evaluate("macro {} {}").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("macro cmd {} {}").Type()).To(Equal(core.ValueType_COMMAND))
+			Specify("usage", func() {
+				evaluate("set cmd [macro {} {}]")
+				Expect(evaluate("help $cmd")).To(Equal(
+					core.STR("<metacommand> ?subcommand? ?arg ...?"),
+				))
 			})
-			Specify("the metacommand should return the macro", func() {
-				value := evaluate("set cmd [macro {val} {idem _${val}_}]")
-				Expect(evaluate("$cmd").Type()).To(Equal(core.ValueType_COMMAND))
-				Expect(evaluate("$cmd")).NotTo(Equal(value))
-				Expect(evaluate("[$cmd] arg")).To(Equal(STR("_arg_")))
-			})
+			Specify(
+				"the metacommand should return the macro when called with no argument",
+				func() {
+					value := evaluate("set cmd [macro {val} {idem _${val}_}]")
+					Expect(evaluate("$cmd").Type()).To(Equal(core.ValueType_COMMAND))
+					Expect(evaluate("$cmd")).NotTo(Equal(value))
+					Expect(evaluate("[$cmd] arg")).To(Equal(STR("_arg_")))
+				},
+			)
 
 			Describe("Examples", func() {
 				Specify("Calling macro through its wrapped metacommand", func() {
@@ -136,7 +145,10 @@ var _ = Describe("Helena macros", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[macro {} {}] subcommands a")).To(Equal(
-								ERROR(`wrong # args: should be "<macro> subcommands"`),
+								ERROR(`wrong # args: should be "<metacommand> subcommands"`),
+							))
+							Expect(execute("help [macro {} {}] subcommands a")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> subcommands"`),
 							))
 						})
 					})
@@ -162,7 +174,10 @@ var _ = Describe("Helena macros", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("[macro {} {}] argspec a")).To(Equal(
-								ERROR(`wrong # args: should be "<macro> argspec"`),
+								ERROR(`wrong # args: should be "<metacommand> argspec"`),
+							))
+							Expect(execute("help [macro {} {}] argspec a")).To(Equal(
+								ERROR(`wrong # args: should be "<metacommand> argspec"`),
 							))
 						})
 					})

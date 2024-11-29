@@ -27,15 +27,40 @@ func (metacommand *closureMetacommand) Execute(args []core.Value, _ any) core.Re
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
-			return ARITY_ERROR("<closure> subcommands")
+			return ARITY_ERROR("<metacommand> subcommands")
 		}
 		return core.OK(closureMetacommandSubcommands.List)
 
 	case "argspec":
 		if len(args) != 2 {
-			return ARITY_ERROR("<closure> argspec")
+			return ARITY_ERROR("<metacommand> argspec")
 		}
 		return core.OK(metacommand.closure.argspec)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
+}
+func (*closureMetacommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+	if len(args) == 1 {
+		return core.OK(core.STR("<metacommand> ?subcommand? ?arg ...?"))
+	}
+	result, subcommand := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	switch subcommand {
+	case "subcommands":
+		if len(args) > 2 {
+			return ARITY_ERROR("<metacommand> subcommands")
+		}
+		return core.OK(core.STR("<metacommand> subcommands"))
+
+	case "argspec":
+		if len(args) > 2 {
+			return ARITY_ERROR("<metacommand> argspec")
+		}
+		return core.OK(core.STR("<metacommand> argspec"))
 
 	default:
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)

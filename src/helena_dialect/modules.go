@@ -37,6 +37,11 @@ func (exportCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) c
 	return core.OK(core.STR(EXPORT_SIGNATURE))
 }
 
+func MODULE_COMMAND_PREFIX(name core.Value) string {
+	_, s := core.ValueToStringOrDefault(name, "<module>")
+	return s
+}
+
 type Module struct {
 	value   core.Value
 	scope   *Scope
@@ -69,13 +74,13 @@ func (module *Module) Execute(args []core.Value, context any) core.Result {
 	switch subcommand {
 	case "subcommands":
 		if len(args) != 2 {
-			return ARITY_ERROR("<module> subcommands")
+			return ARITY_ERROR(MODULE_COMMAND_PREFIX(args[0]) + " subcommands")
 		}
 		return core.OK(moduleSubcommands.List)
 
 	case "exports":
 		if len(args) != 2 {
-			return ARITY_ERROR("<module> exports")
+			return ARITY_ERROR(MODULE_COMMAND_PREFIX(args[0]) + " exports")
 		}
 		values := make([]core.Value, len(*module.exports))
 		i := 0
@@ -87,7 +92,7 @@ func (module *Module) Execute(args []core.Value, context any) core.Result {
 
 	case "import":
 		if len(args) != 3 && len(args) != 4 {
-			return ARITY_ERROR("<module> import name ?alias?")
+			return ARITY_ERROR(MODULE_COMMAND_PREFIX(args[0]) + " import name ?alias?")
 		}
 		var aliasName core.Value
 		if len(args) == 4 {
@@ -102,6 +107,55 @@ func (module *Module) Execute(args []core.Value, context any) core.Result {
 			module.scope,
 			scope,
 		)
+
+	default:
+		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
+	}
+}
+func (*Module) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
+	var usage string
+	if options.Skip > 0 {
+		usage = ""
+	} else {
+		usage = MODULE_COMMAND_PREFIX(args[0])
+	}
+	signature := ""
+	if len(options.Prefix) > 0 {
+		signature += options.Prefix
+	}
+	if len(usage) > 0 {
+		if len(signature) > 0 {
+			signature += " "
+		}
+		signature += usage
+	}
+	if len(args) == 1 {
+		return core.OK(
+			core.STR(signature + " ?subcommand? ?arg ...?"),
+		)
+	}
+	result, subcommand := core.ValueToString(args[1])
+	if result.Code != core.ResultCode_OK {
+		return INVALID_SUBCOMMAND_ERROR()
+	}
+	switch subcommand {
+	case "subcommands":
+		if len(args) > 2 {
+			return ARITY_ERROR(signature + " subcommands")
+		}
+		return core.OK(core.STR(signature + " subcommands"))
+
+	case "exports":
+		if len(args) > 2 {
+			return ARITY_ERROR(signature + " exports")
+		}
+		return core.OK(core.STR(signature + " exports"))
+
+	case "import":
+		if len(args) > 4 {
+			return ARITY_ERROR(signature + " import name ?alias?")
+		}
+		return core.OK(core.STR(signature + " import name ?alias?"))
 
 	default:
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
