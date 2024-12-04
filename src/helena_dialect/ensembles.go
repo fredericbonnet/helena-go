@@ -118,13 +118,11 @@ func (*ensembleMetacommand) Help(args []core.Value, _ core.CommandHelpOptions, _
 	}
 }
 
-func ENSEMBLE_COMMAND_PREFIX(name core.Value, args string) string {
-	_, s := core.ValueToStringOrDefault(name, "<ensemble>")
-	if args != "" {
-		return s + " " + args
-	} else {
-		return s
-	}
+func ENSEMBLE_COMMAND_PREFIX(name core.Value, argspec ArgspecValue) string {
+	return USAGE_ARGSPEC(name, "<ensemble>", argspec, core.CommandHelpOptions{})
+}
+func ENSEMBLE_HELP_PREFIX(name core.Value, argspec ArgspecValue, options core.CommandHelpOptions) string {
+	return USAGE_ARGSPEC(name, "<ensemble>", argspec, options)
 }
 
 type EnsembleCommand struct {
@@ -148,7 +146,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 	minArgs := ensemble.argspec.Argspec.NbRequired + 1
 	if uint(len(args)) < minArgs {
 		return ARITY_ERROR(
-			ENSEMBLE_COMMAND_PREFIX(args[0], ensemble.argspec.Usage(0)) +
+			ENSEMBLE_COMMAND_PREFIX(args[0], ensemble.argspec) +
 				" ?subcommand? ?arg ...?",
 		)
 	}
@@ -176,8 +174,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 	if subcommand == "subcommands" {
 		if uint(len(args)) != minArgs+1 {
 			return ARITY_ERROR(
-				ENSEMBLE_COMMAND_PREFIX(args[0], ensemble.argspec.Usage(0)) +
-					" subcommands",
+				ENSEMBLE_COMMAND_PREFIX(args[0], ensemble.argspec) + " subcommands",
 			)
 		}
 		localCommands := ensemble.scope.GetLocalCommands()
@@ -200,22 +197,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 	return CreateContinuationValue(scope, program, nil)
 }
 func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
-	var usage string
-	if options.Skip > 0 {
-		usage = ensemble.argspec.Usage(options.Skip - 1)
-	} else {
-		usage = ENSEMBLE_COMMAND_PREFIX(args[0], ensemble.argspec.Usage(0))
-	}
-	signature := ""
-	if len(options.Prefix) > 0 {
-		signature += options.Prefix
-	}
-	if len(usage) > 0 {
-		if len(signature) > 0 {
-			signature += " "
-		}
-		signature += usage
-	}
+	signature := ENSEMBLE_HELP_PREFIX(args[0], ensemble.argspec, options)
 	minArgs := ensemble.argspec.Argspec.NbRequired + 1
 	if uint(len(args)) <= minArgs {
 		return core.OK(core.STR(signature + " ?subcommand? ?arg ...?"))

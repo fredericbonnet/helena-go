@@ -153,8 +153,10 @@ func (*namespaceMetacommand) Help(args []core.Value, _ core.CommandHelpOptions, 
 }
 
 func NAMESPACE_COMMAND_PREFIX(name core.Value) string {
-	_, s := core.ValueToStringOrDefault(name, "<namespace>")
-	return s
+	return USAGE_PREFIX(name, "<namespace>", core.CommandHelpOptions{})
+}
+func NAMESPACE_HELP_PREFIX(name core.Value, options core.CommandHelpOptions) string {
+	return USAGE_PREFIX(name, "<namespace>", options)
 }
 
 type namespaceCommand struct {
@@ -200,22 +202,7 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 	return CreateContinuationValue(namespace.scope, program, nil)
 }
 func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
-	var usage string
-	if options.Skip > 0 {
-		usage = ""
-	} else {
-		usage = NAMESPACE_COMMAND_PREFIX(args[0])
-	}
-	signature := ""
-	if len(options.Prefix) > 0 {
-		signature += options.Prefix
-	}
-	if len(usage) > 0 {
-		if len(signature) > 0 {
-			signature += " "
-		}
-		signature += usage
-	}
+	signature := NAMESPACE_HELP_PREFIX(args[0], options)
 	if len(args) <= 1 {
 		return core.OK(core.STR(signature + " ?subcommand? ?arg ...?"))
 	}

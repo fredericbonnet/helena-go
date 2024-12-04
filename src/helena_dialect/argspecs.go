@@ -2,6 +2,23 @@ package helena_dialect
 
 import "helena/core"
 
+func USAGE_ARGSPEC(name core.Value, def string, argspec ArgspecValue, options core.CommandHelpOptions) string {
+	prefix := USAGE_PREFIX(name, def, options)
+	var usage string
+	if options.Skip > 0 {
+		usage = argspec.Usage(options.Skip - 1)
+	} else {
+		usage = argspec.Usage(0)
+	}
+	if len(usage) > 0 {
+		if len(prefix) > 0 {
+			return prefix + " " + usage
+		}
+		return usage
+	}
+	return prefix
+}
+
 type Argspec struct {
 	Args         []Argument
 	NbRequired   uint

@@ -67,13 +67,11 @@ func (*procMetacommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any
 	}
 }
 
-func PROC_COMMAND_SIGNATURE(name core.Value, help string) string {
-	_, s := core.ValueToStringOrDefault(name, "<proc>")
-	if help != "" {
-		return s + " " + help
-	} else {
-		return s
-	}
+func PROC_COMMAND_SIGNATURE(name core.Value, argspec ArgspecValue) string {
+	return USAGE_ARGSPEC(name, "<proc>", argspec, core.CommandHelpOptions{})
+}
+func PROC_HELP_SIGNATURE(name core.Value, argspec ArgspecValue, options core.CommandHelpOptions) string {
+	return USAGE_ARGSPEC(name, "<proc>", argspec, options)
 }
 
 type procCommand struct {
@@ -106,7 +104,7 @@ func newProcCommand(
 
 func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 	if !proc.argspec.CheckArity(args, 1) {
-		return ARITY_ERROR(PROC_COMMAND_SIGNATURE(args[0], proc.argspec.Usage(0)))
+		return ARITY_ERROR(PROC_COMMAND_SIGNATURE(args[0], proc.argspec))
 	}
 	subscope := proc.scope.NewChildScope()
 	setarg := func(name string, value core.Value) core.Result {
@@ -146,22 +144,7 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 	}
 }
 func (proc *procCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
-	var usage string
-	if options.Skip > 0 {
-		usage = proc.argspec.Usage(options.Skip - 1)
-	} else {
-		usage = PROC_COMMAND_SIGNATURE(args[0], proc.argspec.Usage(0))
-	}
-	signature := ""
-	if len(options.Prefix) > 0 {
-		signature += options.Prefix
-	}
-	if len(usage) > 0 {
-		if len(signature) > 0 {
-			signature += " "
-		}
-		signature += usage
-	}
+	signature := PROC_HELP_SIGNATURE(args[0], proc.argspec, options)
 	if !proc.argspec.CheckArity(args, 1) &&
 		uint(len(args)) > proc.argspec.Argspec.NbRequired {
 		return ARITY_ERROR(signature)

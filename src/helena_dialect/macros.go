@@ -67,13 +67,11 @@ func (*macroMetacommand) Help(args []core.Value, _ core.CommandHelpOptions, _ an
 	}
 }
 
-func MACRO_COMMAND_SIGNATURE(name core.Value, help string) string {
-	_, s := core.ValueToStringOrDefault(name, "<macro>")
-	if help != "" {
-		return s + " " + help
-	} else {
-		return s
-	}
+func MACRO_COMMAND_SIGNATURE(name core.Value, argspec ArgspecValue) string {
+	return USAGE_ARGSPEC(name, "<macro>", argspec, core.CommandHelpOptions{})
+}
+func MACRO_HELP_SIGNATURE(name core.Value, argspec ArgspecValue, options core.CommandHelpOptions) string {
+	return USAGE_ARGSPEC(name, "<macro>", argspec, options)
 }
 
 type macroCommand struct {
@@ -97,9 +95,7 @@ func newMacroCommand(argspec ArgspecValue, body core.ScriptValue, guard core.Val
 func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if !macro.argspec.CheckArity(args, 1) {
-		return ARITY_ERROR(
-			MACRO_COMMAND_SIGNATURE(args[0], macro.argspec.Usage(0)),
-		)
+		return ARITY_ERROR(MACRO_COMMAND_SIGNATURE(args[0], macro.argspec))
 	}
 	subscope := scope.NewLocalScope()
 	setarg := func(name string, value core.Value) core.Result {
@@ -124,22 +120,7 @@ func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 	}
 }
 func (macro *macroCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
-	var usage string
-	if options.Skip > 0 {
-		usage = macro.argspec.Usage(options.Skip - 1)
-	} else {
-		usage = MACRO_COMMAND_SIGNATURE(args[0], macro.argspec.Usage(0))
-	}
-	signature := ""
-	if len(options.Prefix) > 0 {
-		signature += options.Prefix
-	}
-	if len(usage) > 0 {
-		if len(signature) > 0 {
-			signature += " "
-		}
-		signature += usage
-	}
+	signature := MACRO_HELP_SIGNATURE(args[0], macro.argspec, options)
 	if !macro.argspec.CheckArity(args, 1) &&
 		uint(len(args)) > macro.argspec.Argspec.NbRequired {
 		return ARITY_ERROR(signature)

@@ -67,13 +67,11 @@ func (*closureMetacommand) Help(args []core.Value, _ core.CommandHelpOptions, _ 
 	}
 }
 
-func CLOSURE_COMMAND_SIGNATURE(name core.Value, help string) string {
-	_, s := core.ValueToStringOrDefault(name, "<closure>")
-	if help != "" {
-		return s + " " + help
-	} else {
-		return s
-	}
+func CLOSURE_COMMAND_SIGNATURE(name core.Value, argspec ArgspecValue) string {
+	return USAGE_ARGSPEC(name, "<closure>", argspec, core.CommandHelpOptions{})
+}
+func CLOSURE_HELP_SIGNATURE(name core.Value, argspec ArgspecValue, options core.CommandHelpOptions) string {
+	return USAGE_ARGSPEC(name, "<closure>", argspec, options)
 }
 
 type closureCommand struct {
@@ -103,9 +101,7 @@ func newClosureCommand(
 
 func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 	if !closure.argspec.CheckArity(args, 1) {
-		return ARITY_ERROR(
-			CLOSURE_COMMAND_SIGNATURE(args[0], closure.argspec.Usage(0)),
-		)
+		return ARITY_ERROR(CLOSURE_COMMAND_SIGNATURE(args[0], closure.argspec))
 	}
 	subscope := closure.scope.NewLocalScope()
 	setarg := func(name string, value core.Value) core.Result {
@@ -130,22 +126,7 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 	}
 }
 func (closure *closureCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
-	var usage string
-	if options.Skip > 0 {
-		usage = closure.argspec.Usage(options.Skip - 1)
-	} else {
-		usage = CLOSURE_COMMAND_SIGNATURE(args[0], closure.argspec.Usage(0))
-	}
-	signature := ""
-	if len(options.Prefix) > 0 {
-		signature += options.Prefix
-	}
-	if len(usage) > 0 {
-		if len(signature) > 0 {
-			signature += " "
-		}
-		signature += usage
-	}
+	signature := CLOSURE_HELP_SIGNATURE(args[0], closure.argspec, options)
 	if !closure.argspec.CheckArity(args, 1) &&
 		uint(len(args)) > closure.argspec.Argspec.NbRequired {
 		return ARITY_ERROR(signature)

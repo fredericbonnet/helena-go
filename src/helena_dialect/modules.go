@@ -38,8 +38,10 @@ func (exportCommand) Help(args []core.Value, _ core.CommandHelpOptions, _ any) c
 }
 
 func MODULE_COMMAND_PREFIX(name core.Value) string {
-	_, s := core.ValueToStringOrDefault(name, "<module>")
-	return s
+	return USAGE_PREFIX(name, "<module>", core.CommandHelpOptions{})
+}
+func MODULE_HELP_PREFIX(name core.Value, options core.CommandHelpOptions) string {
+	return USAGE_PREFIX(name, "<module>", options)
 }
 
 type Module struct {
@@ -113,22 +115,7 @@ func (module *Module) Execute(args []core.Value, context any) core.Result {
 	}
 }
 func (*Module) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
-	var usage string
-	if options.Skip > 0 {
-		usage = ""
-	} else {
-		usage = MODULE_COMMAND_PREFIX(args[0])
-	}
-	signature := ""
-	if len(options.Prefix) > 0 {
-		signature += options.Prefix
-	}
-	if len(usage) > 0 {
-		if len(signature) > 0 {
-			signature += " "
-		}
-		signature += usage
-	}
+	signature := MODULE_HELP_PREFIX(args[0], options)
 	if len(args) == 1 {
 		return core.OK(
 			core.STR(signature + " ?subcommand? ?arg ...?"),

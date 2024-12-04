@@ -5,6 +5,20 @@ import (
 	"strings"
 )
 
+func USAGE_PREFIX(name core.Value, def string, options core.CommandHelpOptions) string {
+	signature := ""
+	if len(options.Prefix) > 0 {
+		signature += options.Prefix
+	}
+	if options.Skip == 0 {
+		_, s := core.ValueToStringOrDefault(name, def)
+		if len(signature) > 0 {
+			signature += " "
+		}
+		signature += s
+	}
+	return signature
+}
 func ARITY_ERROR(signature string) core.Result {
 	return core.ERROR(`wrong # args: should be "` + signature + `"`)
 }

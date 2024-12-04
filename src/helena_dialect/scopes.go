@@ -3,8 +3,10 @@ package helena_dialect
 import "helena/core"
 
 func SCOPE_COMMAND_PREFIX(name core.Value) string {
-	_, s := core.ValueToStringOrDefault(name, "<scope>")
-	return s
+	return USAGE_PREFIX(name, "<scope>", core.CommandHelpOptions{})
+}
+func SCOPE_HELP_PREFIX(name core.Value, options core.CommandHelpOptions) string {
+	return USAGE_PREFIX(name, "<scope>", options)
 }
 
 type scopeCommand struct {
@@ -77,22 +79,7 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 	}
 }
 func (scope *scopeCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
-	var usage string
-	if options.Skip > 0 {
-		usage = ""
-	} else {
-		usage = SCOPE_COMMAND_PREFIX(args[0])
-	}
-	signature := ""
-	if len(options.Prefix) > 0 {
-		signature += options.Prefix
-	}
-	if len(usage) > 0 {
-		if len(signature) > 0 {
-			signature += " "
-		}
-		signature += usage
-	}
+	signature := SCOPE_HELP_PREFIX(args[0], options)
 	if len(args) == 1 {
 		return core.OK(
 			core.STR(signature + " ?subcommand? ?arg ...?"),
