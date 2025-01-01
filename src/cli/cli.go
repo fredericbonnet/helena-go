@@ -92,9 +92,17 @@ func initScope() *helena_dialect.Scope {
 		CapturePositions:  true,
 	})
 	helena_dialect.InitCommandsForModule(rootScope, moduleRegistry, cwd)
+
+	// Interactive mode functions
 	rootScope.RegisterNamedCommand("source", sourceCmd{})
 	rootScope.RegisterNamedCommand("exit", exitCmd{})
+
+	// Embedded picol dialect
 	rootScope.RegisterNamedCommand("picol", picolCmd{})
+
+	// Native modules
+	registerNativeModule("go:slog", "slog", native.SlogCmd{})
+
 	return rootScope
 }
 
@@ -133,7 +141,6 @@ func prompt() {
 	defer rl.Close()
 
 	rootScope := initScope()
-	registerNativeModule("go:slog", "slog", native.SlogCmd{})
 
 	cmd := ""
 	for {
