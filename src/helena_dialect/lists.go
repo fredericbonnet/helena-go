@@ -238,21 +238,37 @@ func (listReplaceCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) 
 	return core.OK(core.STR(LIST_REPLACE_SIGNATURE))
 }
 
-const LIST_FOREACH_SIGNATURE = "list value foreach element body"
+const LIST_FOREACH_SIGNATURE = "list value foreach ?index? element body"
 
 type listForeachCmd struct{}
 
 func (listForeachCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
-	if len(args) != 4 {
+	var hasIndex bool
+	var index string
+	var varname, body core.Value
+	switch len(args) {
+	case 4:
+		varname = args[2]
+		body = args[3]
+	case 5:
+		{
+			result, name := core.ValueToString(args[2])
+			if result.Code != core.ResultCode_OK {
+				return core.ERROR("invalid index name")
+			}
+			hasIndex = true
+			index = name
+			varname = args[3]
+			body = args[4]
+		}
+	default:
 		return ARITY_ERROR(LIST_FOREACH_SIGNATURE)
 	}
 	result, list := ValueToList(args[1])
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
-	varname := args[2]
-	body := args[3]
 	if body.Type() != core.ValueType_SCRIPT {
 		return core.ERROR("body must be a script")
 	}
@@ -264,6 +280,9 @@ func (listForeachCmd) Execute(args []core.Value, context any) core.Result {
 	next = func() core.Result {
 		if i >= len(list.Values) {
 			return lastResult
+		}
+		if hasIndex {
+			subscope.SetNamedLocal(index, core.INT(int64(i)))
 		}
 		value := list.Values[i]
 		i++

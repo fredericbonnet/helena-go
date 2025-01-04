@@ -499,7 +499,7 @@ var _ = Describe("Helena lists", func() {
 				Describe("`foreach`", func() {
 					Specify("usage", func() {
 						Expect(evaluate("help list () foreach")).To(Equal(
-							STR("list value foreach element body"),
+							STR("list value foreach ?index? element body"),
 						))
 					})
 
@@ -540,6 +540,13 @@ var _ = Describe("Helena lists", func() {
 						Expect(
 							evaluate("set i 0; list (a b c) foreach element {set i [+ $i 1]}"),
 						).To(Equal(INT(3)))
+					})
+					It("should increment `index` at each iteration", func() {
+						Expect(
+							evaluate(
+								`set s ""; list (a b c) foreach index element {set s $s$index$element}`,
+							),
+						).To(Equal(STR("0a1b2c")))
 					})
 
 					Describe("Control flow", func() {
@@ -629,23 +636,28 @@ var _ = Describe("Helena lists", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("list (a b c) foreach a")).To(Equal(
 								ERROR(
-									`wrong # args: should be "list value foreach element body"`,
+									`wrong # args: should be "list value foreach ?index? element body"`,
 								),
 							))
-							Expect(execute("list (a b c) foreach a b c")).To(Equal(
+							Expect(execute("list (a b c) foreach a b c d")).To(Equal(
 								ERROR(
-									`wrong # args: should be "list value foreach element body"`,
+									`wrong # args: should be "list value foreach ?index? element body"`,
 								),
 							))
-							Expect(execute("help list (a b c) foreach a b c")).To(Equal(
+							Expect(execute("help list (a b c) foreach a b c d")).To(Equal(
 								ERROR(
-									`wrong # args: should be "list value foreach element body"`,
+									`wrong # args: should be "list value foreach ?index? element body"`,
 								),
 							))
 						})
 						Specify("non-script body", func() {
 							Expect(execute("list (a b c) foreach a b")).To(Equal(
 								ERROR("body must be a script"),
+							))
+						})
+						Specify("invalid `index` name", func() {
+							Expect(execute("list (a b c) foreach [] a {}")).To(Equal(
+								ERROR("invalid index name"),
 							))
 						})
 						Specify("bad value shape", func() {

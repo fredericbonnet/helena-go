@@ -491,7 +491,7 @@ var _ = Describe("Helena dictionaries", func() {
 				Describe("`foreach`", func() {
 					Specify("usage", func() {
 						Expect(evaluate("help dict () foreach")).To(Equal(
-							STR("dict value foreach entry body"),
+							STR("dict value foreach ?index? entry body"),
 						))
 					})
 
@@ -547,6 +547,15 @@ var _ = Describe("Helena dictionaries", func() {
 								"set i 0; dict (a b c d e f) foreach entry {set i [+ $i 1]}",
 							),
 						).To(Equal(INT(3)))
+					})
+					It("should increment `index` at each iteration", func() {
+						Expect(
+							evaluate(
+								`set s ""; dict (a b c d e f) foreach index (key value) {set s $s$index$key$value}`,
+							),
+						// TODO specify order?
+						// ).To(Equal(STR("0ab1cd2ef")))
+						).NotTo(BeNil())
 					})
 
 					Describe("Control flow", func() {
@@ -641,18 +650,23 @@ var _ = Describe("Helena dictionaries", func() {
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
 							Expect(execute("dict (a b c d) foreach a")).To(Equal(
-								ERROR(`wrong # args: should be "dict value foreach entry body"`),
+								ERROR(`wrong # args: should be "dict value foreach ?index? entry body"`),
 							))
-							Expect(execute("dict (a b c d) foreach a b c")).To(Equal(
-								ERROR(`wrong # args: should be "dict value foreach entry body"`),
+							Expect(execute("dict (a b c d) foreach a b c d")).To(Equal(
+								ERROR(`wrong # args: should be "dict value foreach ?index? entry body"`),
 							))
-							Expect(execute("help dict (a b c d) foreach a b c")).To(Equal(
-								ERROR(`wrong # args: should be "dict value foreach entry body"`),
+							Expect(execute("help dict (a b c d) foreach a b c d")).To(Equal(
+								ERROR(`wrong # args: should be "dict value foreach ?index? entry body"`),
 							))
 						})
 						Specify("non-script body", func() {
 							Expect(execute("dict (a b c d) foreach a b")).To(Equal(
 								ERROR("body must be a script"),
+							))
+						})
+						Specify("invalid `index` name", func() {
+							Expect(execute("dict (a b c d) foreach [] a {}")).To(Equal(
+								ERROR("invalid index name"),
 							))
 						})
 						Specify("bad value shape", func() {

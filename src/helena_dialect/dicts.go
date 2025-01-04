@@ -291,21 +291,37 @@ func (dictEntriesCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) 
 	return core.OK(core.STR(DICT_ENTRIES_SIGNATURE))
 }
 
-const DICT_FOREACH_SIGNATURE = "dict value foreach entry body"
+const DICT_FOREACH_SIGNATURE = "dict value foreach ?index? entry body"
 
 type dictForeachCmd struct{}
 
 func (dictForeachCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
-	if len(args) != 4 {
+	var hasIndex bool
+	var index string
+	var varname, body core.Value
+	switch len(args) {
+	case 4:
+		varname = args[2]
+		body = args[3]
+	case 5:
+		{
+			result, name := core.ValueToString(args[2])
+			if result.Code != core.ResultCode_OK {
+				return core.ERROR("invalid index name")
+			}
+			hasIndex = true
+			index = name
+			varname = args[3]
+			body = args[4]
+		}
+	default:
 		return ARITY_ERROR(DICT_FOREACH_SIGNATURE)
 	}
 	result, map_ := valueToMap(args[1])
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
-	varname := args[2]
-	body := args[3]
 	if body.Type() != core.ValueType_SCRIPT {
 		return core.ERROR("body must be a script")
 	}
@@ -323,6 +339,9 @@ func (dictForeachCmd) Execute(args []core.Value, context any) core.Result {
 	next = func() core.Result {
 		if i >= len(entries) {
 			return lastResult
+		}
+		if hasIndex {
+			subscope.SetNamedLocal(index, core.INT(int64(i)))
 		}
 		entry := entries[i]
 		i++
