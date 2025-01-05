@@ -266,10 +266,11 @@ var _ = Describe("Helena modules", func() {
 					Expect(evaluate("[module {}] exports")).To(Equal(LIST([]core.Value{})))
 				})
 				It("should return the list of module exports", func() {
-					// Expect(
-					// 	TODO preserve order?
-					// 	evaluate("[module {export a; export b; export c}] exports"),
-					// ).To(Equal(evaluate("list (a b c)")))
+					Expect(
+						evaluate(
+							"list [[module {export a; export b; export c}] exports] sort",
+						),
+					).To(Equal(evaluate("list (a b c) sort")))
 				})
 
 				Describe("Exceptions", func() {

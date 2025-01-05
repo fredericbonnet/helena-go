@@ -69,12 +69,11 @@ var _ = Describe("Helena strings", func() {
 					})
 
 					It("should return list of subcommands", func() {
-						// Expect(evaluate(`string "" subcommands`)).To(Equal(
-						// 	evaluate(
-						// 		TODO specify order?
-						// 		"list (subcommands length at range append remove insert replace == != > >= < <=)",
-						// 	),
-						// ))
+						Expect(evaluate(`list [string "" subcommands] sort`)).To(Equal(
+							evaluate(
+								"list (subcommands length at range append remove insert replace == != > >= < <=) sort",
+							),
+						))
 					})
 
 					Describe("Exceptions", func() {

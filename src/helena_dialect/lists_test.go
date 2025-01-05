@@ -81,12 +81,11 @@ var _ = Describe("Helena lists", func() {
 					})
 
 					It("should return list of subcommands", func() {
-						// Expect(evaluate("list {} subcommands")).To(Equal(
-						// 	evaluate(
-						// 		TODO specify order?
-						// 		"list (subcommands length at range append remove insert replace foreach)",
-						// 	),
-						// ))
+						Expect(evaluate("list [list {} subcommands] sort")).To(Equal(
+							evaluate(
+								"list (subcommands length at range append remove insert replace sort foreach) sort",
+							),
+						))
 					})
 				})
 

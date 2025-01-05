@@ -662,16 +662,16 @@ var _ = Describe("Helena ensembles", func() {
 							evaluate("list (subcommands)"),
 						))
 						evaluate("[cmd1] eval {macro mac1 {} {}}")
-						Expect(evaluate("cmd1 subcommands")).To(Equal(
-							evaluate("list (subcommands mac1)"),
+						Expect(evaluate("list [cmd1 subcommands] sort")).To(Equal(
+							evaluate("list (subcommands mac1) sort"),
 						))
 
 						Expect(evaluate("cmd2 a b subcommands")).To(Equal(
 							evaluate("list (subcommands)"),
 						))
 						evaluate("[cmd2] eval {macro mac2 {} {}}")
-						Expect(evaluate("cmd2 a b subcommands")).To(Equal(
-							evaluate("list (subcommands mac2)"),
+						Expect(evaluate("list [cmd2 a b subcommands] sort")).To(Equal(
+							evaluate("list (subcommands mac2) sort"),
 						))
 					})
 

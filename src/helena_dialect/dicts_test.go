@@ -125,12 +125,11 @@ var _ = Describe("Helena dictionaries", func() {
 					})
 
 					It("should return list of subcommands", func() {
-						// Expect(evaluate("dict () subcommands")).To(Equal(
-						// 	evaluate(
-						// 		TODO specify order?
-						// 		"list (subcommands size has get add remove merge keys values entries foreach)",
-						// 	),
-						// ))
+						Expect(evaluate("list [dict () subcommands] sort")).To(Equal(
+							evaluate(
+								"list (subcommands size has get add remove merge keys values entries foreach) sort",
+							),
+						))
 					})
 
 					Describe("Exceptions", func() {

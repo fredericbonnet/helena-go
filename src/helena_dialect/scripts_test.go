@@ -135,10 +135,9 @@ var _ = Describe("Helena scripts", func() {
 					})
 
 					It("should return list of subcommands", func() {
-						// Expect(evaluate("script {} subcommands")).To(Equal(
-						// 	TODO specify order?
-						// 	evaluate("list (subcommands length append split)"),
-						// ))
+						Expect(evaluate("list [script {} subcommands] sort")).To(Equal(
+							evaluate("list (subcommands length append split) sort"),
+						))
 					})
 
 					var _ = Describe("Exceptions", func() {

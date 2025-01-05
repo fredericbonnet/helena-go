@@ -1213,10 +1213,9 @@ var _ = Describe("Helena argument handling", func() {
 				})
 
 				It("should return list of subcommands", func() {
-					// Expect(evaluate("argspec {} subcommands")).To(Equal(
-					// 	TODO specify order?
-					// 	evaluate("list (subcommands usage set)"),
-					// ))
+					Expect(evaluate("list [argspec {} subcommands] sort")).To(Equal(
+						evaluate("list (subcommands usage set) sort"),
+					))
 				})
 
 				Describe("Exceptions", func() {

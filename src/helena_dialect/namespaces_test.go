@@ -664,8 +664,8 @@ var _ = Describe("Helena namespaces", func() {
 							evaluate("list (subcommands)"),
 						))
 						evaluate("[cmd] eval {macro mac {} {}}")
-						Expect(evaluate("cmd subcommands")).To(Equal(
-							evaluate("list (subcommands mac)"),
+						Expect(evaluate("list [cmd subcommands] sort")).To(Equal(
+							evaluate("list (subcommands mac) sort"),
 						))
 					})
 

@@ -81,10 +81,9 @@ var _ = Describe("Helena tuples", func() {
 					})
 
 					It("should return list of subcommands", func() {
-						// Expect(evaluate("tuple () subcommands")).To(Equal(
-						// 	TODO specify order?
-						// 	evaluate("list (subcommands length at)"),
-						// ))
+						Expect(evaluate("list [tuple () subcommands] sort")).To(Equal(
+							evaluate("list (subcommands length at) sort"),
+						))
 					})
 
 					Describe("Exceptions", func() {
