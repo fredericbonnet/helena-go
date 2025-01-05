@@ -493,6 +493,36 @@ var _ = Describe("Helena lists", func() {
 						})
 					})
 				})
+
+				Describe("`sort`", func() {
+					Specify("usage", func() {
+						Expect(evaluate("help list () sort")).To(Equal(
+							STR("list value sort"),
+						))
+					})
+
+					It("should sort elements as strings in lexical order", func() {
+						Expect(evaluate("list (c a d b) sort")).To(Equal(
+							evaluate("list (a b c d)"),
+						))
+					})
+
+					Describe("Exceptions", func() {
+						Specify("wrong arity", func() {
+							Expect(execute("list (a b c) sort a")).To(Equal(
+								ERROR(`wrong # args: should be "list value sort"`),
+							))
+							Expect(execute("help list (a b c) sort a")).To(Equal(
+								ERROR(`wrong # args: should be "list value sort"`),
+							))
+						})
+						Specify("values with no string representation", func() {
+							Expect(execute("list ([] ()) sort")).To(Equal(
+								ERROR("value has no string representation"),
+							))
+						})
+					})
+				})
 			})
 
 			Describe("Iteration", func() {

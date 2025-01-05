@@ -1,6 +1,9 @@
 package helena_dialect
 
-import "helena/core"
+import (
+	"helena/core"
+	"slices"
+)
 
 type listCommand struct {
 	scope    *Scope
@@ -238,6 +241,51 @@ func (listReplaceCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) 
 	return core.OK(core.STR(LIST_REPLACE_SIGNATURE))
 }
 
+const LIST_SORT_SIGNATURE = "list value sort"
+
+type listSortCmd struct{}
+
+func (listSortCmd) Execute(args []core.Value, _ any) core.Result {
+	if len(args) != 2 {
+		return ARITY_ERROR(LIST_SORT_SIGNATURE)
+	}
+	result, values := ValueToArray(args[1])
+	if result.Code != core.ResultCode_OK {
+		return result
+	}
+	values2 := append([]core.Value{}, values...)
+	result = core.OK(core.NIL)
+	slices.SortFunc(values2, func(a, b core.Value) int {
+		resulta, sa := core.ValueToString(a)
+		if resulta.Code != core.ResultCode_OK {
+			result = resulta
+			return 0
+		}
+		resultb, sb := core.ValueToString(b)
+		if resultb.Code != core.ResultCode_OK {
+			result = resultb
+			return 0
+		}
+		if sa < sb {
+			return -1
+		} else if sa > sb {
+			return 1
+		} else {
+			return 0
+		}
+	})
+	if result.Code != core.ResultCode_OK {
+		return result
+	}
+	return core.OK(core.LIST(values2))
+}
+func (listSortCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+	if len(args) > 2 {
+		return ARITY_ERROR(LIST_SORT_SIGNATURE)
+	}
+	return core.OK(core.STR(LIST_SORT_SIGNATURE))
+}
+
 const LIST_FOREACH_SIGNATURE = "list value foreach ?index? element body"
 
 type listForeachCmd struct{}
@@ -362,5 +410,6 @@ func registerListCommands(scope *Scope) {
 	command.scope.RegisterNamedCommand("remove", listRemoveCmd{})
 	command.scope.RegisterNamedCommand("insert", listInsertCmd{})
 	command.scope.RegisterNamedCommand("replace", listReplaceCmd{})
+	command.scope.RegisterNamedCommand("sort", listSortCmd{})
 	command.scope.RegisterNamedCommand("foreach", listForeachCmd{})
 }
