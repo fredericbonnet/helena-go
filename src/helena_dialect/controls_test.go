@@ -36,6 +36,474 @@ var _ = Describe("Helena control flow commands", func() {
 
 	BeforeEach(init)
 
+	Describe("loop", func() {
+		Describe("Specifications", func() {
+			Specify("usage", func() {
+				Expect(evaluate("help loop")).To(Equal(
+					STR("loop ?index? ?value source ...? body"),
+				))
+			})
+
+			It("should loop over `body` indefinitely when no source is provided", func() {
+				evaluate("set i 0; loop {set i [+ $i 1]; if [$i == 10] {break}}")
+				Expect(evaluate("get i")).To(Equal(INT(10)))
+			})
+			It("should return the result of the last command", func() {
+				Expect(
+					evaluate(
+						"set i 0; loop {set i [+ $i 1]; if [$i > 10] {break}; idem val$i}",
+					),
+				).To(Equal(STR("val10")))
+				Expect(evaluate("loop v [list (a b c)] {get v}")).To(Equal(STR("c")))
+			})
+			It("should increment `index` at each iteration", func() {
+				Expect(
+					evaluate(
+						`set s ""; loop index {set s $s$index; if [$index == 10] {break}}; get s`,
+					),
+				).To(Equal(STR("012345678910")))
+			})
+		})
+
+		Describe("Exceptions", func() {
+			Specify("wrong arity", func() {
+				Expect(execute("loop")).To(Equal(
+					ERROR(
+						`wrong # args: should be "loop ?index? ?value source ...? body"`,
+					),
+				))
+			})
+			Specify("non-script body", func() {
+				Expect(execute("loop a")).To(Equal(ERROR("body must be a script")))
+			})
+			Specify("invalid `index` name", func() {
+				Expect(execute("loop [] {}")).To(Equal(ERROR("invalid index name")))
+			})
+			Specify("invalid sources", func() {
+				Expect(execute("loop v [] {}")).To(Equal(ERROR("invalid source")))
+				Expect(execute("loop v a[1] {}")).To(Equal(ERROR("invalid source")))
+			})
+		})
+
+		Describe("Sources", func() {
+			Describe("list sources", func() {
+				It("should iterate over list elements", func() {
+					evaluate(`
+				set values [list ()]
+				loop element [list (a b c)] {
+				  set values [list $values append ($element)]
+				}
+			  `)
+					Expect(evaluate("get values")).To(Equal(evaluate("list (a b c)")))
+				})
+				Describe("value tuples", func() {
+					It("should be supported", func() {
+						evaluate(`
+				  set values [list ()]
+				  set l [list ((a b) (c d))]
+				  loop (i j) $l {
+					set values [list $values append (($i $j))]
+				  }
+				`)
+						Expect(evaluate("get values")).To(Equal(evaluate("get l")))
+					})
+					It("should accept empty tuple", func() {
+						evaluate(`
+				  set i 0
+				  loop () [list ((a b) (c d) (e f))] {
+					set i [+ $i 1]
+				  }
+				`)
+						Expect(evaluate("get i")).To(Equal(INT(3)))
+					})
+				})
+			})
+			Describe("dict sources", func() {
+				It("should iterate over dictionary entries", func() {
+					evaluate(`
+				set keys [list ()]
+				set values [list ()]
+				loop (key value) [dict (a b c d e f)] {
+				  set keys [list $keys append ($key)]
+				  set values [list $values append ($value)]
+				}
+			  `)
+					Expect(evaluate("list $keys sort")).To(Equal(evaluate("list (a c e)")))
+					Expect(evaluate("list $values sort")).To(Equal(
+						evaluate("list (b d f)"),
+					))
+				})
+				Describe("value tuples", func() {
+					It("should be supported", func() {
+						evaluate(`
+				  set keys [list ()]
+				  set values [list ()]
+				  set d [dict (a b c d e f)]
+				  loop (key value) $d  {
+					set keys [list $keys append ($key)]
+					set values [list $values append ($value)]
+				  }
+			  `)
+						Expect(evaluate("list $keys sort")).To(Equal(
+							evaluate("list (a c e)"),
+						))
+						Expect(evaluate("list $values sort")).To(Equal(
+							evaluate("list (b d f)"),
+						))
+					})
+					It("should accept empty tuple", func() {
+						evaluate(`
+				  set i 0
+				  loop () [dict (a b c d e f)] {
+					set i [+ $i 1]
+				  }
+				`)
+						Expect(evaluate("get i")).To(Equal(INT(3)))
+					})
+					It("should accept `(key)` tuple", func() {
+						evaluate(`
+				  set keys [list ()]
+				  set d [dict (a b c d e f)]
+				  loop (key) $d {
+					set keys [list $keys append ($key)]
+				  }
+				`)
+						Expect(evaluate("list $keys sort")).To(Equal(
+							evaluate("list (a c e)"),
+						))
+					})
+				})
+			})
+			Describe("script sources", func() {
+				It("should iterate over script results", func() {
+					evaluate(`
+				set values [list ()]
+				loop index value {idem val$index} {
+				  if [$index == 3] {break}
+				  set values [list $values append ($value)]
+				}
+			  `)
+					Expect(evaluate("get values")).To(Equal(
+						evaluate("list (val0 val1 val2)"),
+					))
+				})
+				Describe("value tuples", func() {
+					It("should be supported", func() {
+						evaluate(`
+				  set values [list ()]
+				  set l [list ((a b) (c d))]
+				  loop index (i j) {idem ($index val$index)} {
+					if [$index == 3] {break}
+					set values [list $values append (($i $j))]
+				  }
+				`)
+						Expect(evaluate("get values")).To(Equal(
+							evaluate("list (([0] val0) ([1] val1) ([2] val2))"),
+						))
+					})
+					It("should accept empty tuple", func() {
+						evaluate(`
+				  set i 0
+				  loop index () {idem ($index val$index)} {
+					if [$index == 3] {break}
+					set i [+ $i 1]
+				  }
+				`)
+						Expect(evaluate("get i")).To(Equal(INT(3)))
+					})
+				})
+			})
+			Describe("command name sources", func() {
+				It("should iterate over command results", func() {
+					evaluate(`
+				macro cmd {i} {idem val$i}
+				set values [list ()]
+				loop index value cmd {
+				  if [$index == 3] {break}
+				  set values [list $values append ($value)]
+				}
+			  `)
+					Expect(evaluate("get values")).To(Equal(
+						evaluate("list (val0 val1 val2)"),
+					))
+				})
+				Describe("value tuples", func() {
+					It("should be supported", func() {
+						evaluate(`
+				  macro cmd {i} {idem ($i val$i)}
+				  set values [list ()]
+				  loop index (i j) cmd {
+					if [$index == 3] {break}
+					set values [list $values append (($i $j))]
+				  }
+				`)
+						Expect(evaluate("get values")).To(Equal(
+							evaluate("list (([0] val0) ([1] val1) ([2] val2))"),
+						))
+					})
+					It("should accept empty tuple", func() {
+						evaluate(`
+				  macro cmd {i} {idem ($i val$i)}
+				  set i 0
+				  loop index () cmd {
+					if [$index == 3] {break}
+					set i [+ $i 1]
+				  }
+				`)
+						Expect(evaluate("get i")).To(Equal(INT(3)))
+					})
+				})
+			})
+			Describe("command tuple sources", func() {
+				It("should iterate over command results", func() {
+					evaluate(`
+				set values [list ()]
+				loop index value (* 2) {
+				  if [$index == 3] {break}
+				  set values [list $values append ($value)]
+				}
+			  `)
+					Expect(evaluate("get values")).To(Equal(evaluate("list ([0] [2] [4])")))
+				})
+				Describe("value tuples", func() {
+					It("should be supported", func() {
+						evaluate(`
+				  set l [list ((a b) (c d) (e f))]
+				  set values [list ()]
+				  loop index (i j) (list $l at) {
+					if [$index == 3] {break}
+					set values [list $values append (($i $j))]
+				  }
+				`)
+						Expect(evaluate("get values")).To(Equal(
+							evaluate("list ((a b) (c d) (e f))"),
+						))
+					})
+					It("should accept empty tuple", func() {
+						evaluate(`
+				  set l [list ((a b) (c d) (e f))]
+				  set i 0
+				  loop index () (list $l at) {
+					if [$index == 3] {break}
+					set i [+ $i 1]
+				  }
+				`)
+						Expect(evaluate("get i")).To(Equal(INT(3)))
+					})
+				})
+			})
+			Describe("command value sources", func() {
+				It("should iterate over command results", func() {
+					evaluate(`
+				set values [list ()]
+				loop index value [[macro {i} {idem val$i}]] {
+				  if [$index == 3] {break}
+				  set values [list $values append ($value)]
+				}
+			  `)
+					Expect(evaluate("get values")).To(Equal(
+						evaluate("list (val0 val1 val2)"),
+					))
+				})
+				Describe("value tuples", func() {
+					It("should be supported", func() {
+						evaluate(`
+				  set values [list ()]
+				  loop index (i j) [[macro {i} {idem ($i val$i)}]] {
+					if [$index == 3] {break}
+					set values [list $values append (($i $j))]
+				  }
+				`)
+						Expect(evaluate("get values")).To(Equal(
+							evaluate("list (([0] val0) ([1] val1) ([2] val2))"),
+						))
+					})
+					It("should accept empty tuple", func() {
+						evaluate(`
+				  set i 0
+				  loop index () [[macro {i} {idem ($i val$i)}]] {
+					if [$index == 3] {break}
+					set i [+ $i 1]
+				  }
+				`)
+						Expect(evaluate("get i")).To(Equal(INT(3)))
+					})
+				})
+			})
+		})
+
+		Describe("Control flow", func() {
+			Describe("`return`", func() {
+				It("should interrupt sources with `RETURN` code", func() {
+					Expect(
+						execute("loop v {return val; unreachable} {unreachable}"),
+					).To(Equal(RETURN(STR("val"))))
+					evaluate("macro cmd {i} {return val}")
+					Expect(execute("loop v cmd {unreachable}")).To(Equal(
+						RETURN(STR("val")),
+					))
+					Expect(execute("loop v (cmd) {unreachable}")).To(Equal(
+						RETURN(STR("val")),
+					))
+					Expect(
+						execute("loop v [[macro {i} {return val}]] {unreachable}"),
+					).To(Equal(RETURN(STR("val"))))
+				})
+				It("should interrupt the loop with `RETURN` code", func() {
+					Expect(
+						execute("set i 0; loop {set i [+ $i 1]; return val; unreachable}"),
+					).To(Equal(RETURN(STR("val"))))
+					Expect(evaluate("get i")).To(Equal(INT(1)))
+				})
+			})
+			Describe("`tailcall`", func() {
+				It("should interrupt sources with `RETURN` code", func() {
+					Expect(
+						execute("loop v {tailcall {idem val}; unreachable} {unreachable}"),
+					).To(Equal(RETURN(STR("val"))))
+					evaluate("macro cmd {i} {tailcall {idem val}}")
+					Expect(execute("loop v cmd {unreachable}")).To(Equal(
+						RETURN(STR("val")),
+					))
+					Expect(execute("loop v (cmd) {unreachable}")).To(Equal(
+						RETURN(STR("val")),
+					))
+					Expect(
+						execute("loop v [[macro {i} {tailcall {idem val}}]] {unreachable}"),
+					).To(Equal(RETURN(STR("val"))))
+				})
+				It("should interrupt the loop with `RETURN` code", func() {
+					Expect(
+						execute(
+							"set i 0; loop {set i [+ $i 1]; tailcall {idem val}; unreachable}",
+						),
+					).To(Equal(RETURN(STR("val"))))
+					Expect(evaluate("get i")).To(Equal(INT(1)))
+				})
+			})
+			Describe("`yield`", func() {
+				It("should interrupt sources with `YIELD` code", func() {
+					Expect(execute("loop v {yield; unreachable} {}").Code).To(Equal(
+						core.ResultCode_YIELD,
+					))
+				})
+				It("should interrupt the body with `YIELD` code", func() {
+					Expect(execute("loop {yield; unreachable}").Code).To(Equal(
+						core.ResultCode_YIELD,
+					))
+				})
+				It("should provide a resumable state", func() {
+					process := prepareScript(
+						"loop v {yield source} {if {! $v} {break}; yield body}",
+					)
+					result := process.Run()
+					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+					Expect(result.Value).To(Equal(STR("source")))
+					process.YieldBack(TRUE)
+					result = process.Run()
+					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+					Expect(result.Value).To(Equal(STR("body")))
+					process.YieldBack(STR("step 1"))
+					result = process.Run()
+					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+					Expect(result.Value).To(Equal(STR("source")))
+					process.YieldBack(TRUE)
+					result = process.Run()
+					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+					Expect(result.Value).To(Equal(STR("body")))
+					process.YieldBack(STR("step 2"))
+					result = process.Run()
+					Expect(result.Code).To(Equal(core.ResultCode_YIELD))
+					Expect(result.Value).To(Equal(STR("source")))
+					process.YieldBack(FALSE)
+					result = process.Run()
+					Expect(result).To(Equal(OK(STR("step 2"))))
+				})
+			})
+			Describe("`error`", func() {
+				It("should interrupt sources with `ERROR` code", func() {
+					Expect(
+						execute("loop v {error msg; set var val} {unreachable}"),
+					).To(Equal(ERROR("msg")))
+					Expect(execute("get var").Code).To(Equal(core.ResultCode_ERROR))
+					evaluate("macro cmd {i} {error msg; set var val}")
+					Expect(execute("loop v cmd {unreachable}")).To(Equal(ERROR("msg")))
+					Expect(execute("get var").Code).To(Equal(core.ResultCode_ERROR))
+					Expect(execute("loop v (cmd) {unreachable}")).To(Equal(ERROR("msg")))
+					Expect(execute("get var").Code).To(Equal(core.ResultCode_ERROR))
+					Expect(
+						execute(
+							"loop v [[macro {i} {error msg; set var val}]] {unreachable}",
+						),
+					).To(Equal(ERROR("msg")))
+					Expect(execute("get var").Code).To(Equal(core.ResultCode_ERROR))
+				})
+				It("should interrupt the loop with `ERROR` code", func() {
+					Expect(
+						execute(
+							"set i 0; loop {set i [+ $i 1]; error msg; set var val; unreachable}",
+						),
+					).To(Equal(ERROR("msg")))
+					Expect(evaluate("get i")).To(Equal(INT(1)))
+					Expect(execute("get var").Code).To(Equal(core.ResultCode_ERROR))
+				})
+			})
+			Describe("`break`", func() {
+				It("should skip the source for the remaining loop iterations", func() {
+					evaluate(`
+				macro cmd {i} {
+				  if {$i == 1} {break} 
+				  get i
+				}
+			  `)
+					Expect(
+						evaluate(`
+				  set l [list ()]
+				  loop index v [list (a b c)] e cmd {
+					set l [list $l append ($v [get e skipped])]
+				  }
+				`),
+					).To(Equal(evaluate("list (a [0] b skipped c skipped)")))
+				})
+				It("should interrupt the loop with `nil` result", func() {
+					Expect(
+						execute("set i 0; loop {set i [+ $i 1]; break; unreachable}"),
+					).To(Equal(OK(NIL)))
+					Expect(evaluate("get i")).To(Equal(INT(1)))
+				})
+			})
+			Describe("`continue`", func() {
+				It("should skip the source value for the current loop iteration", func() {
+					evaluate(`
+				macro cmd {i} {
+				  when ($i ==) {
+					1 {continue} 
+					3 {break} 
+					  {get i}
+				  }
+				}
+			  `)
+					Expect(
+						evaluate(`
+				  set l [list ()]
+				  loop index v [list (a b c)] e cmd {
+					set l [list $l append ($v [get e skipped])]
+				  }
+				`),
+					).To(Equal(evaluate("list (a [0] b skipped c [2])")))
+				})
+				It("should interrupt the loop iteration", func() {
+					Expect(
+						execute(
+							"set i 0; loop v {if {$i == 10} {break}} {set i [+ $i 1]; continue; unreachable}",
+						),
+					).To(Equal(OK(NIL)))
+					Expect(evaluate("get i")).To(Equal(INT(10)))
+				})
+			})
+		})
+	})
+
 	Describe("while", func() {
 		Describe("Specifications", func() {
 			Specify("usage", func() {
@@ -51,7 +519,7 @@ var _ = Describe("Helena control flow commands", func() {
 				Expect(evaluate("get i")).To(Equal(INT(10)))
 			})
 			It("should return the result of the last command", func() {
-				Expect(execute(" while false {}")).To(Equal(OK(NIL)))
+				Expect(execute("while false {}")).To(Equal(OK(NIL)))
 				Expect(
 					evaluate("set i 0; while {$i < 10} {set i [+ $i 1]; idem val$i}"),
 				).To(Equal(STR("val10")))
@@ -174,7 +642,7 @@ var _ = Describe("Helena control flow commands", func() {
 						BREAK(NIL),
 					))
 				})
-				It("should interrupt the body with `nil` result", func() {
+				It("should interrupt the loop with `nil` result", func() {
 					Expect(
 						execute(
 							"set i 0; while {$i < 10} {set i [+ $i 1]; break; unreachable}",
@@ -189,7 +657,7 @@ var _ = Describe("Helena control flow commands", func() {
 						CONTINUE(NIL),
 					))
 				})
-				It("should interrupt the body iteration", func() {
+				It("should interrupt the loop iteration", func() {
 					Expect(
 						execute(
 							"set i 0; while {$i < 10} {set i [+ $i 1]; continue; unreachable}",

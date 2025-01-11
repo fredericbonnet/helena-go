@@ -531,7 +531,7 @@ var _ = Describe("Helena dictionaries", func() {
 							evaluate(`
 								set keys [list ()]
 								set d [dict (a b c d e f)]
-								dict (a b c d e f) foreach (key) {
+								dict $d foreach (key) {
 									set keys [list $keys append ($key)]
 								}
 							`)

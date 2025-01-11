@@ -354,6 +354,9 @@ func (scope *Scope) ResolveNamedCommand(name string) core.Command {
 	return nil
 }
 
+func (scope *Scope) ClearLocals() {
+	clear(scope.locals)
+}
 func (scope *Scope) SetNamedLocal(name string, value core.Value) {
 	scope.locals[name] = value
 }

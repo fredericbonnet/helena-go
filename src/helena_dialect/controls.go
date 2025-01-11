@@ -2,6 +2,170 @@ package helena_dialect
 
 import "helena/core"
 
+type loopCmd struct{}
+
+const LOOP_SIGNATURE = "loop ?index? ?value source ...? body"
+
+type LoopSourceCallback = func(result core.Result) core.Result
+type LoopSourceFn = func(i int, callback LoopSourceCallback) core.Result
+
+func (loopCmd) Execute(args []core.Value, context any) core.Result {
+	scope := context.(*Scope)
+	if len(args) < 2 {
+		return ARITY_ERROR(LOOP_SIGNATURE)
+	}
+	var index string
+	var hasIndex = (len(args)%2 == 1)
+	if hasIndex {
+		result, name := core.ValueToString(args[1])
+		if result.Code != core.ResultCode_OK {
+			return core.ERROR("invalid index name")
+		}
+		index = name
+	}
+	body := args[len(args)-1]
+	if body.Type() != core.ValueType_SCRIPT {
+		return core.ERROR("body must be a script")
+	}
+	subscope := scope.NewLocalScope()
+	nbSources := (len(args) - 2) / 2
+	varnames := make([]core.Value, nbSources)
+	sources := make([]LoopSourceFn, nbSources)
+	var firstSource int
+	if hasIndex {
+		firstSource = 2
+	} else {
+		firstSource = 1
+	}
+	for i, iSource := firstSource, 0; i < len(args)-1; i, iSource = i+2, iSource+1 {
+		varname := args[i]
+		varnames[iSource] = varname
+		source := args[i+1]
+		switch source.Type() {
+		case core.ValueType_LIST:
+			{
+				list := source.(core.ListValue)
+				sources[iSource] = func(i int, callback LoopSourceCallback) core.Result {
+					if i >= len(list.Values) {
+						return callback(core.BREAK(nil))
+					}
+					value := list.Values[i]
+					return callback(core.OK(value))
+				}
+			}
+		case core.ValueType_DICTIONARY:
+			{
+				dictionary := source.(core.DictionaryValue)
+				entries := make([][2]core.Value, len(dictionary.Map))
+				j := 0
+				for key, value := range dictionary.Map {
+					entries[j] = [2]core.Value{core.STR(key), value}
+					j++
+				}
+				sources[iSource] = func(i int, callback LoopSourceCallback) core.Result {
+					if i >= len(entries) {
+						return callback(core.BREAK(nil))
+					}
+					value := core.TUPLE(entries[i][:])
+					return callback(core.OK(value))
+				}
+			}
+		case core.ValueType_SCRIPT:
+			{
+				program := subscope.CompileScriptValue(source.(core.ScriptValue))
+				sources[iSource] = func(i int, callback LoopSourceCallback) core.Result {
+					return CreateContinuationValue(subscope, program, callback)
+				}
+			}
+		default:
+			{
+				if scope.ResolveCommand(source) == nil {
+					return core.ERROR("invalid source")
+				}
+				sources[iSource] = func(i int, callback LoopSourceCallback) core.Result {
+					program := subscope.CompileArgs(source, core.INT(int64(i)))
+					return CreateContinuationValue(subscope, program, callback)
+				}
+			}
+		}
+	}
+	program := subscope.CompileScriptValue(body.(core.ScriptValue))
+
+	activeSources := len(sources)
+	i := 0
+	iSource := -1
+	lastResult := core.OK(core.NIL)
+	var nextIteration func() core.Result
+	var nextSource func() core.Result
+	var callBody func() core.Result
+	nextIteration = func() core.Result {
+		subscope.ClearLocals()
+		if hasIndex {
+			subscope.SetNamedLocal(index, core.INT(int64(i)))
+		}
+		iSource = -1
+		return nextSource()
+	}
+	nextSource = func() core.Result {
+		if activeSources == 0 && len(sources) > 0 {
+			return lastResult
+		}
+		iSource++
+		if iSource >= len(sources) {
+			return callBody()
+		}
+		source := sources[iSource]
+		if source == nil {
+			return nextSource()
+		}
+		varname := varnames[iSource]
+		return source(i, func(result core.Result) core.Result {
+			switch result.Code {
+			case core.ResultCode_BREAK:
+				sources[iSource] = nil
+				activeSources--
+				return nextSource()
+			case core.ResultCode_CONTINUE:
+				return nextSource()
+			case core.ResultCode_OK:
+			default:
+				return result
+			}
+			value := result.Value
+			result2 := DestructureValue(
+				func(name core.Value, value core.Value, check bool) core.Result {
+					return subscope.DestructureLocal(name, value, check)
+				},
+				varname,
+				value,
+			)
+			if result2.Code != core.ResultCode_OK {
+				return result2
+			}
+			return nextSource()
+		})
+	}
+	callBody = func() core.Result {
+		i++
+		return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+			switch result.Code {
+			case core.ResultCode_BREAK:
+				return lastResult
+			case core.ResultCode_CONTINUE:
+			case core.ResultCode_OK:
+				lastResult = result
+			default:
+				return result
+			}
+			return nextIteration()
+		})
+	}
+	return nextIteration()
+}
+func (loopCmd) Help(_ []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
+	return core.OK(core.STR(LOOP_SIGNATURE))
+}
+
 const WHILE_SIGNATURE = "while test body"
 
 type whileCmd struct{}
@@ -579,6 +743,7 @@ func (passCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Re
 }
 
 func registerControlCommands(scope *Scope) {
+	scope.RegisterNamedCommand("loop", loopCmd{})
 	scope.RegisterNamedCommand("while", whileCmd{})
 	scope.RegisterNamedCommand("if", ifCmd{})
 	scope.RegisterNamedCommand("when", whenCmd{})
