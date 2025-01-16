@@ -34,6 +34,8 @@ var _ = Describe("Helena control flow commands", func() {
 		parser = core.NewParser(nil)
 	}
 
+	example := specifyExample(func(spec exampleSpec) core.Result { return execute(spec.script) })
+
 	BeforeEach(init)
 
 	Describe("loop", func() {
@@ -56,12 +58,46 @@ var _ = Describe("Helena control flow commands", func() {
 				).To(Equal(STR("val10")))
 				Expect(evaluate("loop v [list (a b c)] {get v}")).To(Equal(STR("c")))
 			})
-			It("should increment `index` at each iteration", func() {
-				Expect(
-					evaluate(
-						`set s ""; loop index {set s $s$index; if [$index == 10] {break}}; get s`,
-					),
-				).To(Equal(STR("012345678910")))
+
+			Describe("`index`", func() {
+				It("should be incremented at each iteration", func() {
+					Expect(
+						evaluate(
+							`set s ""; loop index {set s $s$index; if [$index == 10] {break}}; get s`,
+						),
+					).To(Equal(STR("012345678910")))
+				})
+				It("should be local to the `body` scope", func() {
+					Expect(
+						evaluate(`loop index {if [$index == 10] {break}}; exists index`),
+					).To(Equal(FALSE))
+				})
+			})
+
+			Describe("`value`", func() {
+				It("should be local to the `body` scope", func() {
+					Expect(evaluate("loop v [list (a b c)] {}; exists v")).To(Equal(FALSE))
+				})
+				It("should be defined left-to-right", func() {
+					Expect(
+						evaluate("loop v [list (val1)] v [list (val2)] {get v}"),
+					).To(Equal(STR("val2")))
+					Expect(
+						evaluate(`
+							set l [list ()]
+							loop index v {
+								if {$index != 0} {continue}
+								idem val1
+							} v {
+								if {$index != 1} {continue}
+								idem val2
+							} {
+								if {$index == 2} {break}
+								set l [list $l append ($v)]
+							}
+						`),
+					).To(Equal(evaluate("list (val1 val2)")))
+				})
 			})
 		})
 
@@ -86,25 +122,36 @@ var _ = Describe("Helena control flow commands", func() {
 		})
 
 		Describe("Sources", func() {
-			Describe("list sources", func() {
+			Describe("List sources", func() {
 				It("should iterate over list elements", func() {
 					evaluate(`
-				set values [list ()]
-				loop element [list (a b c)] {
-				  set values [list $values append ($element)]
-				}
-			  `)
+						set values [list ()]
+						loop element [list (a b c)] {
+							set values [list $values append ($element)]
+						}
+					`)
 					Expect(evaluate("get values")).To(Equal(evaluate("list (a b c)")))
+				})
+				It("should stop after last element", func() {
+					evaluate(`
+						set values [list ()]
+						loop i element [list (a b c)] v {if [$i >= 5] {break}} {
+							set values [list $values append ([get element none])]
+						}
+					`)
+					Expect(evaluate("get values")).To(Equal(
+						evaluate("list (a b c none none)"),
+					))
 				})
 				Describe("value tuples", func() {
 					It("should be supported", func() {
 						evaluate(`
-				  set values [list ()]
-				  set l [list ((a b) (c d))]
-				  loop (i j) $l {
-					set values [list $values append (($i $j))]
-				  }
-				`)
+							set values [list ()]
+							set l [list ((a b) (c d))]
+							loop (i j) $l {
+								set values [list $values append (($i $j))]
+							}
+						`)
 						Expect(evaluate("get values")).To(Equal(evaluate("get l")))
 					})
 					It("should accept empty tuple", func() {
@@ -118,32 +165,48 @@ var _ = Describe("Helena control flow commands", func() {
 					})
 				})
 			})
-			Describe("dict sources", func() {
+			Describe("Dictionary sources", func() {
 				It("should iterate over dictionary entries", func() {
 					evaluate(`
-				set keys [list ()]
-				set values [list ()]
-				loop (key value) [dict (a b c d e f)] {
-				  set keys [list $keys append ($key)]
-				  set values [list $values append ($value)]
-				}
-			  `)
+						set keys [list ()]
+						set values [list ()]
+						loop (key value) [dict (a b c d e f)] {
+							set keys [list $keys append ($key)]
+							set values [list $values append ($value)]
+						}
+					`)
 					Expect(evaluate("list $keys sort")).To(Equal(evaluate("list (a c e)")))
 					Expect(evaluate("list $values sort")).To(Equal(
 						evaluate("list (b d f)"),
 					))
 				})
+				It("should stop after last element", func() {
+					evaluate(`
+						set keys [list ()]
+						set values [list ()]
+						loop i (key value) [dict (a b c d e f)] v {if [$i >= 5] {break}} {
+							set keys [list $keys append ([get key none])]
+							set values [list $values append ([get value none])]
+						}
+					`)
+					Expect(evaluate("list $keys sort")).To(Equal(
+						evaluate("list (a c e none none)"),
+					))
+					Expect(evaluate("list $values sort")).To(Equal(
+						evaluate("list (b d f none none)"),
+					))
+				})
 				Describe("value tuples", func() {
 					It("should be supported", func() {
 						evaluate(`
-				  set keys [list ()]
-				  set values [list ()]
-				  set d [dict (a b c d e f)]
-				  loop (key value) $d  {
-					set keys [list $keys append ($key)]
-					set values [list $values append ($value)]
-				  }
-			  `)
+							set keys [list ()]
+							set values [list ()]
+							set d [dict (a b c d e f)]
+							loop (key value) $d  {
+								set keys [list $keys append ($key)]
+								set values [list $values append ($value)]
+							}
+						`)
 						Expect(evaluate("list $keys sort")).To(Equal(
 							evaluate("list (a c e)"),
 						))
@@ -153,180 +216,206 @@ var _ = Describe("Helena control flow commands", func() {
 					})
 					It("should accept empty tuple", func() {
 						evaluate(`
-				  set i 0
-				  loop () [dict (a b c d e f)] {
-					set i [+ $i 1]
-				  }
-				`)
+							set i 0
+							loop () [dict (a b c d e f)] {
+								set i [+ $i 1]
+							}
+						`)
 						Expect(evaluate("get i")).To(Equal(INT(3)))
 					})
 					It("should accept `(key)` tuple", func() {
 						evaluate(`
-				  set keys [list ()]
-				  set d [dict (a b c d e f)]
-				  loop (key) $d {
-					set keys [list $keys append ($key)]
-				  }
-				`)
+							set keys [list ()]
+							set d [dict (a b c d e f)]
+							loop (key) $d {
+								set keys [list $keys append ($key)]
+							}
+						`)
 						Expect(evaluate("list $keys sort")).To(Equal(
 							evaluate("list (a c e)"),
 						))
 					})
 				})
 			})
-			Describe("script sources", func() {
+			Describe("Script sources", func() {
 				It("should iterate over script results", func() {
 					evaluate(`
-				set values [list ()]
-				loop index value {idem val$index} {
-				  if [$index == 3] {break}
-				  set values [list $values append ($value)]
-				}
-			  `)
+						set values [list ()]
+						set i 0
+						loop index value {idem val$[set i [$i + 1]]} {
+							if [$index == 3] {break}
+							set values [list $values append ($value)]
+						}
+					`)
 					Expect(evaluate("get values")).To(Equal(
-						evaluate("list (val0 val1 val2)"),
+						evaluate("list (val1 val2 val3)"),
 					))
+				})
+				It("should access `index` variable", func() {
+					Expect(
+						evaluate(
+							"loop index v {if [$index > 0] {break}; idem script} {get v}",
+						),
+					).To(Equal(STR("script")))
+				})
+				It("should access `value` variables of previous sources", func() {
+					Expect(
+						evaluate(
+							"loop index value [list (a)] v {if [$index > 0] {break}; exists value} {get v}",
+						),
+					).To(Equal(TRUE))
+				})
+				It("should not access `value` variables of next sources", func() {
+					Expect(
+						evaluate(
+							"loop index v {if [$index > 0] {break}; exists value} value [list (a)] {get v}",
+						),
+					).To(Equal(FALSE))
 				})
 				Describe("value tuples", func() {
 					It("should be supported", func() {
 						evaluate(`
-				  set values [list ()]
-				  set l [list ((a b) (c d))]
-				  loop index (i j) {idem ($index val$index)} {
-					if [$index == 3] {break}
-					set values [list $values append (($i $j))]
-				  }
-				`)
+							set values [list ()]
+							set l [list ((a b) (c d))]
+							loop index (i j) {idem ($index val$index)} {
+								if [$index == 3] {break}
+								set values [list $values append (($i $j))]
+							}
+						`)
 						Expect(evaluate("get values")).To(Equal(
 							evaluate("list (([0] val0) ([1] val1) ([2] val2))"),
 						))
 					})
 					It("should accept empty tuple", func() {
 						evaluate(`
-				  set i 0
-				  loop index () {idem ($index val$index)} {
-					if [$index == 3] {break}
-					set i [+ $i 1]
-				  }
-				`)
+							set i 0
+							loop index () {idem ($index val$index)} {
+								if [$index == 3] {break}
+								set i [+ $i 1]
+							}
+						`)
 						Expect(evaluate("get i")).To(Equal(INT(3)))
 					})
 				})
 			})
-			Describe("command name sources", func() {
-				It("should iterate over command results", func() {
-					evaluate(`
-				macro cmd {i} {idem val$i}
-				set values [list ()]
-				loop index value cmd {
-				  if [$index == 3] {break}
-				  set values [list $values append ($value)]
-				}
-			  `)
-					Expect(evaluate("get values")).To(Equal(
-						evaluate("list (val0 val1 val2)"),
-					))
-				})
-				Describe("value tuples", func() {
-					It("should be supported", func() {
+			Describe("Command sources", func() {
+				Describe("command name sources", func() {
+					It("should iterate over command results", func() {
 						evaluate(`
-				  macro cmd {i} {idem ($i val$i)}
-				  set values [list ()]
-				  loop index (i j) cmd {
-					if [$index == 3] {break}
-					set values [list $values append (($i $j))]
-				  }
-				`)
+							macro cmd {i} {idem val$i}
+							set values [list ()]
+							loop index value cmd {
+								if [$index == 3] {break}
+								set values [list $values append ($value)]
+							}
+						`)
 						Expect(evaluate("get values")).To(Equal(
-							evaluate("list (([0] val0) ([1] val1) ([2] val2))"),
+							evaluate("list (val0 val1 val2)"),
 						))
 					})
-					It("should accept empty tuple", func() {
-						evaluate(`
-				  macro cmd {i} {idem ($i val$i)}
-				  set i 0
-				  loop index () cmd {
-					if [$index == 3] {break}
-					set i [+ $i 1]
-				  }
-				`)
-						Expect(evaluate("get i")).To(Equal(INT(3)))
+					Describe("value tuples", func() {
+						It("should be supported", func() {
+							evaluate(`
+								macro cmd {i} {idem ($i val$i)}
+								set values [list ()]
+								loop index (i j) cmd {
+									if [$index == 3] {break}
+									set values [list $values append (($i $j))]
+								}
+							`)
+							Expect(evaluate("get values")).To(Equal(
+								evaluate("list (([0] val0) ([1] val1) ([2] val2))"),
+							))
+						})
+						It("should accept empty tuple", func() {
+							evaluate(`
+								macro cmd {i} {idem ($i val$i)}
+								set i 0
+								loop index () cmd {
+									if [$index == 3] {break}
+									set i [+ $i 1]
+								}
+							`)
+							Expect(evaluate("get i")).To(Equal(INT(3)))
+						})
 					})
 				})
-			})
-			Describe("command tuple sources", func() {
-				It("should iterate over command results", func() {
-					evaluate(`
-				set values [list ()]
-				loop index value (* 2) {
-				  if [$index == 3] {break}
-				  set values [list $values append ($value)]
-				}
-			  `)
-					Expect(evaluate("get values")).To(Equal(evaluate("list ([0] [2] [4])")))
-				})
-				Describe("value tuples", func() {
-					It("should be supported", func() {
+				Describe("command tuple sources", func() {
+					It("should iterate over command results", func() {
 						evaluate(`
-				  set l [list ((a b) (c d) (e f))]
-				  set values [list ()]
-				  loop index (i j) (list $l at) {
-					if [$index == 3] {break}
-					set values [list $values append (($i $j))]
-				  }
-				`)
+							set values [list ()]
+							loop index value (* 2) {
+								if [$index == 3] {break}
+								set values [list $values append ($value)]
+							}
+						`)
 						Expect(evaluate("get values")).To(Equal(
-							evaluate("list ((a b) (c d) (e f))"),
+							evaluate("list ([0] [2] [4])"),
 						))
 					})
-					It("should accept empty tuple", func() {
-						evaluate(`
-				  set l [list ((a b) (c d) (e f))]
-				  set i 0
-				  loop index () (list $l at) {
-					if [$index == 3] {break}
-					set i [+ $i 1]
-				  }
-				`)
-						Expect(evaluate("get i")).To(Equal(INT(3)))
+					Describe("value tuples", func() {
+						It("should be supported", func() {
+							evaluate(`
+								set l [list ((a b) (c d) (e f))]
+								set values [list ()]
+								loop index (i j) (list $l at) {
+									if [$index == 3] {break}
+									set values [list $values append (($i $j))]
+								}
+							`)
+							Expect(evaluate("get values")).To(Equal(
+								evaluate("list ((a b) (c d) (e f))"),
+							))
+						})
+						It("should accept empty tuple", func() {
+							evaluate(`
+								set l [list ((a b) (c d) (e f))]
+								set i 0
+								loop index () (list $l at) {
+									if [$index == 3] {break}
+									set i [+ $i 1]
+								}
+							`)
+							Expect(evaluate("get i")).To(Equal(INT(3)))
+						})
 					})
 				})
-			})
-			Describe("command value sources", func() {
-				It("should iterate over command results", func() {
-					evaluate(`
-				set values [list ()]
-				loop index value [[macro {i} {idem val$i}]] {
-				  if [$index == 3] {break}
-				  set values [list $values append ($value)]
-				}
-			  `)
-					Expect(evaluate("get values")).To(Equal(
-						evaluate("list (val0 val1 val2)"),
-					))
-				})
-				Describe("value tuples", func() {
-					It("should be supported", func() {
+				Describe("command value sources", func() {
+					It("should iterate over command results", func() {
 						evaluate(`
-				  set values [list ()]
-				  loop index (i j) [[macro {i} {idem ($i val$i)}]] {
-					if [$index == 3] {break}
-					set values [list $values append (($i $j))]
-				  }
-				`)
+							set values [list ()]
+							loop index value [[macro {i} {idem val$i}]] {
+								if [$index == 3] {break}
+								set values [list $values append ($value)]
+							}
+						`)
 						Expect(evaluate("get values")).To(Equal(
-							evaluate("list (([0] val0) ([1] val1) ([2] val2))"),
+							evaluate("list (val0 val1 val2)"),
 						))
 					})
-					It("should accept empty tuple", func() {
-						evaluate(`
-				  set i 0
-				  loop index () [[macro {i} {idem ($i val$i)}]] {
-					if [$index == 3] {break}
-					set i [+ $i 1]
-				  }
-				`)
-						Expect(evaluate("get i")).To(Equal(INT(3)))
+					Describe("value tuples", func() {
+						It("should be supported", func() {
+							evaluate(`
+								set values [list ()]
+								loop index (i j) [[macro {i} {idem ($i val$i)}]] {
+									if [$index == 3] {break}
+									set values [list $values append (($i $j))]
+								}
+							`)
+							Expect(evaluate("get values")).To(Equal(
+								evaluate("list (([0] val0) ([1] val1) ([2] val2))"),
+							))
+						})
+						It("should accept empty tuple", func() {
+							evaluate(`
+								set i 0
+								loop index () [[macro {i} {idem ($i val$i)}]] {
+									if [$index == 3] {break}
+									set i [+ $i 1]
+								}
+							`)
+							Expect(evaluate("get i")).To(Equal(INT(3)))
+						})
 					})
 				})
 			})
@@ -451,18 +540,18 @@ var _ = Describe("Helena control flow commands", func() {
 			Describe("`break`", func() {
 				It("should skip the source for the remaining loop iterations", func() {
 					evaluate(`
-				macro cmd {i} {
-				  if {$i == 1} {break} 
-				  get i
-				}
-			  `)
+						macro cmd {i} {
+							if {$i == 1} {break} 
+							get i
+						}
+					`)
 					Expect(
 						evaluate(`
-				  set l [list ()]
-				  loop index v [list (a b c)] e cmd {
-					set l [list $l append ($v [get e skipped])]
-				  }
-				`),
+							set l [list ()]
+							loop index v [list (a b c)] e cmd {
+								set l [list $l append ($v [get e skipped])]
+							}
+						`),
 					).To(Equal(evaluate("list (a [0] b skipped c skipped)")))
 				})
 				It("should interrupt the loop with `nil` result", func() {
@@ -475,21 +564,21 @@ var _ = Describe("Helena control flow commands", func() {
 			Describe("`continue`", func() {
 				It("should skip the source value for the current loop iteration", func() {
 					evaluate(`
-				macro cmd {i} {
-				  when ($i ==) {
-					1 {continue} 
-					3 {break} 
-					  {get i}
-				  }
-				}
-			  `)
+						macro cmd {i} {
+							when ($i ==) {
+								1 {continue} 
+								3 {break} 
+								{get i}
+							}
+						}
+					`)
 					Expect(
 						evaluate(`
-				  set l [list ()]
-				  loop index v [list (a b c)] e cmd {
-					set l [list $l append ($v [get e skipped])]
-				  }
-				`),
+							set l [list ()]
+							loop index v [list (a b c)] e cmd {
+								set l [list $l append ($v [get e skipped])]
+							}
+						`),
 					).To(Equal(evaluate("list (a [0] b skipped c [2])")))
 				})
 				It("should interrupt the loop iteration", func() {
@@ -499,6 +588,162 @@ var _ = Describe("Helena control flow commands", func() {
 						),
 					).To(Equal(OK(NIL)))
 					Expect(evaluate("get i")).To(Equal(INT(10)))
+				})
+			})
+		})
+
+		Describe("Examples", func() {
+			Specify("List striding", func() {
+				example([]exampleSpec{
+					{
+						script: `
+							macro stride {(list l) (int w)} {
+								idem (
+									[[macro {l w i} {
+										if {[$i * $w] >= [list $l length]} {break}
+										tuple [list $l range [$i * $w] [[[$i + 1] * $w] - 1]]
+									}]]
+									$l $w
+								)
+							}
+						`,
+					},
+					{
+						script: `
+							set l [list ()]
+							loop (v1 v2 v3) [stride (a b c d e f g h i) 3] {
+								set l [list $l append (($v1 $v2 $v3))]
+							}
+						`,
+						result: evaluate("list ((a b c) (d e f) (g h i))"),
+					},
+				})
+			})
+			Specify("Range of integer values", func() {
+				example([]exampleSpec{
+					{
+						script: `
+							macro range {(int ?start 0) (int stop) (int ?step 1)} {
+								idem (
+									[[macro {start stop step i} {
+										if {[$start + $step * $i] >= $stop} {break}
+										$start + $step * $i
+									}]]
+									$start $stop $step
+								)
+							}
+						`,
+					},
+					{
+						script: `
+							set l [list ()]
+							loop i [range 10] {set l [list $l append ($i)]}
+						`,
+						result: evaluate("list ([0] [1] [2] [3] [4] [5] [6] [7] [8] [9])"),
+					},
+					{
+						script: `
+							set l [list ()]
+							loop i [range 1 5] {set l [list $l append ($i)]}
+						`,
+						result: evaluate("list ([1] [2] [3] [4])"),
+					},
+					{
+						script: `
+							set l [list ()]
+							loop i [range -10 20 5] {set l [list $l append ($i)]}
+						`,
+						result: evaluate("list ([-10] [-5] [0] [5] [10] [15])"),
+					},
+					{
+						script: `
+							macro range {-start (int ?start 0) -stop (int stop) -step (int ?step 1)} {
+								idem (
+									[[macro {start stop step i} {
+										if {[$start + $step * $i] >= $stop} {break}
+										$start + $step * $i
+									}]]
+									$start $stop $step
+								)
+							}
+						`,
+					},
+					{
+						script: `
+							set l [list ()]
+							loop i [range -stop 10] {set l [list $l append ($i)]}
+						`,
+						result: evaluate("list ([0] [1] [2] [3] [4] [5] [6] [7] [8] [9])"),
+					},
+					{
+						script: `
+							set l [list ()]
+							loop i [range -start 1 -stop 5] {set l [list $l append ($i)]}
+						`,
+						result: evaluate("list ([1] [2] [3] [4])"),
+					},
+					{
+						script: `
+							set l [list ()]
+							loop i [range -start -10 -stop 20 -step 5] {set l [list $l append ($i)]}
+						`,
+						result: evaluate("list ([-10] [-5] [0] [5] [10] [15])"),
+					},
+					{
+						script: `
+							set l [list ()]
+							loop i [range -stop 20 -step 5] {set l [list $l append ($i)]}
+						`,
+						result: evaluate("list ([0] [5] [10] [15])"),
+					},
+				})
+			})
+			Specify("List mapping", func() {
+				example([]exampleSpec{
+					{
+						script: `
+							proc map {(list l) cmd} {
+								set r [list ()]
+								loop v $l {set r [list $r append ([$cmd $v])]}
+							}
+						`,
+					},
+					{
+						script: `
+							macro square {x} {$x * $x}
+							map (1 2 3 4 5) square
+						`,
+						result: evaluate("list ([1] [4] [9] [16] [25])"),
+					},
+					{
+						script: `
+							macro double {x} {$x * 2}
+							map (1 2 3 4 5) double
+						`,
+						result: evaluate("list ([2] [4] [6] [8] [10])"),
+					},
+					{
+						script: `map (1 2 3 4 5) (* 10)`,
+						result: evaluate("list ([10] [20] [30] [40] [50])"),
+					},
+					{
+						script: `map (1 2 3 4 5) [[macro {v} {idem val$v}]]`,
+						result: evaluate("list (val1 val2 val3 val4 val5)"),
+					},
+					{
+						script: `
+							[list] eval {
+								proc map {(list l) cmd} {
+									set r [list ()]
+									loop v $l {set r [list $r append ([$cmd $v])]}
+								}
+							}
+						`,
+					},
+					{
+						script: `list (1 2 3 4 5) map (* 2)`,
+						result: evaluate("list ([2] [4] [6] [8] [10])"),
+					},
 				})
 			})
 		})
