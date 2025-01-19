@@ -11,13 +11,25 @@ type ContinuationValue struct {
 	Callback func(result core.Result) core.Result
 }
 
-func NewContinuationValue(scope *Scope, program *core.Program, callback func(result core.Result) core.Result) ContinuationValue {
-	return ContinuationValue{scope, program, callback}
+var continuationValuePool = sync.Pool{
+	New: func() any {
+		return &ContinuationValue{}
+	},
 }
-func (ContinuationValue) Type() core.ValueType {
+
+func NewContinuationValue(scope *Scope, program *core.Program, callback func(result core.Result) core.Result) *ContinuationValue {
+	// Get continuation value from pool
+	value := continuationValuePool.Get().(*ContinuationValue)
+
+	value.Scope = scope
+	value.Program = program
+	value.Callback = callback
+	return value
+}
+func (*ContinuationValue) Type() core.ValueType {
 	return core.ValueType_CUSTOM
 }
-func (ContinuationValue) CustomType() core.CustomValueType {
+func (*ContinuationValue) CustomType() core.CustomValueType {
 	return core.CustomValueType{Name: "continuation"}
 }
 func CreateContinuationValue(scope *Scope, program *core.Program, callback func(result core.Result) core.Result) core.Result {
@@ -59,7 +71,7 @@ func (processStack *ProcessStack) PushProgram(scope *Scope, program *core.Progra
 	processStack.stack = append(processStack.stack, context)
 	return context
 }
-func (processStack *ProcessStack) PushContinuation(continuation ContinuationValue) ProcessContext {
+func (processStack *ProcessStack) PushContinuation(continuation *ContinuationValue) ProcessContext {
 	context := ProcessContext{
 		continuation.Scope,
 		continuation.Program,
@@ -100,7 +112,7 @@ func (process *Process) Run() core.Result {
 	context := process.stack.CurrentContext()
 	result := context.scope.Execute(context.program, context.state)
 	for process.stack.Depth() > 0 {
-		if continuation, ok := result.Value.(ContinuationValue); ok {
+		if continuation, ok := result.Value.(*ContinuationValue); ok {
 			if result.Code != core.ResultCode_YIELD && context.callback == nil {
 				// End and replace current context
 				process.stack.Pop()
@@ -109,6 +121,9 @@ func (process *Process) Run() core.Result {
 			// Push and execute result continuation context
 			context = process.stack.PushContinuation(continuation)
 			result = context.scope.Execute(context.program, context.state)
+
+			// Continuation is no longer used so put it back in the pool
+			continuationValuePool.Put(continuation)
 			continue
 		}
 
@@ -162,7 +177,7 @@ func (process *Process) Run() core.Result {
 		process.stack.Pop()
 
 		context = process.stack.CurrentContext()
-		if _, ok := result.Value.(ContinuationValue); ok {
+		if _, ok := result.Value.(*ContinuationValue); ok {
 			// Process continuation above
 			continue
 		}
