@@ -287,7 +287,12 @@ func (scope *Scope) Execute(program *core.Program, state *core.ProgramState) cor
 }
 
 func (scope *Scope) CompileScriptValue(script core.ScriptValue) *core.Program {
-	return scope.Compile(script.Script)
+	if script.Cache.Program != nil {
+		return script.Cache.Program
+	}
+	program := scope.Compile(script.Script)
+	script.Cache.Program = program
+	return program
 }
 func (scope *Scope) CompileTupleValue(tuple core.TupleValue) *core.Program {
 	program := &core.Program{}

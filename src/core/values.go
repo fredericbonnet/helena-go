@@ -618,6 +618,15 @@ type ScriptValue struct {
 
 	// Script source string
 	Source *string
+
+	// Run-time cache
+	Cache *ScriptValueCache
+}
+
+// Run-time caching structure for script values
+type ScriptValueCache struct {
+	// Cached compiled program
+	Program *Program
 }
 
 func (value ScriptValue) Type() ValueType {
@@ -626,12 +635,12 @@ func (value ScriptValue) Type() ValueType {
 
 // Constructor with script and source to encapsulate
 func NewScriptValue(script Script, source string) ScriptValue {
-	return ScriptValue{script, &source}
+	return ScriptValue{script, &source, &ScriptValueCache{}}
 }
 
 // Constructor with script to encapsulate
 func NewScriptValueWithNoSource(script Script) ScriptValue {
-	return ScriptValue{script, nil}
+	return ScriptValue{script, nil, &ScriptValueCache{}}
 }
 
 func (value ScriptValue) Display(fn DisplayFunction) string {
