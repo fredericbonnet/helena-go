@@ -162,7 +162,9 @@ func (listRemoveCmd) Execute(args []core.Value, _ any) core.Result {
 	}
 	head := values[0:min(first, length)]
 	tail := values[min(max(first, last+1), length):]
-	return core.OK(core.LIST(append(append([]core.Value{}, head...), tail...)))
+	newValues := make([]core.Value, 0, len(head)+len(tail))
+	newValues = append(append(newValues, head...), tail...)
+	return core.OK(core.LIST(newValues))
 }
 func (listRemoveCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 4 {
@@ -195,7 +197,9 @@ func (listInsertCmd) Execute(args []core.Value, _ any) core.Result {
 	}
 	head := values[0:min(index, length)]
 	tail := values[min(index, length):]
-	return core.OK(core.LIST(append(append(append([]core.Value{}, head...), insert...), tail...)))
+	newValues := make([]core.Value, 0, len(head)+len(insert)+len(tail))
+	newValues = append(append(append(newValues, head...), insert...), tail...)
+	return core.OK(core.LIST(newValues))
 }
 func (listInsertCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 4 {
@@ -232,7 +236,9 @@ func (listReplaceCmd) Execute(args []core.Value, _ any) core.Result {
 	if result2.Code != core.ResultCode_OK {
 		return result2
 	}
-	return core.OK(core.LIST(append(append(append([]core.Value{}, head...), insert...), tail...)))
+	newValues := make([]core.Value, 0, len(head)+len(insert)+len(tail))
+	newValues = append(append(append(newValues, head...), insert...), tail...)
+	return core.OK(core.LIST(newValues))
 }
 func (listReplaceCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 5 {
