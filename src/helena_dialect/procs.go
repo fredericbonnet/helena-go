@@ -115,13 +115,13 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 		return result
 	}
 	if proc.guard != nil {
-		return CreateContinuationValue(subscope, proc.program, func(result core.Result) core.Result {
+		return CreateContinuationValueWithCallback(subscope, proc.program, nil, func(result core.Result, data any) core.Result {
 			switch result.Code {
 			case core.ResultCode_OK,
 				core.ResultCode_RETURN:
 				{
 					program := proc.scope.CompileArgs(proc.guard, result.Value)
-					return CreateContinuationValue(proc.scope, program, nil)
+					return CreateContinuationValue(proc.scope, program)
 				}
 			case core.ResultCode_ERROR:
 				return result
@@ -130,7 +130,7 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 			}
 		})
 	} else {
-		return CreateContinuationValue(subscope, proc.program, func(result core.Result) core.Result {
+		return CreateContinuationValueWithCallback(subscope, proc.program, nil, func(result core.Result, data any) core.Result {
 			switch result.Code {
 			case core.ResultCode_OK,
 				core.ResultCode_RETURN:

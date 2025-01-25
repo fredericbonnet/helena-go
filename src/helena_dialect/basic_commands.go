@@ -81,7 +81,7 @@ func (tailcallCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script or tuple")
 	}
 	return core.RETURN(
-		NewContinuationValue(scope, program, func(result core.Result) core.Result {
+		NewContinuationValue(scope, program, nil, func(result core.Result, data any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
@@ -173,7 +173,7 @@ func (evalCmd) Execute(args []core.Value, context any) core.Result {
 	default:
 		return core.ERROR("body must be a script or tuple")
 	}
-	return CreateContinuationValue(scope, program, nil)
+	return CreateContinuationValue(scope, program)
 }
 func (evalCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {

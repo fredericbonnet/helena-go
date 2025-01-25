@@ -56,7 +56,7 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 		default:
 			return core.ERROR("body must be a script or tuple")
 		}
-		return CreateContinuationValue(scope.scope, program, nil)
+		return CreateContinuationValue(scope.scope, program)
 
 	case "call":
 		if len(args) < 3 {
@@ -72,7 +72,7 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 			return core.ERROR(`unknown command "` + command + `"`)
 		}
 		program := scope.scope.CompileArgs(args[2:]...)
-		return CreateContinuationValue(scope.scope, program, nil)
+		return CreateContinuationValue(scope.scope, program)
 
 	default:
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
@@ -133,7 +133,7 @@ func (scopeCmd) Execute(args []core.Value, context any) core.Result {
 
 	subscope := scope.NewChildScope()
 	program := subscope.CompileScriptValue(body.(core.ScriptValue))
-	return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+	return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
 		switch result.Code {
 		case core.ResultCode_OK,
 			core.ResultCode_RETURN:

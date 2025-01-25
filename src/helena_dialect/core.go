@@ -5,10 +5,12 @@ import (
 	"sync"
 )
 
+type ContinuationCallback func(result core.Result, data any) core.Result
 type ContinuationValue struct {
 	Scope    *Scope
 	Program  *core.Program
-	Callback func(result core.Result) core.Result
+	Data     any
+	Callback ContinuationCallback
 }
 
 var continuationValuePool = sync.Pool{
@@ -17,12 +19,13 @@ var continuationValuePool = sync.Pool{
 	},
 }
 
-func NewContinuationValue(scope *Scope, program *core.Program, callback func(result core.Result) core.Result) *ContinuationValue {
+func NewContinuationValue(scope *Scope, program *core.Program, data any, callback ContinuationCallback) *ContinuationValue {
 	// Get continuation value from pool
 	value := continuationValuePool.Get().(*ContinuationValue)
 
 	value.Scope = scope
 	value.Program = program
+	value.Data = data
 	value.Callback = callback
 	return value
 }
@@ -32,15 +35,19 @@ func (*ContinuationValue) Type() core.ValueType {
 func (*ContinuationValue) CustomType() core.CustomValueType {
 	return core.CustomValueType{Name: "continuation"}
 }
-func CreateContinuationValue(scope *Scope, program *core.Program, callback func(result core.Result) core.Result) core.Result {
-	return core.YIELD(NewContinuationValue(scope, program, callback))
+func CreateContinuationValue(scope *Scope, program *core.Program) core.Result {
+	return core.YIELD(NewContinuationValue(scope, program, nil, nil))
+}
+func CreateContinuationValueWithCallback(scope *Scope, program *core.Program, data any, callback func(result core.Result, data any) core.Result) core.Result {
+	return core.YIELD(NewContinuationValue(scope, program, data, callback))
 }
 
 type ProcessContext struct {
 	scope    *Scope
 	program  *core.Program
 	state    *core.ProgramState
-	callback func(result core.Result) core.Result
+	data     any
+	callback ContinuationCallback
 }
 type ProcessStack struct {
 	stack []ProcessContext
@@ -67,6 +74,7 @@ func (processStack *ProcessStack) PushProgram(scope *Scope, program *core.Progra
 		program,
 		programStatePool.Get().(*core.ProgramState),
 		nil,
+		nil,
 	}
 	processStack.stack = append(processStack.stack, context)
 	return context
@@ -76,6 +84,7 @@ func (processStack *ProcessStack) PushContinuation(continuation *ContinuationVal
 		continuation.Scope,
 		continuation.Program,
 		programStatePool.Get().(*core.ProgramState),
+		continuation.Data,
 		continuation.Callback,
 	}
 	processStack.stack = append(processStack.stack, context)
@@ -133,7 +142,7 @@ func (process *Process) Run() core.Result {
 		}
 		if context.callback != nil {
 			// Process result with callback
-			result = context.callback(result)
+			result = context.callback(result, context.data)
 		}
 
 		if result.Code == core.ResultCode_ERROR {

@@ -55,7 +55,7 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 		default:
 			return core.ERROR("body must be a script or tuple")
 		}
-		return CreateContinuationValue(metacommand.ensemble.scope, program, nil)
+		return CreateContinuationValue(metacommand.ensemble.scope, program)
 
 	case "call":
 		if len(args) < 3 {
@@ -71,7 +71,7 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 		command := metacommand.ensemble.scope.ResolveNamedCommand(subcommand)
 		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
 		program := scope.CompileArgs(cmdline...)
-		return CreateContinuationValue(scope, program, nil)
+		return CreateContinuationValue(scope, program)
 
 	case "argspec":
 		if len(args) != 2 {
@@ -194,7 +194,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		ensembleArgs...),
 		args[minArgs+1:]...)
 	program := scope.CompileArgs(cmdline...)
-	return CreateContinuationValue(scope, program, nil)
+	return CreateContinuationValue(scope, program)
 }
 func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	signature := ENSEMBLE_HELP_PREFIX(args[0], ensemble.argspec, options)
@@ -258,7 +258,7 @@ func (ensembleCmd) Execute(args []core.Value, context any) core.Result {
 
 	subscope := scope.NewChildScope()
 	program := subscope.CompileScriptValue(body.(core.ScriptValue))
-	return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+	return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
 		switch result.Code {
 		case core.ResultCode_OK,
 			core.ResultCode_RETURN:

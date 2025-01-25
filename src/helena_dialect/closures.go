@@ -114,15 +114,15 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 	}
 	program := subscope.CompileScriptValue(closure.body)
 	if closure.guard != nil {
-		return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
 			program := closure.scope.CompileArgs(closure.guard, result.Value)
-			return CreateContinuationValue(closure.scope, program, nil)
+			return CreateContinuationValue(closure.scope, program)
 		})
 	} else {
-		return CreateContinuationValue(subscope, program, nil)
+		return CreateContinuationValue(subscope, program)
 	}
 }
 func (closure *closureCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {

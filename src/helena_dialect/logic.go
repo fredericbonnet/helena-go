@@ -174,7 +174,7 @@ func (notCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(NOT_SIGNATURE)
 	}
-	return ExecuteCondition(scope, args[1], func(result core.Result, b bool) core.Result {
+	return ExecuteCondition(scope, args[1], nil, func(result core.Result, b bool, data any) core.Result {
 		if result.Code != core.ResultCode_OK {
 			return result
 		}
@@ -202,8 +202,8 @@ func (andCmd) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(AND_SIGNATURE)
 	}
 	i := 1
-	var callback func(result core.Result, b bool) core.Result
-	callback = func(result core.Result, b bool) core.Result {
+	var callback func(result core.Result, b bool, data any) core.Result
+	callback = func(result core.Result, b bool, d any) core.Result {
 		if result.Code != core.ResultCode_OK {
 			return result
 		}
@@ -214,9 +214,9 @@ func (andCmd) Execute(args []core.Value, context any) core.Result {
 		if i >= len(args) {
 			return core.OK(core.TRUE)
 		}
-		return ExecuteCondition(scope, args[i], callback)
+		return ExecuteCondition(scope, args[i], nil, callback)
 	}
-	return ExecuteCondition(scope, args[i], callback)
+	return ExecuteCondition(scope, args[i], nil, callback)
 }
 func (andCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(AND_SIGNATURE))
@@ -232,8 +232,8 @@ func (orCmd) Execute(args []core.Value, context any) core.Result {
 		return ARITY_ERROR(OR_SIGNATURE)
 	}
 	i := 1
-	var callback func(result core.Result, b bool) core.Result
-	callback = func(result core.Result, b bool) core.Result {
+	var callback func(result core.Result, b bool, data any) core.Result
+	callback = func(result core.Result, b bool, data any) core.Result {
 		if result.Code != core.ResultCode_OK {
 			return result
 		}
@@ -244,9 +244,9 @@ func (orCmd) Execute(args []core.Value, context any) core.Result {
 		if i >= len(args) {
 			return core.OK(core.FALSE)
 		}
-		return ExecuteCondition(scope, args[i], callback)
+		return ExecuteCondition(scope, args[i], nil, callback)
 	}
-	return ExecuteCondition(scope, args[i], callback)
+	return ExecuteCondition(scope, args[i], nil, callback)
 }
 func (orCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(OR_SIGNATURE))
@@ -255,19 +255,22 @@ func (orCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Resu
 func ExecuteCondition(
 	scope *Scope,
 	value core.Value,
-	callback func(result core.Result, b bool) core.Result,
+	data any,
+	callback func(result core.Result, b bool, data any) core.Result,
 ) core.Result {
 	if value.Type() == core.ValueType_SCRIPT {
 		program := scope.CompileScriptValue(value.(core.ScriptValue))
-		return CreateContinuationValue(scope, program, func(result core.Result) core.Result {
+		return CreateContinuationValueWithCallback(scope, program, data, func(result core.Result, data any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
-			return callback(core.ValueToBoolean(result.Value))
+			r, b := core.ValueToBoolean(result.Value)
+			return callback(r, b, data)
 		})
 	}
 	// TODO ensure tail call in trampoline, or unroll in caller
-	return callback(core.ValueToBoolean(value))
+	r, b := core.ValueToBoolean(value)
+	return callback(r, b, data)
 }
 
 func registerLogicCommands(scope *Scope) {

@@ -6,8 +6,7 @@ type loopCmd struct{}
 
 const LOOP_SIGNATURE = "loop ?index? ?value source ...? body"
 
-type LoopSourceCallback = func(result core.Result) core.Result
-type LoopSourceFn = func(i int, callback LoopSourceCallback) core.Result
+type LoopSourceFn = func(i int, callback ContinuationCallback) core.Result
 
 func (loopCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
@@ -45,12 +44,12 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 		case core.ValueType_LIST:
 			{
 				list := source.(core.ListValue)
-				sources[iSource] = func(i int, callback LoopSourceCallback) core.Result {
+				sources[iSource] = func(i int, callback ContinuationCallback) core.Result {
 					if i >= len(list.Values) {
-						return callback(core.BREAK(nil))
+						return callback(core.BREAK(nil), nil)
 					}
 					value := list.Values[i]
-					return callback(core.OK(value))
+					return callback(core.OK(value), nil)
 				}
 			}
 		case core.ValueType_DICTIONARY:
@@ -62,19 +61,19 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 					entries[j] = [2]core.Value{core.STR(key), value}
 					j++
 				}
-				sources[iSource] = func(i int, callback LoopSourceCallback) core.Result {
+				sources[iSource] = func(i int, callback ContinuationCallback) core.Result {
 					if i >= len(entries) {
-						return callback(core.BREAK(nil))
+						return callback(core.BREAK(nil), nil)
 					}
 					value := core.TUPLE(entries[i][:])
-					return callback(core.OK(value))
+					return callback(core.OK(value), nil)
 				}
 			}
 		case core.ValueType_SCRIPT:
 			{
 				program := subscope.CompileScriptValue(source.(core.ScriptValue))
-				sources[iSource] = func(i int, callback LoopSourceCallback) core.Result {
-					return CreateContinuationValue(subscope, program, callback)
+				sources[iSource] = func(i int, callback ContinuationCallback) core.Result {
+					return CreateContinuationValueWithCallback(subscope, program, nil, callback)
 				}
 			}
 		default:
@@ -82,9 +81,9 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 				if scope.ResolveCommand(source) == nil {
 					return core.ERROR("invalid source")
 				}
-				sources[iSource] = func(i int, callback LoopSourceCallback) core.Result {
+				sources[iSource] = func(i int, callback ContinuationCallback) core.Result {
 					program := subscope.CompileArgs(source, core.INT(int64(i)))
-					return CreateContinuationValue(subscope, program, callback)
+					return CreateContinuationValueWithCallback(subscope, program, nil, callback)
 				}
 			}
 		}
@@ -119,7 +118,7 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 			return nextSource()
 		}
 		varname := varnames[iSource]
-		return source(i, func(result core.Result) core.Result {
+		return source(i, func(result core.Result, data any) core.Result {
 			switch result.Code {
 			case core.ResultCode_BREAK:
 				sources[iSource] = nil
@@ -147,7 +146,7 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 	}
 	callBody = func() core.Result {
 		i++
-		return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
 			switch result.Code {
 			case core.ResultCode_BREAK:
 				return lastResult
@@ -189,7 +188,7 @@ func (whileCmd) Execute(args []core.Value, context any) core.Result {
 	if test.Type() == core.ValueType_SCRIPT {
 		testProgram := scope.CompileScriptValue(test.(core.ScriptValue))
 		callTest = func() core.Result {
-			return CreateContinuationValue(scope, testProgram, func(result core.Result) core.Result {
+			return CreateContinuationValueWithCallback(scope, testProgram, nil, func(result core.Result, data any) core.Result {
 				if result.Code != core.ResultCode_OK {
 					return result
 				}
@@ -215,7 +214,7 @@ func (whileCmd) Execute(args []core.Value, context any) core.Result {
 	}
 	program := scope.CompileScriptValue(body.(core.ScriptValue))
 	callBody = func() core.Result {
-		return CreateContinuationValue(scope, program, func(result core.Result) core.Result {
+		return CreateContinuationValueWithCallback(scope, program, nil, func(result core.Result, data any) core.Result {
 			switch result.Code {
 			case core.ResultCode_BREAK:
 				return lastResult
@@ -261,7 +260,7 @@ func (cmd ifCmd) Execute(args []core.Value, context any) core.Result {
 		test := args[i+1]
 		if test.Type() == core.ValueType_SCRIPT {
 			program := scope.CompileScriptValue(test.(core.ScriptValue))
-			return CreateContinuationValue(scope, program, func(result core.Result) core.Result {
+			return CreateContinuationValueWithCallback(scope, program, nil, func(result core.Result, data any) core.Result {
 				if result.Code != core.ResultCode_OK {
 					return result
 				}
@@ -298,7 +297,7 @@ func (cmd ifCmd) Execute(args []core.Value, context any) core.Result {
 			return core.ERROR("body must be a script")
 		}
 		program := scope.CompileScriptValue(body.(core.ScriptValue))
-		return CreateContinuationValue(scope, program, nil)
+		return CreateContinuationValue(scope, program)
 	}
 	return callTest()
 }
@@ -382,7 +381,7 @@ func (whenCmd) Execute(args []core.Value, context any) core.Result {
 		}
 		if command.Type() == core.ValueType_SCRIPT {
 			program := scope.CompileScriptValue(command.(core.ScriptValue))
-			return CreateContinuationValue(scope, program, func(result core.Result) core.Result {
+			return CreateContinuationValueWithCallback(scope, program, nil, func(result core.Result, data any) core.Result {
 				if result.Code != core.ResultCode_OK {
 					return result
 				}
@@ -425,7 +424,7 @@ func (whenCmd) Execute(args []core.Value, context any) core.Result {
 				return callCommand()
 			}
 		}
-		return CreateContinuationValue(scope, program, func(result core.Result) core.Result {
+		return CreateContinuationValueWithCallback(scope, program, nil, func(result core.Result, data any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
@@ -451,7 +450,7 @@ func (whenCmd) Execute(args []core.Value, context any) core.Result {
 			return core.ERROR("body must be a script")
 		}
 		program := scope.CompileScriptValue(body.(core.ScriptValue))
-		return CreateContinuationValue(scope, program, nil)
+		return CreateContinuationValue(scope, program)
 	}
 	return callCommand()
 }

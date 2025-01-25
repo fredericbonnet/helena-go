@@ -355,7 +355,7 @@ func (dictForeachCmd) Execute(args []core.Value, context any) core.Result {
 		if result.Code != core.ResultCode_OK {
 			return result
 		}
-		return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
 			switch result.Code {
 			case core.ResultCode_BREAK:
 				return lastResult

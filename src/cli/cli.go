@@ -54,7 +54,7 @@ func (sourceCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR(result.Message)
 	}
 	program := scope.Compile(*result.Script)
-	return helena_dialect.CreateContinuationValue(scope, program, nil)
+	return helena_dialect.CreateContinuationValue(scope, program)
 }
 
 type exitCmd struct{}

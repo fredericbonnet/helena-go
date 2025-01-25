@@ -70,7 +70,7 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		default:
 			return core.ERROR("body must be a script or tuple")
 		}
-		return CreateContinuationValue(metacommand.namespace.scope, program, nil)
+		return CreateContinuationValue(metacommand.namespace.scope, program)
 
 	case "call":
 		if len(args) < 3 {
@@ -86,7 +86,7 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		command := metacommand.namespace.scope.ResolveNamedCommand(subcommand)
 		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
 		program := metacommand.namespace.scope.CompileArgs(cmdline...)
-		return CreateContinuationValue(metacommand.namespace.scope, program, nil)
+		return CreateContinuationValue(metacommand.namespace.scope, program)
 
 	case "import":
 		if len(args) != 3 && len(args) != 4 {
@@ -199,7 +199,7 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 		args[2:]...,
 	)
 	program := namespace.scope.CompileArgs(cmdline...)
-	return CreateContinuationValue(namespace.scope, program, nil)
+	return CreateContinuationValue(namespace.scope, program)
 }
 func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	signature := NAMESPACE_HELP_PREFIX(args[0], options)
@@ -251,7 +251,7 @@ func (namespaceCmd) Execute(args []core.Value, context any) core.Result {
 
 	subscope := scope.NewChildScope()
 	program := subscope.CompileScriptValue(body.(core.ScriptValue))
-	return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+	return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
 		switch result.Code {
 		case core.ResultCode_OK,
 			core.ResultCode_RETURN:

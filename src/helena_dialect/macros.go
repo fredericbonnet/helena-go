@@ -108,15 +108,15 @@ func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 	}
 	program := subscope.CompileScriptValue(macro.body)
 	if macro.guard != nil {
-		return CreateContinuationValue(subscope, program, func(result core.Result) core.Result {
+		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
 			program := scope.CompileArgs(macro.guard, result.Value)
-			return CreateContinuationValue(scope, program, nil)
+			return CreateContinuationValue(scope, program)
 		})
 	} else {
-		return CreateContinuationValue(subscope, program, nil)
+		return CreateContinuationValue(subscope, program)
 	}
 }
 func (macro *macroCommand) Help(args []core.Value, options core.CommandHelpOptions, _ any) core.Result {
