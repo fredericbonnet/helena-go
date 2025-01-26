@@ -1,6 +1,9 @@
 package helena_dialect
 
-import "helena/core"
+import (
+	"helena/core"
+	"sync"
+)
 
 var booleanSubcommands = NewSubcommands([]string{"subcommands", "?", "!?"})
 
@@ -174,16 +177,7 @@ func (notCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) != 2 {
 		return ARITY_ERROR(NOT_SIGNATURE)
 	}
-	return ExecuteCondition(scope, args[1], nil, func(result core.Result, b bool, data any) core.Result {
-		if result.Code != core.ResultCode_OK {
-			return result
-		}
-		if b {
-			return core.OK(core.FALSE)
-		} else {
-			return core.OK(core.TRUE)
-		}
-	})
+	return notCmdCondition(scope, args[1])
 }
 func (notCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 2 {
@@ -191,35 +185,92 @@ func (notCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Res
 	}
 	return core.OK(core.STR(NOT_SIGNATURE))
 }
+func notCmdCondition(
+	scope *Scope,
+	value core.Value,
+) core.Result {
+	if value.Type() == core.ValueType_SCRIPT {
+		program := scope.CompileScriptValue(value.(core.ScriptValue))
+		return CreateContinuationValueWithCallback(scope, program, nil, func(result core.Result, data any) core.Result {
+			if result.Code != core.ResultCode_OK {
+				return result
+			}
+			return notCmdResult(result.Value)
+		})
+	}
+	// TODO ensure tail call in trampoline, or unroll in caller
+	return notCmdResult(value)
+}
+func notCmdResult(value core.Value) core.Result {
+	result, b := core.ValueToBoolean(value)
+	if result.Code != core.ResultCode_OK {
+		return result
+	}
+	if b {
+		return core.OK(core.FALSE)
+	} else {
+		return core.OK(core.TRUE)
+	}
+}
 
 const AND_SIGNATURE = "&& arg ?arg ...?"
 
 type andCmd struct{}
+type andCmdState struct {
+	scope *Scope
+	i     int
+	args  []core.Value
+}
+
+var andCmdStatePool = sync.Pool{
+	New: func() any {
+		return &andCmdState{}
+	},
+}
 
 func (andCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
 	if len(args) < 2 {
 		return ARITY_ERROR(AND_SIGNATURE)
 	}
-	i := 1
-	var callback func(result core.Result, b bool, data any) core.Result
-	callback = func(result core.Result, b bool, d any) core.Result {
-		if result.Code != core.ResultCode_OK {
-			return result
-		}
-		if !b {
-			return core.OK(core.FALSE)
-		}
-		i++
-		if i >= len(args) {
-			return core.OK(core.TRUE)
-		}
-		return ExecuteCondition(scope, args[i], nil, callback)
-	}
-	return ExecuteCondition(scope, args[i], nil, callback)
+	return andCmdCondition(scope, args, 1)
 }
 func (andCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(AND_SIGNATURE))
+}
+func andCmdCondition(scope *Scope, args []core.Value, i int) core.Result {
+	value := args[i]
+	if value.Type() == core.ValueType_SCRIPT {
+		program := scope.CompileScriptValue(value.(core.ScriptValue))
+		state := andCmdStatePool.Get().(*andCmdState)
+		state.scope = scope
+		state.i = i
+		state.args = args
+		return CreateContinuationValueWithCallback(scope, program, state, func(result core.Result, data any) core.Result {
+			state := data.(*andCmdState)
+			andCmdStatePool.Put(state)
+			if result.Code != core.ResultCode_OK {
+				return result
+			}
+			return andCmdNext(result.Value, state.scope, state.args, state.i)
+		})
+	}
+	// TODO ensure tail call in trampoline, or unroll in caller
+	return andCmdNext(value, scope, args, i)
+}
+func andCmdNext(value core.Value, scope *Scope, args []core.Value, i int) core.Result {
+	result, b := core.ValueToBoolean(value)
+	if result.Code != core.ResultCode_OK {
+		return result
+	}
+	if !b {
+		return core.OK(core.FALSE)
+	}
+	i++
+	if i >= len(args) {
+		return core.OK(core.TRUE)
+	}
+	return andCmdCondition(scope, args, i)
 }
 
 const OR_SIGNATURE = "|| arg ?arg ...?"
@@ -231,46 +282,44 @@ func (orCmd) Execute(args []core.Value, context any) core.Result {
 	if len(args) < 2 {
 		return ARITY_ERROR(OR_SIGNATURE)
 	}
-	i := 1
-	var callback func(result core.Result, b bool, data any) core.Result
-	callback = func(result core.Result, b bool, data any) core.Result {
-		if result.Code != core.ResultCode_OK {
-			return result
-		}
-		if b {
-			return core.OK(core.TRUE)
-		}
-		i++
-		if i >= len(args) {
-			return core.OK(core.FALSE)
-		}
-		return ExecuteCondition(scope, args[i], nil, callback)
-	}
-	return ExecuteCondition(scope, args[i], nil, callback)
+	return orCmdCondition(scope, args, 1)
 }
 func (orCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(OR_SIGNATURE))
 }
-
-func ExecuteCondition(
-	scope *Scope,
-	value core.Value,
-	data any,
-	callback func(result core.Result, b bool, data any) core.Result,
-) core.Result {
+func orCmdCondition(scope *Scope, args []core.Value, i int) core.Result {
+	value := args[i]
 	if value.Type() == core.ValueType_SCRIPT {
 		program := scope.CompileScriptValue(value.(core.ScriptValue))
-		return CreateContinuationValueWithCallback(scope, program, data, func(result core.Result, data any) core.Result {
+		state := andCmdStatePool.Get().(*andCmdState)
+		state.scope = scope
+		state.i = i
+		state.args = args
+		return CreateContinuationValueWithCallback(scope, program, state, func(result core.Result, data any) core.Result {
+			state := data.(*andCmdState)
+			andCmdStatePool.Put(state)
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
-			r, b := core.ValueToBoolean(result.Value)
-			return callback(r, b, data)
+			return orCmdNext(result.Value, state.scope, state.args, state.i)
 		})
 	}
 	// TODO ensure tail call in trampoline, or unroll in caller
-	r, b := core.ValueToBoolean(value)
-	return callback(r, b, data)
+	return orCmdNext(value, scope, args, i)
+}
+func orCmdNext(value core.Value, scope *Scope, args []core.Value, i int) core.Result {
+	result, b := core.ValueToBoolean(value)
+	if result.Code != core.ResultCode_OK {
+		return result
+	}
+	if b {
+		return core.OK(core.TRUE)
+	}
+	i++
+	if i >= len(args) {
+		return core.OK(core.FALSE)
+	}
+	return orCmdCondition(scope, args, i)
 }
 
 func registerLogicCommands(scope *Scope) {

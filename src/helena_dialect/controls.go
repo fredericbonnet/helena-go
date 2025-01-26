@@ -1,12 +1,32 @@
 package helena_dialect
 
-import "helena/core"
-
-type loopCmd struct{}
+import (
+	"helena/core"
+	"sync"
+)
 
 const LOOP_SIGNATURE = "loop ?index? ?value source ...? body"
 
-type LoopSourceFn = func(i int, callback ContinuationCallback) core.Result
+type loopCmd struct{}
+type LoopSourceFn = func(i int, data any, callback ContinuationCallback) core.Result
+type loopCmdState struct {
+	scope         *Scope
+	bodyProgram   *core.Program
+	lastResult    core.Result
+	hasIndex      bool
+	index         string
+	varnames      []core.Value
+	sources       []LoopSourceFn
+	activeSources int
+	i             int
+	iSource       int
+}
+
+var loopCmdStatePool = sync.Pool{
+	New: func() any {
+		return &loopCmdState{}
+	},
+}
 
 func (loopCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
@@ -44,12 +64,12 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 		case core.ValueType_LIST:
 			{
 				list := source.(core.ListValue)
-				sources[iSource] = func(i int, callback ContinuationCallback) core.Result {
+				sources[iSource] = func(i int, data any, callback ContinuationCallback) core.Result {
 					if i >= len(list.Values) {
-						return callback(core.BREAK(nil), nil)
+						return callback(core.BREAK(nil), data)
 					}
 					value := list.Values[i]
-					return callback(core.OK(value), nil)
+					return callback(core.OK(value), data)
 				}
 			}
 		case core.ValueType_DICTIONARY:
@@ -61,19 +81,19 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 					entries[j] = [2]core.Value{core.STR(key), value}
 					j++
 				}
-				sources[iSource] = func(i int, callback ContinuationCallback) core.Result {
+				sources[iSource] = func(i int, data any, callback ContinuationCallback) core.Result {
 					if i >= len(entries) {
-						return callback(core.BREAK(nil), nil)
+						return callback(core.BREAK(nil), data)
 					}
 					value := core.TUPLE(entries[i][:])
-					return callback(core.OK(value), nil)
+					return callback(core.OK(value), data)
 				}
 			}
 		case core.ValueType_SCRIPT:
 			{
 				program := subscope.CompileScriptValue(source.(core.ScriptValue))
-				sources[iSource] = func(i int, callback ContinuationCallback) core.Result {
-					return CreateContinuationValueWithCallback(subscope, program, nil, callback)
+				sources[iSource] = func(i int, data any, callback ContinuationCallback) core.Result {
+					return CreateContinuationValueWithCallback(subscope, program, data, callback)
 				}
 			}
 		default:
@@ -81,93 +101,114 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 				if scope.ResolveCommand(source) == nil {
 					return core.ERROR("invalid source")
 				}
-				sources[iSource] = func(i int, callback ContinuationCallback) core.Result {
+				sources[iSource] = func(i int, data any, callback ContinuationCallback) core.Result {
 					program := subscope.CompileArgs(source, core.INT(int64(i)))
-					return CreateContinuationValueWithCallback(subscope, program, nil, callback)
+					return CreateContinuationValueWithCallback(subscope, program, data, callback)
 				}
 			}
 		}
 	}
-	program := subscope.CompileScriptValue(body.(core.ScriptValue))
 
-	activeSources := len(sources)
-	i := 0
-	iSource := -1
-	lastResult := core.OK(core.NIL)
-	var nextIteration func() core.Result
-	var nextSource func() core.Result
-	var callBody func() core.Result
-	nextIteration = func() core.Result {
-		subscope.ClearLocals()
-		if hasIndex {
-			subscope.SetNamedLocal(index, core.INT(int64(i)))
-		}
-		iSource = -1
-		return nextSource()
-	}
-	nextSource = func() core.Result {
-		if activeSources == 0 && len(sources) > 0 {
-			return lastResult
-		}
-		iSource++
-		if iSource >= len(sources) {
-			return callBody()
-		}
-		source := sources[iSource]
-		if source == nil {
-			return nextSource()
-		}
-		varname := varnames[iSource]
-		return source(i, func(result core.Result, data any) core.Result {
-			switch result.Code {
-			case core.ResultCode_BREAK:
-				sources[iSource] = nil
-				activeSources--
-				return nextSource()
-			case core.ResultCode_CONTINUE:
-				return nextSource()
-			case core.ResultCode_OK:
-			default:
-				return result
-			}
-			value := result.Value
-			result2 := DestructureValue(
-				func(name core.Value, value core.Value, check bool) core.Result {
-					return subscope.DestructureLocal(name, value, check)
-				},
-				varname,
-				value,
-			)
-			if result2.Code != core.ResultCode_OK {
-				return result2
-			}
-			return nextSource()
-		})
-	}
-	callBody = func() core.Result {
-		i++
-		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
-			switch result.Code {
-			case core.ResultCode_BREAK:
-				return lastResult
-			case core.ResultCode_CONTINUE:
-			case core.ResultCode_OK:
-				lastResult = result
-			default:
-				return result
-			}
-			return nextIteration()
-		})
-	}
-	return nextIteration()
+	state := loopCmdStatePool.Get().(*loopCmdState)
+	state.scope = subscope
+	state.bodyProgram = subscope.CompileScriptValue(body.(core.ScriptValue))
+	state.lastResult = core.OK(core.NIL)
+	state.hasIndex = hasIndex
+	state.index = index
+	state.varnames = varnames
+	state.sources = sources
+	state.activeSources = len(sources)
+	state.i = 0
+	state.iSource = -1
+	return loopCmdNextIteration(state)
 }
 func (loopCmd) Help(_ []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(LOOP_SIGNATURE))
+}
+func loopCmdNextIteration(state *loopCmdState) core.Result {
+	state.scope.ClearLocals()
+	if state.hasIndex {
+		state.scope.SetNamedLocal(state.index, core.INT(int64(state.i)))
+	}
+	state.iSource = -1
+	return loopCmdNextSource(state)
+}
+func loopCmdNextSource(state *loopCmdState) core.Result {
+	if state.activeSources == 0 && len(state.sources) > 0 {
+		loopCmdStatePool.Put(state)
+		return state.lastResult
+	}
+	state.iSource++
+	if state.iSource >= len(state.sources) {
+		return loopCmdBody(state)
+	}
+	source := state.sources[state.iSource]
+	if source == nil {
+		return loopCmdNextSource(state)
+	}
+	varname := state.varnames[state.iSource]
+	return source(state.i, state, func(result core.Result, data any) core.Result {
+		switch result.Code {
+		case core.ResultCode_BREAK:
+			state.sources[state.iSource] = nil
+			state.activeSources--
+			return loopCmdNextSource(state)
+		case core.ResultCode_CONTINUE:
+			return loopCmdNextSource(state)
+		case core.ResultCode_OK:
+		default:
+			loopCmdStatePool.Put(state)
+			return result
+		}
+		value := result.Value
+		result2 := DestructureValue(
+			func(name core.Value, value core.Value, check bool) core.Result {
+				return state.scope.DestructureLocal(name, value, check)
+			},
+			varname,
+			value,
+		)
+		if result2.Code != core.ResultCode_OK {
+			loopCmdStatePool.Put(state)
+			return result2
+		}
+		return loopCmdNextSource(state)
+	})
+}
+func loopCmdBody(state *loopCmdState) core.Result {
+	state.i++
+	return CreateContinuationValueWithCallback(state.scope, state.bodyProgram, state, func(result core.Result, data any) core.Result {
+		state := data.(*loopCmdState)
+		switch result.Code {
+		case core.ResultCode_BREAK:
+			loopCmdStatePool.Put(state)
+			return state.lastResult
+		case core.ResultCode_CONTINUE:
+		case core.ResultCode_OK:
+			state.lastResult = result
+		default:
+			loopCmdStatePool.Put(state)
+			return result
+		}
+		return loopCmdNextIteration(state)
+	})
 }
 
 const WHILE_SIGNATURE = "while test body"
 
 type whileCmd struct{}
+type whileCmdState struct {
+	scope       *Scope
+	testProgram *core.Program
+	bodyProgram *core.Program
+	lastResult  core.Result
+}
+
+var whileCmdStatePool = sync.Pool{
+	New: func() any {
+		return &whileCmdState{}
+	},
+}
 
 func (whileCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
@@ -181,53 +222,28 @@ func (whileCmd) Execute(args []core.Value, context any) core.Result {
 	if body.Type() != core.ValueType_SCRIPT {
 		return core.ERROR("body must be a script")
 	}
-
-	lastResult := core.OK(core.NIL)
-	var callTest func() core.Result
-	var callBody func() core.Result
 	if test.Type() == core.ValueType_SCRIPT {
-		testProgram := scope.CompileScriptValue(test.(core.ScriptValue))
-		callTest = func() core.Result {
-			return CreateContinuationValueWithCallback(scope, testProgram, nil, func(result core.Result, data any) core.Result {
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-				result2, b := core.ValueToBoolean(result.Value)
-				if result2.Code != core.ResultCode_OK {
-					return result2
-				}
-				if !b {
-					return lastResult
-				}
-				return callBody()
-			})
-		}
+		state := whileCmdStatePool.Get().(*whileCmdState)
+		state.scope = scope
+		state.bodyProgram = scope.CompileScriptValue(body.(core.ScriptValue))
+		state.testProgram = scope.CompileScriptValue(test.(core.ScriptValue))
+		state.lastResult = core.OK(core.NIL)
+		return whileCmdTest(state)
 	} else {
 		result, b := core.ValueToBoolean(test)
 		if result.Code != core.ResultCode_OK {
 			return result
 		}
 		if !b {
-			return lastResult
+			return core.OK(core.NIL)
 		}
-		callTest = callBody
+		state := whileCmdStatePool.Get().(*whileCmdState)
+		state.scope = scope
+		state.bodyProgram = scope.CompileScriptValue(body.(core.ScriptValue))
+		state.testProgram = nil
+		state.lastResult = core.OK(core.NIL)
+		return whileCmdLoop(state)
 	}
-	program := scope.CompileScriptValue(body.(core.ScriptValue))
-	callBody = func() core.Result {
-		return CreateContinuationValueWithCallback(scope, program, nil, func(result core.Result, data any) core.Result {
-			switch result.Code {
-			case core.ResultCode_BREAK:
-				return lastResult
-			case core.ResultCode_CONTINUE:
-			case core.ResultCode_OK:
-				lastResult = result
-			default:
-				return result
-			}
-			return callTest()
-		})
-	}
-	return callTest()
 }
 func (whileCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 3 {
@@ -235,10 +251,71 @@ func (whileCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.R
 	}
 	return core.OK(core.STR(WHILE_SIGNATURE))
 }
+func whileCmdLoop(state *whileCmdState) core.Result {
+	return CreateContinuationValueWithCallback(state.scope, state.bodyProgram, state, func(result core.Result, data any) core.Result {
+		state := data.(*whileCmdState)
+		switch result.Code {
+		case core.ResultCode_BREAK:
+			whileCmdStatePool.Put(state)
+			return state.lastResult
+		case core.ResultCode_CONTINUE:
+		case core.ResultCode_OK:
+			state.lastResult = result
+		default:
+			whileCmdStatePool.Put(state)
+			return result
+		}
+		return whileCmdLoop(state)
+	})
+}
+func whileCmdTest(state *whileCmdState) core.Result {
+	return CreateContinuationValueWithCallback(state.scope, state.testProgram, state, func(result core.Result, data any) core.Result {
+		state := data.(*whileCmdState)
+		if result.Code != core.ResultCode_OK {
+			whileCmdStatePool.Put(state)
+			return result
+		}
+		result2, b := core.ValueToBoolean(result.Value)
+		if result2.Code != core.ResultCode_OK {
+			whileCmdStatePool.Put(state)
+			return result2
+		}
+		if !b {
+			whileCmdStatePool.Put(state)
+			return state.lastResult
+		}
+		return CreateContinuationValueWithCallback(state.scope, state.bodyProgram, state, func(result core.Result, data any) core.Result {
+			state := data.(*whileCmdState)
+			switch result.Code {
+			case core.ResultCode_BREAK:
+				whileCmdStatePool.Put(state)
+				return state.lastResult
+			case core.ResultCode_CONTINUE:
+			case core.ResultCode_OK:
+				state.lastResult = result
+			default:
+				whileCmdStatePool.Put(state)
+				return result
+			}
+			return whileCmdTest(state)
+		})
+	})
+}
 
 const IF_SIGNATURE = "if test body ?elseif test body ...? ?else? ?body?"
 
 type ifCmd struct{}
+type ifCmdState struct {
+	scope *Scope
+	i     int
+	args  []core.Value
+}
+
+var ifCmdStatePool = sync.Pool{
+	New: func() any {
+		return &ifCmdState{}
+	},
+}
 
 func (cmd ifCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
@@ -247,62 +324,61 @@ func (cmd ifCmd) Execute(args []core.Value, context any) core.Result {
 		return checkResult
 	}
 	i := 0
-	var callTest func() core.Result
-	var callBody func() core.Result
-	callTest = func() core.Result {
-		if i >= len(args) {
-			return core.OK(core.NIL)
-		}
-		_, keyword := core.ValueToString(args[i])
-		if keyword == "else" {
-			return callBody()
-		}
-		test := args[i+1]
-		if test.Type() == core.ValueType_SCRIPT {
-			program := scope.CompileScriptValue(test.(core.ScriptValue))
-			return CreateContinuationValueWithCallback(scope, program, nil, func(result core.Result, data any) core.Result {
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-				result2, b := core.ValueToBoolean(result.Value)
-				if result2.Code != core.ResultCode_OK {
-					return result2
-				}
-				if b {
-					return callBody()
-				}
-				i += 3
-				return callTest()
-			})
-		} else {
-			result, b := core.ValueToBoolean(test)
-			if result.Code != core.ResultCode_OK {
-				return result
-			}
-			if b {
-				return callBody()
-			}
-			i += 3
-			return callTest()
-		}
-	}
-	callBody = func() core.Result {
-		var body core.Value
-		if _, s := core.ValueToString(args[i]); s == "else" {
-			body = args[i+1]
-		} else {
-			body = args[i+2]
-		}
-		if body.Type() != core.ValueType_SCRIPT {
-			return core.ERROR("body must be a script")
-		}
-		program := scope.CompileScriptValue(body.(core.ScriptValue))
-		return CreateContinuationValue(scope, program)
-	}
-	return callTest()
+	return ifCmdTest(scope, args, i)
 }
 func (ifCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	return core.OK(core.STR(IF_SIGNATURE))
+}
+func ifCmdTest(scope *Scope, args []core.Value, i int) core.Result {
+	if i >= len(args) {
+		return core.OK(core.NIL)
+	}
+	_, keyword := core.ValueToString(args[i])
+	if keyword == "else" {
+		return ifCmdBody(scope, args, i)
+	}
+	test := args[i+1]
+	if test.Type() == core.ValueType_SCRIPT {
+		program := scope.CompileScriptValue(test.(core.ScriptValue))
+		state := ifCmdStatePool.Get().(*ifCmdState)
+		state.scope = scope
+		state.i = i
+		state.args = args
+		return CreateContinuationValueWithCallback(scope, program, state, func(result core.Result, data any) core.Result {
+			state := data.(*ifCmdState)
+			ifCmdStatePool.Put(state)
+			if result.Code != core.ResultCode_OK {
+				return result
+			}
+			return ifCmdNext(result.Value, state.scope, state.args, state.i)
+		})
+	} else {
+		return ifCmdNext(test, scope, args, i)
+	}
+}
+func ifCmdNext(value core.Value, scope *Scope, args []core.Value, i int) core.Result {
+	result, b := core.ValueToBoolean(value)
+	if result.Code != core.ResultCode_OK {
+		return result
+	}
+	if b {
+		return ifCmdBody(scope, args, i)
+	}
+	i += 3
+	return ifCmdTest(scope, args, i)
+}
+func ifCmdBody(scope *Scope, args []core.Value, i int) core.Result {
+	var body core.Value
+	if _, s := core.ValueToString(args[i]); s == "else" {
+		body = args[i+1]
+	} else {
+		body = args[i+2]
+	}
+	if body.Type() != core.ValueType_SCRIPT {
+		return core.ERROR("body must be a script")
+	}
+	program := scope.CompileScriptValue(body.(core.ScriptValue))
+	return CreateContinuationValue(scope, program)
 }
 func (ifCmd) checkArgs(args []core.Value) core.Result {
 	if len(args) == 2 {
@@ -344,6 +420,19 @@ func (ifCmd) checkArgs(args []core.Value) core.Result {
 const WHEN_SIGNATURE = "when ?command? {?test body ...? ?default?}"
 
 type whenCmd struct{}
+type whenCmdState struct {
+	scope      *Scope
+	hasCommand bool
+	command    core.Value
+	i          int
+	cases      []core.Value
+}
+
+var whenCmdStatePool = sync.Pool{
+	New: func() any {
+		return &whenCmdState{}
+	},
+}
 
 func (whenCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
@@ -365,94 +454,104 @@ func (whenCmd) Execute(args []core.Value, context any) core.Result {
 	if len(cases) == 0 {
 		return core.OK(core.NIL)
 	}
-	i := 0
-	var callCommand func() core.Result
-	var callTest func(command core.Value) core.Result
-	var callBody func() core.Result
-	callCommand = func() core.Result {
-		if i >= len(cases) {
-			return core.OK(core.NIL)
-		}
-		if i == len(cases)-1 {
-			return callBody()
-		}
-		if !hasCommand {
-			return callTest(core.NIL)
-		}
-		if command.Type() == core.ValueType_SCRIPT {
-			program := scope.CompileScriptValue(command.(core.ScriptValue))
-			return CreateContinuationValueWithCallback(scope, program, nil, func(result core.Result, data any) core.Result {
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-				return callTest(result.Value)
-			})
-		} else {
-			return callTest(command)
-		}
+	state := whenCmdStatePool.Get().(*whenCmdState)
+	state.scope = scope
+	state.hasCommand = hasCommand
+	state.command = command
+	state.i = 0
+	state.cases = cases
+	return whenCmdCommand(state)
+}
+func whenCmdCommand(state *whenCmdState) core.Result {
+	if state.i >= len(state.cases) {
+		whenCmdStatePool.Put(state)
+		return core.OK(core.NIL)
 	}
-	callTest = func(command core.Value) core.Result {
-		test := cases[i]
-		if hasCommand {
-			switch test.Type() {
-			case core.ValueType_TUPLE:
-				test = core.TUPLE(append([]core.Value{command}, test.(core.TupleValue).Values...))
-			default:
-				test = core.TUPLE([]core.Value{command, test})
-			}
-		}
-		var program *core.Program
-		switch test.Type() {
-		case core.ValueType_SCRIPT:
-			{
-				program = scope.CompileScriptValue(test.(core.ScriptValue))
-			}
-		case core.ValueType_TUPLE:
-			{
-				program = scope.CompileTupleValue(test.(core.TupleValue))
-			}
-		default:
-			{
-				result, b := core.ValueToBoolean(test)
-				if result.Code != core.ResultCode_OK {
-					return result
-				}
-				if b {
-					return callBody()
-				}
-				i += 2
-				return callCommand()
-			}
-		}
-		return CreateContinuationValueWithCallback(scope, program, nil, func(result core.Result, data any) core.Result {
+	if state.i == len(state.cases)-1 {
+		return whenCmdBody(state)
+	}
+	if !state.hasCommand {
+		return whenCmdTest(core.NIL, state)
+	}
+	if state.command.Type() == core.ValueType_SCRIPT {
+		program := state.scope.CompileScriptValue(state.command.(core.ScriptValue))
+		return CreateContinuationValueWithCallback(state.scope, program, state, func(result core.Result, data any) core.Result {
+			state := data.(*whenCmdState)
 			if result.Code != core.ResultCode_OK {
+				whenCmdStatePool.Put(state)
 				return result
 			}
-			result2, b := core.ValueToBoolean(result.Value)
-			if result2.Code != core.ResultCode_OK {
-				return result2
+			return whenCmdTest(result.Value, state)
+		})
+	} else {
+		return whenCmdTest(state.command, state)
+	}
+}
+func whenCmdTest(command core.Value, state *whenCmdState) core.Result {
+	test := state.cases[state.i]
+	if state.hasCommand {
+		switch test.Type() {
+		case core.ValueType_TUPLE:
+			test = core.TUPLE(append([]core.Value{command}, test.(core.TupleValue).Values...))
+		default:
+			test = core.TUPLE([]core.Value{command, test})
+		}
+	}
+	var program *core.Program
+	switch test.Type() {
+	case core.ValueType_SCRIPT:
+		{
+			program = state.scope.CompileScriptValue(test.(core.ScriptValue))
+		}
+	case core.ValueType_TUPLE:
+		{
+			program = state.scope.CompileTupleValue(test.(core.TupleValue))
+		}
+	default:
+		{
+			result, b := core.ValueToBoolean(test)
+			if result.Code != core.ResultCode_OK {
+				whenCmdStatePool.Put(state)
+				return result
 			}
 			if b {
-				return callBody()
+				return whenCmdBody(state)
 			}
-			i += 2
-			return callCommand()
-		})
-	}
-	callBody = func() core.Result {
-		var body core.Value
-		if i == len(cases)-1 {
-			body = cases[i]
-		} else {
-			body = cases[i+1]
+			state.i += 2
+			return whenCmdCommand(state)
 		}
-		if body.Type() != core.ValueType_SCRIPT {
-			return core.ERROR("body must be a script")
-		}
-		program := scope.CompileScriptValue(body.(core.ScriptValue))
-		return CreateContinuationValue(scope, program)
 	}
-	return callCommand()
+	return CreateContinuationValueWithCallback(state.scope, program, state, func(result core.Result, data any) core.Result {
+		state := data.(*whenCmdState)
+		if result.Code != core.ResultCode_OK {
+			whenCmdStatePool.Put(state)
+			return result
+		}
+		result2, b := core.ValueToBoolean(result.Value)
+		if result2.Code != core.ResultCode_OK {
+			whenCmdStatePool.Put(state)
+			return result2
+		}
+		if b {
+			return whenCmdBody(state)
+		}
+		state.i += 2
+		return whenCmdCommand(state)
+	})
+}
+func whenCmdBody(state *whenCmdState) core.Result {
+	whenCmdStatePool.Put(state)
+	var body core.Value
+	if state.i == len(state.cases)-1 {
+		body = state.cases[state.i]
+	} else {
+		body = state.cases[state.i+1]
+	}
+	if body.Type() != core.ValueType_SCRIPT {
+		return core.ERROR("body must be a script")
+	}
+	program := state.scope.CompileScriptValue(body.(core.ScriptValue))
+	return CreateContinuationValue(state.scope, program)
 }
 func (whenCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 3 {

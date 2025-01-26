@@ -888,6 +888,7 @@ var _ = Describe("Helena control flow commands", func() {
 					))
 				})
 				It("should interrupt the loop with `nil` result", func() {
+					Expect(execute("while true {break}")).To(Equal(OK(NIL)))
 					Expect(
 						execute(
 							"set i 0; while {$i < 10} {set i [+ $i 1]; break; unreachable}",
