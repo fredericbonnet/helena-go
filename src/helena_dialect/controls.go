@@ -348,11 +348,13 @@ type whenCmd struct{}
 
 func (whenCmd) Execute(args []core.Value, context any) core.Result {
 	scope := context.(*Scope)
+	hasCommand := false
 	var command, casesBody core.Value
 	switch len(args) {
 	case 2:
 		casesBody = args[1]
 	case 3:
+		hasCommand = true
 		command, casesBody = args[1], args[2]
 	default:
 		return ARITY_ERROR(WHEN_SIGNATURE)
@@ -375,7 +377,7 @@ func (whenCmd) Execute(args []core.Value, context any) core.Result {
 		if i == len(cases)-1 {
 			return callBody()
 		}
-		if command == nil {
+		if !hasCommand {
 			return callTest(core.NIL)
 		}
 		if command.Type() == core.ValueType_SCRIPT {
@@ -392,7 +394,7 @@ func (whenCmd) Execute(args []core.Value, context any) core.Result {
 	}
 	callTest = func(command core.Value) core.Result {
 		test := cases[i]
-		if command != core.NIL {
+		if hasCommand {
 			switch test.Type() {
 			case core.ValueType_TUPLE:
 				test = core.TUPLE(append([]core.Value{command}, test.(core.TupleValue).Values...))

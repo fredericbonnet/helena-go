@@ -1388,6 +1388,11 @@ var _ = Describe("Helena control flow commands", func() {
 					),
 				))
 			})
+			Specify("invalid command", func() {
+				Expect(execute("when [] {1 {1}}")).To(Equal(
+					ERROR("invalid command name"),
+				))
+			})
 			Specify("invalid case list", func() {
 				Expect(execute("when a")).To(Equal(ERROR("invalid list")))
 				Expect(execute("when []")).To(Equal(ERROR("invalid list")))
