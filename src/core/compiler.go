@@ -630,9 +630,9 @@ type ProgramState struct {
 
 func NewProgramState() *ProgramState {
 	return &ProgramState{
-		stack:        []Value{},
-		frames:       []int{0},
-		frameResults: []Result{OK(NIL)},
+		stack:        make([]Value, 0, 64),
+		frames:       make([]int, 1, 16),
+		frameResults: append(make([]Result, 0, 16), OK(NIL)),
 		PC:           0,
 		CC:           0,
 		Result:       OK(NIL),
