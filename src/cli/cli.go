@@ -7,6 +7,7 @@ import (
 	"helena/native"
 	"helena/picol_dialect"
 	"os"
+	"runtime/pprof"
 
 	"github.com/ergochat/readline"
 	"github.com/fatih/color"
@@ -109,7 +110,10 @@ func initScope() *helena_dialect.Scope {
 
 func source(path string) {
 	rootScope := initScope()
+	f, _ := os.Create("./cli.prof")
+	pprof.StartCPUProfile(f)
 	result := sourceFile(path, rootScope)
+	pprof.StopCPUProfile()
 	value, err := processResult(result)
 	if err == nil {
 		os.Stdout.WriteString(resultWriter(value) + "\n")

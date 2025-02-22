@@ -604,13 +604,20 @@ func (compiler Compiler) emitConstant(
 //
 type ProgramState struct {
 	// Execution stack
-	stack []Value
+	// stack []Value
+	stack      [64]Value
+	stackDepth int
+
+	// Execution frame depth
+	framesDepth int
 
 	// Execution frame start indexes; each frame is a slice of the stack
-	frames []int
+	// frames []int
+	frames [16]int
 
 	// Execution results for each frame
-	frameResults []Result
+	// frameResults []Result
+	frameResults [16]Result
 
 	// Last closed frame
 	LastFrame []Value
@@ -629,22 +636,43 @@ type ProgramState struct {
 }
 
 func NewProgramState() *ProgramState {
-	return &ProgramState{
-		stack:        make([]Value, 0, 64),
-		frames:       make([]int, 1, 16),
-		frameResults: append(make([]Result, 0, 16), OK(NIL)),
-		PC:           0,
-		CC:           0,
-		Result:       OK(NIL),
-	}
+	state := new(ProgramState)
+	// state.stack = []Value{}
+	// state.stack = make([]Value, 0, 64)
+	state.stackDepth = 0
+	// state.frames = []int{0}
+	// state.frameResults = []Result{OK(NIL)}
+	// state.frames = make([]int, 1, 16)
+	// state.frameResults = append(make([]Result, 0, 16), OK(NIL))
+	state.framesDepth = 1
+	state.frames[0] = 0
+	state.frameResults[0] = OK(NIL)
+	state.LastFrame = nil
+	state.PC = 0
+	state.CC = 0
+	state.Command = nil
+	state.Result = OK(NIL)
+	return state
+
+	// return &ProgramState{
+	// 	stack:        make([]Value, 0, 64),
+	//  framesDepth:  1,
+	// 	frames:       make([]int, 1, 16),
+	// 	frameResults: append(make([]Result, 0, 16), OK(NIL)),
+	// 	PC:           0,
+	// 	CC:           0,
+	// 	Result:       OK(NIL),
+	// }
 }
 
 // Reset program state
 func (state *ProgramState) Reset() {
-	state.stack = state.stack[:0]
-	state.frames = state.frames[:1]
+	// state.stack = state.stack[:0]
+	state.stackDepth = 0
+	// state.frames = state.frames[:1]
+	// state.frameResults = state.frameResults[:1]
+	state.framesDepth = 1
 	state.frames[0] = 0
-	state.frameResults = state.frameResults[:1]
 	state.frameResults[0] = OK(NIL)
 	state.LastFrame = nil
 	state.PC = 0
@@ -656,61 +684,77 @@ func (state *ProgramState) Reset() {
 // Set result for the current frame
 func (state *ProgramState) SetResult(result Result) {
 	state.Result = result
-	state.frameResults[len(state.frameResults)-1] = result
+	state.frameResults[state.framesDepth-1] = result
 }
 
 // Return result of the last frame
 func (state *ProgramState) lastFrameResult() Result {
-	return state.frameResults[len(state.frameResults)-1]
+	return state.frameResults[state.framesDepth-1]
 }
 
 // Open a new frame
 func (state *ProgramState) OpenFrame() {
-	state.frames = append(state.frames, len(state.stack))
-	state.frameResults = append(state.frameResults, OK(NIL))
+	// state.frames = append(state.frames, len(state.stack))
+	// state.frameResults = append(state.frameResults, OK(NIL))
+	state.framesDepth++
+	// state.frames[state.framesDepth-1] = len(state.stack)
+	state.frames[state.framesDepth-1] = state.stackDepth
+	state.frameResults[state.framesDepth-1] = OK(NIL)
 	state.LastFrame = nil
 }
 
 // Close the current frame
 func (state *ProgramState) CloseFrame() {
-	length := state.frames[len(state.frames)-1]
-	state.frames = state.frames[:len(state.frames)-1]
-	state.frameResults = state.frameResults[:len(state.frameResults)-1]
-	state.LastFrame = state.stack[length:]
-	state.stack = state.stack[:length]
+	length := state.frames[state.framesDepth-1]
+	// state.frames = state.frames[:state.framesDepth-1]
+	// state.frameResults = state.frameResults[:state.framesDepth-1]
+	state.framesDepth--
+	// state.LastFrame = state.stack[length:]
+	state.LastFrame = state.stack[length:state.stackDepth]
+	// state.stack = state.stack[:length]
+	state.stackDepth = length
 }
 
 // Report whether current frame is empty
 func (state *ProgramState) Empty() bool {
-	return len(state.frames) == 0 || state.frames[len(state.frames)-1] == len(state.stack)
+	// return state.framesDepth == 0 || state.frames[state.framesDepth-1] == len(state.stack)
+	return state.framesDepth == 0 || state.frames[state.framesDepth-1] == state.stackDepth
 }
 
 // Push value on current frame
 func (state *ProgramState) Push(value Value) {
-	state.stack = append(state.stack, value)
+	// state.stack = append(state.stack, value)
+	state.stack[state.stackDepth] = value
+	state.stackDepth++
 }
 
 // Pop and return last value on current frame
 func (state *ProgramState) Pop() Value {
-	last := state.stack[len(state.stack)-1]
-	state.stack = state.stack[:len(state.stack)-1]
+	// last := state.stack[len(state.stack)-1]
+	last := state.stack[state.stackDepth-1]
+	// state.stack = state.stack[:len(state.stack)-1]
+	state.stackDepth--
 	return last
 }
 
 // Return last value on current frame
 func (state *ProgramState) lastValue() Value {
-	if len(state.stack) == 0 {
+	// if len(state.stack) == 0 {
+	if state.stackDepth == 0 {
 		return nil
 	}
-	return state.stack[len(state.stack)-1]
+	// return state.stack[len(state.stack)-1]
+	return state.stack[state.stackDepth-1]
 }
 
 // Expand last value in current frame
 func (state *ProgramState) Expand() {
 	last := state.lastValue()
 	if last != nil && last.Type() == ValueType_TUPLE {
-		state.stack = state.stack[:len(state.stack)-1]
-		state.stack = append(state.stack, last.(TupleValue).Values...)
+		// state.stack = state.stack[:len(state.stack)-1]
+		// state.stack = append(state.stack, last.(TupleValue).Values...)
+		copy(state.stack[state.stackDepth-1:], last.(TupleValue).Values)
+		state.stackDepth += len(last.(TupleValue).Values) - 1
 	}
 }
 
