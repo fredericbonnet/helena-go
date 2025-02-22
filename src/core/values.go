@@ -627,6 +627,9 @@ type ScriptValue struct {
 type ScriptValueCache struct {
 	// Cached compiled program
 	Program *Program
+
+	// Cached array of values
+	Values []Value
 }
 
 func (value ScriptValue) Type() ValueType {

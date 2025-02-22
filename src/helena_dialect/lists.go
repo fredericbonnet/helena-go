@@ -386,6 +386,10 @@ func ValueToList(value core.Value) (core.Result, core.ListValue) {
 
 func ValueToArray(value core.Value) (core.Result, []core.Value) {
 	if value.Type() == core.ValueType_SCRIPT {
+		script := value.(core.ScriptValue)
+		if script.Cache.Values != nil {
+			return core.OK(core.NIL), script.Cache.Values
+		}
 		program := core.NewCompiler(nil).CompileSentences(
 			value.(core.ScriptValue).Script.Sentences,
 		)
@@ -394,7 +398,8 @@ func ValueToArray(value core.Value) (core.Result, []core.Value) {
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid list"), nil
 		}
-		return core.OK(core.NIL), result.Value.(core.TupleValue).Values
+		script.Cache.Values = result.Value.(core.TupleValue).Values
+		return core.OK(core.NIL), script.Cache.Values
 	}
 	return core.ValueToValues(value)
 }
