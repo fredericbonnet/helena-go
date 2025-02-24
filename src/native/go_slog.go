@@ -29,26 +29,26 @@ func (SlogCmd) Execute(args []core.Value, _ any) core.Result {
 		if len(args) < 3 {
 			return core.ERROR(`wrong # args: should be "slog Debug msg"`)
 		}
-		method, _ = asString((args[2]))
-		slog.Debug(method)
+		msg, _ := asString((args[2]))
+		slog.Debug(msg)
 	case "Error":
 		if len(args) < 3 {
 			return core.ERROR(`wrong # args: should be "slog Error msg"`)
 		}
-		method, _ = asString((args[2]))
-		slog.Error(method, "toto", 1)
+		msg, _ := asString((args[2]))
+		slog.Error(msg, "toto", 1)
 	case "Info":
 		if len(args) < 3 {
 			return core.ERROR(`wrong # args: should be "slog Info msg"`)
 		}
-		method, _ = asString((args[2]))
-		slog.Info(method)
+		msg, _ := asString((args[2]))
+		slog.Info(msg)
 	case "Warn":
 		if len(args) < 3 {
 			return core.ERROR(`wrong # args: should be "slog Warn msg"`)
 		}
-		method, _ = asString((args[2]))
-		slog.Warn(method)
+		msg, _ := asString((args[2]))
+		slog.Warn(msg)
 	}
 	return core.OK(core.NIL)
 }

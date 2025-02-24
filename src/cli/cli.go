@@ -102,6 +102,7 @@ func initScope() *helena_dialect.Scope {
 
 	// Native modules
 	registerNativeModule("go:slog", "slog", native.SlogCmd{})
+	registerNativeModule("go:os", "os", native.OsCmd{})
 
 	return rootScope
 }
