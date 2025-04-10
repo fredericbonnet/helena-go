@@ -352,13 +352,6 @@ var _ = Describe("Helena logic operations", func() {
 						))
 					})
 				})
-				Describe("`tailcall`", func() {
-					It("should interrupt expression with `RETURN` code", func() {
-						Expect(execute("! {tailcall {idem value}; unreachable}")).To(Equal(
-							RETURN(STR("value")),
-						))
-					})
-				})
 				Describe("`yield`", func() {
 					It("should interrupt expression with `YIELD` code", func() {
 						result := execute("! {yield value; true}")
@@ -447,13 +440,6 @@ var _ = Describe("Helena logic operations", func() {
 						Expect(execute("&& true {return value; unreachable} false")).To(Equal(
 							RETURN(STR("value")),
 						))
-					})
-				})
-				Describe("`tailcall`", func() {
-					It("should interrupt expression with `RETURN` code", func() {
-						Expect(
-							execute("&& true {tailcall {idem value}; unreachable} false"),
-						).To(Equal(RETURN(STR("value"))))
 					})
 				})
 				Describe("`yield`", func() {
@@ -551,13 +537,6 @@ var _ = Describe("Helena logic operations", func() {
 						Expect(execute("|| false {return value; unreachable} true")).To(Equal(
 							RETURN(STR("value")),
 						))
-					})
-				})
-				Describe("`tailcall`", func() {
-					It("should interrupt expression with `RETURN` code", func() {
-						Expect(
-							execute("|| false {tailcall {idem value}; unreachable} true"),
-						).To(Equal(RETURN(STR("value"))))
 					})
 				})
 				Describe("`yield`", func() {

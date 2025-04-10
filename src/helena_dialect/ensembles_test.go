@@ -149,25 +149,6 @@ var _ = Describe("Helena ensembles", func() {
 						Expect(execute("ensemble {} {return val}")).To(Equal(OK(STR("val"))))
 					})
 				})
-				Describe("`tailcall`", func() {
-					It("should interrupt the body with `OK` code", func() {
-						evaluate("closure cmd1 {} {set var val1}")
-						evaluate("closure cmd2 {} {set var val2}")
-						Expect(
-							execute("ensemble {} {cmd1; tailcall {}; cmd2}").Code,
-						).To(Equal(core.ResultCode_OK))
-						Expect(evaluate("get var")).To(Equal(STR("val1")))
-					})
-					It("should still define the named command", func() {
-						evaluate("ensemble cmd {} {tailcall {}}")
-						Expect(rootScope.Context.Commands["cmd"]).NotTo(BeNil())
-					})
-					It("should return passed value instead of the command object", func() {
-						Expect(execute("ensemble {} {tailcall {idem val}}")).To(Equal(
-							OK(STR("val")),
-						))
-					})
-				})
 				Describe("`yield`", func() {
 					It("should interrupt the body with `YIELD` code", func() {
 						evaluate("closure cmd1 {} {set var val1}")
@@ -321,17 +302,6 @@ var _ = Describe("Helena ensembles", func() {
 								Expect(evaluate("get var")).To(Equal(STR("val1")))
 							})
 						})
-						Describe("`tailcall`", func() {
-							It("should interrupt the body with `RETURN` code", func() {
-								evaluate("closure cmd1 {} {set var val1}")
-								evaluate("closure cmd2 {} {set var val2}")
-								evaluate("ensemble cmd {} {}")
-								Expect(
-									execute("[cmd] eval {cmd1; tailcall {idem val3}; cmd2}"),
-								).To(Equal(RETURN(STR("val3"))))
-								Expect(evaluate("get var")).To(Equal(STR("val1")))
-							})
-						})
 						Describe("`yield`", func() {
 							It("should interrupt the body with `YIELD` code", func() {
 								evaluate("closure cmd1 {} {set var val1}")
@@ -441,17 +411,6 @@ var _ = Describe("Helena ensembles", func() {
 								evaluate("closure cmd2 {} {set var val2}")
 								evaluate(
 									"ensemble cmd {} {macro mac {} {cmd1; return val3; cmd2}}",
-								)
-								Expect(execute("[cmd] call mac")).To(Equal(RETURN(STR("val3"))))
-								Expect(evaluate("get var")).To(Equal(STR("val1")))
-							})
-						})
-						Describe("`tailcall`", func() {
-							It("should interrupt the body with `RETURN` code", func() {
-								evaluate("closure cmd1 {} {set var val1}")
-								evaluate("closure cmd2 {} {set var val2}")
-								evaluate(
-									"ensemble cmd {} {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}",
 								)
 								Expect(execute("[cmd] call mac")).To(Equal(RETURN(STR("val3"))))
 								Expect(evaluate("get var")).To(Equal(STR("val1")))
@@ -798,17 +757,6 @@ var _ = Describe("Helena ensembles", func() {
 						evaluate("closure cmd2 {} {set var val2}")
 						evaluate(
 							"ensemble cmd {} {macro mac {} {cmd1; return val3; cmd2}}",
-						)
-						Expect(execute("cmd mac")).To(Equal(RETURN(STR("val3"))))
-						Expect(evaluate("get var")).To(Equal(STR("val1")))
-					})
-				})
-				Describe("`tailcall`", func() {
-					It("should interrupt the call with `RETURN` code", func() {
-						evaluate("closure cmd1 {} {set var val1}")
-						evaluate("closure cmd2 {} {set var val2}")
-						evaluate(
-							"ensemble cmd {} {macro mac {} {cmd1; tailcall {idem val3}; cmd2}}",
 						)
 						Expect(execute("cmd mac")).To(Equal(RETURN(STR("val3"))))
 						Expect(evaluate("get var")).To(Equal(STR("val1")))

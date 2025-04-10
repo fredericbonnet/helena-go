@@ -100,81 +100,6 @@ var _ = Describe("Helena basic commands", func() {
 		})
 	})
 
-	Describe("tailcall", func() {
-		Describe("Specifications", func() {
-			Specify("usage", func() {
-				Expect(evaluate("help tailcall")).To(Equal(STR("tailcall body")))
-				Expect(evaluate("help tailcall {}")).To(Equal(STR("tailcall body")))
-			})
-
-			Specify("result code should be `RETURN`", func() {
-				Expect(execute("tailcall {}").Code).To(Equal(core.ResultCode_RETURN))
-			})
-			It("should accept script values for its `body` argument", func() {
-				Expect(execute("tailcall {}")).To(Equal(RETURN(NIL)))
-			})
-			It("should accept tuple values for its `body` argument", func() {
-				Expect(execute("tailcall ()")).To(Equal(RETURN(NIL)))
-			})
-			It("should return the evaluation result of it `body` argument", func() {
-				Expect(execute("tailcall {idem val}")).To(Equal(RETURN(STR("val"))))
-				Expect(execute("tailcall {return val}")).To(Equal(RETURN(STR("val"))))
-				Expect(execute("tailcall (idem val); unreachable")).To(Equal(
-					RETURN(STR("val")),
-				))
-				Expect(execute("tailcall (return val); unreachable")).To(Equal(
-					RETURN(STR("val")),
-				))
-			})
-			It("should propagate `ERROR` code from `body`", func() {
-				Expect(execute("tailcall {error msg}")).To(Equal(ERROR("msg")))
-				Expect(execute("tailcall (error msg); unreachable")).To(Equal(
-					ERROR("msg"),
-				))
-			})
-			It("should propagate `BREAK` code from `body`", func() {
-				Expect(execute("tailcall {break}")).To(Equal(BREAK(NIL)))
-				Expect(execute("tailcall (break); unreachable")).To(Equal(BREAK(NIL)))
-			})
-			It("should propagate `CONTINUE` code from `body`", func() {
-				Expect(execute("tailcall {continue}")).To(Equal(CONTINUE(NIL)))
-				Expect(execute("tailcall (continue); unreachable")).To(Equal(CONTINUE(NIL)))
-			})
-			It("should interrupt the script", func() {
-				Expect(execute("tailcall {idem val}; unreachable")).To(Equal(
-					RETURN(STR("val")),
-				))
-				Expect(execute("tailcall (idem val); unreachable")).To(Equal(
-					RETURN(STR("val")),
-				))
-			})
-			It("should work recursively", func() {
-				Expect(
-					execute("tailcall {tailcall (idem val); unreachable}; unreachable"),
-				).To(Equal(RETURN(STR("val"))))
-			})
-		})
-
-		Describe("Exceptions", func() {
-			Specify("wrong arity", func() {
-				Expect(execute("tailcall")).To(Equal(
-					ERROR(`wrong # args: should be "tailcall body"`),
-				))
-				Expect(execute("tailcall a b")).To(Equal(
-					ERROR(`wrong # args: should be "tailcall body"`),
-				))
-				Expect(execute("help tailcall a b")).To(Equal(
-					ERROR(`wrong # args: should be "tailcall body"`),
-				))
-			})
-			Specify("invalid `body`", func() {
-				Expect(execute("tailcall 1")).To(Equal(
-					ERROR("body must be a script or tuple"),
-				))
-			})
-		})
-	})
-
 	Describe("yield", func() {
 		Describe("Specifications", func() {
 			Specify("usage", func() {
@@ -356,19 +281,6 @@ var _ = Describe("Helena basic commands", func() {
 				})
 				It("should return passed value", func() {
 					Expect(execute("eval {return val}")).To(Equal(RETURN(STR("val"))))
-				})
-			})
-			Describe("`tailcall`", func() {
-				It("should interrupt the body with `RETURN` code", func() {
-					Expect(
-						execute("eval {set var val1; tailcall {}; set var val2}").Code,
-					).To(Equal(core.ResultCode_RETURN))
-					Expect(evaluate("get var")).To(Equal(STR("val1")))
-				})
-				It("should return tailcall result", func() {
-					Expect(execute("eval {tailcall {idem val}}")).To(Equal(
-						RETURN(STR("val")),
-					))
 				})
 			})
 			Describe("`yield`", func() {

@@ -61,41 +61,6 @@ func (yieldCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.R
 	return core.OK(core.STR(YIELD_SIGNATURE))
 }
 
-const TAILCALL_SIGNATURE = "tailcall body"
-
-type tailcallCmd struct{}
-
-func (tailcallCmd) Execute(args []core.Value, context any) core.Result {
-	scope := context.(*Scope)
-	if len(args) != 2 {
-		return ARITY_ERROR(TAILCALL_SIGNATURE)
-	}
-	body := args[1]
-	var program *core.Program
-	switch body.Type() {
-	case core.ValueType_SCRIPT:
-		program = scope.CompileScriptValue(body.(core.ScriptValue))
-	case core.ValueType_TUPLE:
-		program = scope.CompileTupleValue(body.(core.TupleValue))
-	default:
-		return core.ERROR("body must be a script or tuple")
-	}
-	return core.RETURN(
-		NewContinuationValue(scope, program, nil, func(result core.Result, data any) core.Result {
-			if result.Code != core.ResultCode_OK {
-				return result
-			}
-			return core.RETURN(result.Value)
-		}),
-	)
-}
-func (tailcallCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
-	if len(args) > 2 {
-		return ARITY_ERROR(TAILCALL_SIGNATURE)
-	}
-	return core.OK(core.STR(TAILCALL_SIGNATURE))
-}
-
 const ERROR_SIGNATURE = "error message"
 
 type errorCmd struct{}
@@ -218,7 +183,6 @@ func (helpCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Re
 func registerBasicCommands(scope *Scope) {
 	scope.RegisterNamedCommand("idem", idemCmd{})
 	scope.RegisterNamedCommand("return", returnCmd{})
-	scope.RegisterNamedCommand("tailcall", tailcallCmd{})
 	scope.RegisterNamedCommand("yield", yieldCmd{})
 	scope.RegisterNamedCommand("error", errorCmd{})
 	scope.RegisterNamedCommand("break", breakCmd{})

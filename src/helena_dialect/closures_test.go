@@ -390,12 +390,6 @@ var _ = Describe("Helena closures", func() {
 					Expect(execute("cmd")).To(Equal(RETURN(STR("val1"))))
 				})
 			})
-			Describe("`tailcall`", func() {
-				It("should interrupt a closure with `RETURN` code", func() {
-					evaluate("closure cmd {} {tailcall {idem val1}; idem val2}")
-					Expect(execute("cmd")).To(Equal(RETURN(STR("val1"))))
-				})
-			})
 			Describe("`yield`", func() {
 				It("should interrupt a closure with `YIELD` code", func() {
 					evaluate("closure cmd {} {yield val1; idem val2}")

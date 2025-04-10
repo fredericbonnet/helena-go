@@ -380,12 +380,6 @@ var _ = Describe("Helena procedures", func() {
 					Expect(execute("cmd")).To(Equal(OK(STR("val1"))))
 				})
 			})
-			Describe("`tailcall`", func() {
-				It("should interrupt a proc with `OK` code", func() {
-					evaluate("proc cmd {} {tailcall (idem val1); idem val2}")
-					Expect(execute("cmd")).To(Equal(OK(STR("val1"))))
-				})
-			})
 			Describe("`yield`", func() {
 				It("should interrupt a proc with `YIELD` code", func() {
 					evaluate("proc cmd {} {yield val1; idem val2}")

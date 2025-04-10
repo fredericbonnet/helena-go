@@ -132,17 +132,6 @@ var _ = Describe("Helena modules", func() {
 						Expect(rootScope.Context.Commands["cmd"]).To(BeNil())
 					})
 				})
-				Describe("`tailcall`", func() {
-					It("should interrupt the body with `ERROR` Code", func() {
-						Expect(execute("module {tailcall {idem value}}")).To(Equal(
-							ERROR("unexpected return"),
-						))
-					})
-					It("should not define the module command", func() {
-						evaluate("module cmd {return value}")
-						Expect(rootScope.Context.Commands["cmd"]).To(BeNil())
-					})
-				})
 				Describe("`yield`", func() {
 					It("should interrupt the body with `ERROR` Code", func() {
 						Expect(execute("module {yield value}")).To(Equal(

@@ -97,21 +97,6 @@ var _ = Describe("Helena coroutines", func() {
 						))
 					})
 				})
-				Describe("`tailcall`", func() {
-					It("should interrupt the body with `OK` code", func() {
-						Expect(
-							execute(
-								"[coroutine {set var val1; tailcall {}; set var val2}] wait",
-							).Code,
-						).To(Equal(core.ResultCode_OK))
-						Expect(evaluate("get var")).To(Equal(STR("val1")))
-					})
-					It("should return passed value", func() {
-						Expect(execute("[coroutine {tailcall {idem val}}] wait")).To(Equal(
-							OK(STR("val")),
-						))
-					})
-				})
 				Describe("`yield`", func() {
 					It("should interrupt the body with `OK` code", func() {
 						Expect(

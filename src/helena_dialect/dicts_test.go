@@ -570,18 +570,6 @@ var _ = Describe("Helena dictionaries", func() {
 								Expect(evaluate("get i")).To(Equal(INT(1)))
 							})
 						})
-						Describe("`tailcall`", func() {
-							It("should interrupt the loop with `RETURN` code", func() {
-								Expect(
-									execute(
-										"set i 0; dict (a b c d e f) foreach entry {set i [+ $i 1]; tailcall {idem $entry}; unreachable}",
-									),
-								// TODO specify order?
-								// ).To(Equal(execute("return (a b)")))
-								).NotTo(BeNil())
-								Expect(evaluate("get i")).To(Equal(INT(1)))
-							})
-						})
 						Describe("`yield`", func() {
 							It("should interrupt the body with `YIELD` code", func() {
 								Expect(

@@ -163,17 +163,6 @@ var _ = Describe("Helena aliases", func() {
 						Expect(execute("cmd")).To(Equal(RETURN(STR("val"))))
 					})
 				})
-				Describe("`tailcall`", func() {
-					It("should interrupt a macro alias with `RETURN` code", func() {
-						evaluate("macro mac {} {tailcall {idem val1}; idem val2}")
-						evaluate("alias cmd mac")
-						Expect(execute("cmd")).To(Equal(RETURN(STR("val1"))))
-					})
-					It("should interrupt a tuple alias with `RETURN` code", func() {
-						evaluate("alias cmd (tailcall {idem val})")
-						Expect(execute("cmd")).To(Equal(RETURN(STR("val"))))
-					})
-				})
 				Describe("`yield`", func() {
 					It("should interrupt a macro alias with `YIELD` code", func() {
 						evaluate("macro mac {} {yield val1; idem val2}")

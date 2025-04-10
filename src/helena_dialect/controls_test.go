@@ -445,31 +445,6 @@ var _ = Describe("Helena control flow commands", func() {
 					Expect(evaluate("get i")).To(Equal(INT(1)))
 				})
 			})
-			Describe("`tailcall`", func() {
-				It("should interrupt sources with `RETURN` code", func() {
-					Expect(
-						execute("loop v {tailcall {idem val}; unreachable} {unreachable}"),
-					).To(Equal(RETURN(STR("val"))))
-					evaluate("macro cmd {i} {tailcall {idem val}}")
-					Expect(execute("loop v cmd {unreachable}")).To(Equal(
-						RETURN(STR("val")),
-					))
-					Expect(execute("loop v (cmd) {unreachable}")).To(Equal(
-						RETURN(STR("val")),
-					))
-					Expect(
-						execute("loop v [[macro {i} {tailcall {idem val}}]] {unreachable}"),
-					).To(Equal(RETURN(STR("val"))))
-				})
-				It("should interrupt the loop with `RETURN` code", func() {
-					Expect(
-						execute(
-							"set i 0; loop {set i [+ $i 1]; tailcall {idem val}; unreachable}",
-						),
-					).To(Equal(RETURN(STR("val"))))
-					Expect(evaluate("get i")).To(Equal(INT(1)))
-				})
-			})
 			Describe("`yield`", func() {
 				It("should interrupt sources with `YIELD` code", func() {
 					Expect(execute("loop v {yield; unreachable} {}").Code).To(Equal(
@@ -804,21 +779,6 @@ var _ = Describe("Helena control flow commands", func() {
 					Expect(evaluate("get i")).To(Equal(INT(1)))
 				})
 			})
-			Describe("`tailcall`", func() {
-				It("should interrupt the test with `RETURN` code", func() {
-					Expect(
-						execute("while {tailcall {idem val}; unreachable} {unreachable}"),
-					).To(Equal(RETURN(STR("val"))))
-				})
-				It("should interrupt the loop with `RETURN` code", func() {
-					Expect(
-						execute(
-							"set i 0; while {$i < 10} {set i [+ $i 1]; tailcall {idem val}; unreachable}",
-						),
-					).To(Equal(RETURN(STR("val"))))
-					Expect(evaluate("get i")).To(Equal(INT(1)))
-				})
-			})
 			Describe("`yield`", func() {
 				It("should interrupt the test with `YIELD` code", func() {
 					Expect(execute("while {yield; unreachable} {}").Code).To(Equal(
@@ -1048,33 +1008,6 @@ var _ = Describe("Helena control flow commands", func() {
 					Expect(
 						execute(
 							"if false {} elseif false {} else {return val; unreachable}",
-						),
-					).To(Equal(RETURN(STR("val"))))
-				})
-			})
-			Describe("`tailcall`", func() {
-				It("should interrupt tests with `RETURN` code", func() {
-					Expect(
-						execute("if {tailcall {idem val}; unreachable} {unreachable}"),
-					).To(Equal(RETURN(STR("val"))))
-					Expect(
-						execute(
-							"if false {} elseif {tailcall {idem val}; unreachable} {unreachable}",
-						),
-					).To(Equal(RETURN(STR("val"))))
-				})
-				It("should interrupt bodies with `RETURN` code", func() {
-					Expect(execute("if true {tailcall {idem val}; unreachable}")).To(Equal(
-						RETURN(STR("val")),
-					))
-					Expect(
-						execute(
-							"if false {} elseif true {tailcall {idem val}; unreachable}",
-						),
-					).To(Equal(RETURN(STR("val"))))
-					Expect(
-						execute(
-							"if false {} elseif false {} else {tailcall {idem val}; unreachable}",
 						),
 					).To(Equal(RETURN(STR("val"))))
 				})
@@ -1430,43 +1363,6 @@ var _ = Describe("Helena control flow commands", func() {
 					).To(Equal(RETURN(STR("val"))))
 					Expect(
 						execute("when {false {} false {} {return val; unreachable}}"),
-					).To(Equal(RETURN(STR("val"))))
-				})
-			})
-			Describe("`tailcall`", func() {
-				It("should interrupt tests with `RETURN` code", func() {
-					Expect(
-						execute("when {{tailcall {idem val}; unreachable} {unreachable}}"),
-					).To(Equal(RETURN(STR("val"))))
-					Expect(
-						execute(
-							"when {false {} {tailcall {idem val}; unreachable} {unreachable}}",
-						),
-					).To(Equal(RETURN(STR("val"))))
-				})
-				It("should interrupt script command with `RETURN` code", func() {
-					Expect(
-						execute(
-							"when {tailcall {idem val}; unreachable} {true {unreachable}}",
-						),
-					).To(Equal(RETURN(STR("val"))))
-					Expect(
-						execute(
-							"set count 0; when {if {$count == 1} {tailcall {idem val}; unreachable} else {set count [+ $count 1]; idem idem}} {false {unreachable} true {unreachable} {unreachable}}",
-						),
-					).To(Equal(RETURN(STR("val"))))
-				})
-				It("should interrupt bodies with `RETURN` code", func() {
-					Expect(
-						execute("when {true {tailcall {idem val}; unreachable}}"),
-					).To(Equal(RETURN(STR("val"))))
-					Expect(
-						execute("when {false {} true {tailcall {idem val}; unreachable}}"),
-					).To(Equal(RETURN(STR("val"))))
-					Expect(
-						execute(
-							"when {false {} false {} {tailcall {idem val}; unreachable}}",
-						),
 					).To(Equal(RETURN(STR("val"))))
 				})
 			})
@@ -1851,22 +1747,6 @@ var _ = Describe("Helena control flow commands", func() {
 						).To(Equal(RETURN(STR("handler"))))
 					})
 				})
-				Describe("`tailcall`", func() {
-					It("should interrupt handler with `RETURN` code", func() {
-						Expect(
-							execute(
-								"catch {return val} return res {tailcall {idem handler}; unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-					It("should bypass `finally` handler", func() {
-						Expect(
-							execute(
-								"catch {return val} return res {tailcall {idem handler}; unreachable} finally {unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-				})
 				Describe("`yield`", func() {
 					It("should interrupt handler with `YIELD` code", func() {
 						Expect(
@@ -2008,22 +1888,6 @@ var _ = Describe("Helena control flow commands", func() {
 						Expect(
 							execute(
 								"catch {yield val} yield res {return handler; unreachable} finally {unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-				})
-				Describe("`tailcall`", func() {
-					It("should interrupt handler with `RETURN` code", func() {
-						Expect(
-							execute(
-								"catch {yield val} yield res {tailcall {idem handler}; unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-					It("should bypass `finally` handler", func() {
-						Expect(
-							execute(
-								"catch {yield val} yield res {tailcall {idem handler}; unreachable} finally {unreachable}",
 							),
 						).To(Equal(RETURN(STR("handler"))))
 					})
@@ -2172,22 +2036,6 @@ var _ = Describe("Helena control flow commands", func() {
 						).To(Equal(RETURN(STR("handler"))))
 					})
 				})
-				Describe("`tailcall`", func() {
-					It("should interrupt handler with `RETURN` code", func() {
-						Expect(
-							execute(
-								"catch {error message} error msg {tailcall {idem handler}; unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-					It("should bypass `finally` handler", func() {
-						Expect(
-							execute(
-								"catch {error message} error msg {tailcall {idem handler}; unreachable} finally {unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-				})
 				Describe("`yield`", func() {
 					It("should interrupt handler with `YIELD` code", func() {
 						Expect(
@@ -2324,22 +2172,6 @@ var _ = Describe("Helena control flow commands", func() {
 						).To(Equal(RETURN(STR("handler"))))
 					})
 				})
-				Describe("`tailcall`", func() {
-					It("should interrupt handler with `RETURN` code", func() {
-						Expect(
-							execute(
-								"catch {break} break {tailcall {idem handler}; unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-					It("should bypass `finally` handler", func() {
-						Expect(
-							execute(
-								"catch {break} break {tailcall {idem handler}; unreachable} finally {unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-				})
 				Describe("`yield`", func() {
 					It("should interrupt handler with `YIELD` code", func() {
 						Expect(
@@ -2460,22 +2292,6 @@ var _ = Describe("Helena control flow commands", func() {
 						Expect(
 							execute(
 								"catch {continue} continue {return handler; unreachable} finally {unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-				})
-				Describe("`tailcall`", func() {
-					It("should interrupt handler with `RETURN` code", func() {
-						Expect(
-							execute(
-								"catch {continue} continue {tailcall {idem handler}; unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-					It("should bypass `finally` handler", func() {
-						Expect(
-							execute(
-								"catch {continue} continue {tailcall {idem handler}; unreachable} finally {unreachable}",
 							),
 						).To(Equal(RETURN(STR("handler"))))
 					})
@@ -2614,15 +2430,6 @@ var _ = Describe("Helena control flow commands", func() {
 						Expect(
 							execute(
 								"catch {error message} finally {return handler; unreachable}",
-							),
-						).To(Equal(RETURN(STR("handler"))))
-					})
-				})
-				Describe("`tailcall`", func() {
-					It("should interrupt handler with `RETURN` code", func() {
-						Expect(
-							execute(
-								"catch {error message} finally {tailcall {idem handler}; unreachable}",
 							),
 						).To(Equal(RETURN(STR("handler"))))
 					})

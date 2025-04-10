@@ -589,16 +589,6 @@ var _ = Describe("Helena lists", func() {
 								Expect(evaluate("get i")).To(Equal(INT(1)))
 							})
 						})
-						Describe("`tailcall`", func() {
-							It("should interrupt the loop with `RETURN` code", func() {
-								Expect(
-									execute(
-										"set i 0; list (a b c) foreach element {set i [+ $i 1]; tailcall {idem $element}; unreachable}",
-									),
-								).To(Equal(execute("return a")))
-								Expect(evaluate("get i")).To(Equal(INT(1)))
-							})
-						})
 						Describe("`yield`", func() {
 							It("should interrupt the body with `YIELD` code", func() {
 								Expect(
