@@ -84,7 +84,9 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 			return core.ERROR(`unknown command "` + subcommand + `"`)
 		}
 		command := metacommand.namespace.scope.ResolveNamedCommand(subcommand)
-		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
+		cmdline := make([]core.Value, 1, len(args)-2)
+		cmdline[0] = core.NewCommandValue(command)
+		cmdline = append(cmdline, args[3:]...)
 		program := metacommand.namespace.scope.CompileArgs(cmdline...)
 		return CreateContinuationValue(metacommand.namespace.scope, program)
 
@@ -194,10 +196,9 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 	command := namespace.scope.ResolveNamedCommand(subcommand)
-	cmdline := append(
-		[]core.Value{core.NewCommandValue(command)},
-		args[2:]...,
-	)
+	cmdline := make([]core.Value, 1, len(args)-1)
+	cmdline[0] = core.NewCommandValue(command)
+	cmdline = append(cmdline, args[2:]...)
 	program := namespace.scope.CompileArgs(cmdline...)
 	return CreateContinuationValue(namespace.scope, program)
 }

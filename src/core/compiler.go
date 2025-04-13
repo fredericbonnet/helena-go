@@ -47,6 +47,12 @@ func NewProgram(capturePositions bool, source *Source) *Program {
 	}
 	return &Program{}
 }
+func ReserveProgram(nbOpCodes int, nbConstants int) *Program {
+	return &Program{
+		OpCodes:   make([]OpCode, 0, nbOpCodes),
+		Constants: make([]Value, 0, nbConstants),
+	}
+}
 
 // Push a new opcode
 func (program *Program) PushOpCode(opCode OpCode, position *SourcePosition) {

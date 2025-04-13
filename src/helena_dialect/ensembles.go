@@ -69,7 +69,9 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 			return core.ERROR(`unknown command "` + subcommand + `"`)
 		}
 		command := metacommand.ensemble.scope.ResolveNamedCommand(subcommand)
-		cmdline := append([]core.Value{core.NewCommandValue(command)}, args[3:]...)
+		cmdline := make([]core.Value, 1, len(args)-2)
+		cmdline[0] = core.NewCommandValue(command)
+		cmdline = append(cmdline, args[3:]...)
 		program := scope.CompileArgs(cmdline...)
 		return CreateContinuationValue(scope, program)
 
@@ -150,7 +152,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 				" ?subcommand? ?arg ...?",
 		)
 	}
-	ensembleArgs := []core.Value{}
+	ensembleArgs := make([]core.Value, 0, minArgs-1)
 	getargs := func(_ string, value core.Value) core.Result {
 		ensembleArgs = append(ensembleArgs, value)
 		return core.OK(value)
@@ -189,10 +191,10 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 	command := ensemble.scope.ResolveNamedCommand(subcommand)
-	cmdline := append(append(
-		[]core.Value{core.NewCommandValue(command)},
-		ensembleArgs...),
-		args[minArgs+1:]...)
+	cmdline := make([]core.Value, 1, len(args)-1)
+	cmdline[0] = core.NewCommandValue(command)
+	cmdline = append(cmdline, ensembleArgs...)
+	cmdline = append(cmdline, args[minArgs+1:]...)
 	program := scope.CompileArgs(cmdline...)
 	return CreateContinuationValue(scope, program)
 }

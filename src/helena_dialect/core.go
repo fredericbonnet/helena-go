@@ -310,7 +310,7 @@ func (scope *Scope) CompileScriptValue(script core.ScriptValue) *core.Program {
 	return program
 }
 func (scope *Scope) CompileTupleValue(tuple core.TupleValue) *core.Program {
-	program := &core.Program{}
+	program := core.ReserveProgram(6, 1)
 	program.PushOpCode(core.OpCode_OPEN_FRAME, nil)
 	program.PushOpCode(core.OpCode_PUSH_CONSTANT, nil)
 	program.PushOpCode(core.OpCode_EXPAND_VALUE, nil)
@@ -321,7 +321,7 @@ func (scope *Scope) CompileTupleValue(tuple core.TupleValue) *core.Program {
 	return program
 }
 func (scope *Scope) CompileArgs(args ...core.Value) *core.Program {
-	program := &core.Program{}
+	program := core.ReserveProgram(4+len(args), len(args))
 	program.PushOpCode(core.OpCode_OPEN_FRAME, nil)
 	for _, arg := range args {
 		program.PushOpCode(core.OpCode_PUSH_CONSTANT, nil)
