@@ -61,6 +61,7 @@ var programStatePool = sync.Pool{
 
 func NewProcessStack() ProcessStack {
 	return ProcessStack{[]ProcessContext{}}
+	// return ProcessStack{make([]ProcessContext, 0, 16)} // Potential gain on PushProgram and PushContinuation
 }
 func (processStack *ProcessStack) Depth() uint {
 	return uint(len(processStack.stack))
@@ -101,8 +102,9 @@ type ProcessOptions struct {
 	CaptureErrorStack bool
 }
 type Process struct {
-	options ProcessOptions
-	stack   ProcessStack
+	options    ProcessOptions
+	stack      ProcessStack
+	lastResult core.Result
 }
 
 func NewProcess(scope *Scope, program *core.Program, options *ProcessOptions) *Process {
@@ -118,6 +120,9 @@ func NewProcess(scope *Scope, program *core.Program, options *ProcessOptions) *P
 }
 
 func (process *Process) Run() core.Result {
+	if process.stack.Depth() == 0 {
+		return process.lastResult
+	}
 	context := process.stack.CurrentContext()
 	result := context.scope.Execute(context.program, context.state)
 	for process.stack.Depth() > 0 {
@@ -179,11 +184,12 @@ func (process *Process) Run() core.Result {
 			}
 		}
 
-		if process.stack.Depth() == 1 {
+		process.stack.Pop()
+		if process.stack.Depth() == 0 {
 			// Reached bottom of stack, stop there
+			process.lastResult = result
 			break
 		}
-		process.stack.Pop()
 
 		context = process.stack.CurrentContext()
 		if _, ok := result.Value.(*ContinuationValue); ok {
