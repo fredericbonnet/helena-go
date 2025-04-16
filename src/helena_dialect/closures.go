@@ -118,7 +118,7 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
-			program := closure.scope.CompileArgs(closure.guard, result.Value)
+			program := closure.scope.CompilePair(closure.guard, result.Value)
 			return CreateContinuationValue(closure.scope, program)
 		})
 	} else {

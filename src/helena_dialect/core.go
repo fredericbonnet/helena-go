@@ -309,28 +309,40 @@ func (scope *Scope) CompileScriptValue(script core.ScriptValue) *core.Program {
 	script.Cache.Program = program
 	return program
 }
-func (scope *Scope) CompileTupleValue(tuple core.TupleValue) *core.Program {
-	program := core.ReserveProgram(6, 1)
-	program.PushOpCode(core.OpCode_OPEN_FRAME, nil)
-	program.PushOpCode(core.OpCode_PUSH_CONSTANT, nil)
-	program.PushOpCode(core.OpCode_EXPAND_VALUE, nil)
-	program.PushOpCode(core.OpCode_CLOSE_FRAME, nil)
-	program.PushOpCode(core.OpCode_EVALUATE_SENTENCE, nil)
-	program.PushOpCode(core.OpCode_PUSH_RESULT, nil)
-	program.PushConstant(tuple)
-	return program
+
+var compileTupleOpCodes = []core.OpCode{
+	core.OpCode_OPEN_FRAME,
+	core.OpCode_PUSH_CONSTANT,
+	core.OpCode_EXPAND_VALUE,
+	core.OpCode_CLOSE_FRAME,
+	core.OpCode_EVALUATE_SENTENCE,
+	core.OpCode_PUSH_RESULT,
 }
-func (scope *Scope) CompileArgs(args ...core.Value) *core.Program {
-	program := core.ReserveProgram(4+len(args), len(args))
-	program.PushOpCode(core.OpCode_OPEN_FRAME, nil)
-	for _, arg := range args {
-		program.PushOpCode(core.OpCode_PUSH_CONSTANT, nil)
-		program.PushConstant(arg)
-	}
-	program.PushOpCode(core.OpCode_CLOSE_FRAME, nil)
-	program.PushOpCode(core.OpCode_EVALUATE_SENTENCE, nil)
-	program.PushOpCode(core.OpCode_PUSH_RESULT, nil)
-	return program
+
+func (scope *Scope) CompileTupleValue(tuple core.TupleValue) *core.Program {
+	return core.LoadProgram(
+		compileTupleOpCodes,
+		[]core.Value{tuple},
+	)
+}
+
+var compilePairOpCodes = []core.OpCode{
+	core.OpCode_OPEN_FRAME,
+	core.OpCode_PUSH_CONSTANT,
+	core.OpCode_PUSH_CONSTANT,
+	core.OpCode_CLOSE_FRAME,
+	core.OpCode_EVALUATE_SENTENCE,
+	core.OpCode_PUSH_RESULT,
+}
+
+func (scope *Scope) CompilePair(arg1 core.Value, arg2 core.Value) *core.Program {
+	return core.LoadProgram(
+		compilePairOpCodes,
+		[]core.Value{arg1, arg2},
+	)
+}
+func (scope *Scope) CompileArgs(args []core.Value) *core.Program {
+	return scope.CompileTupleValue(core.NewTupleValue(args))
 }
 
 func (scope *Scope) PrepareProcess(program *core.Program) *Process {
@@ -499,11 +511,17 @@ func (scope *Scope) GetVariable(variable core.Value, def core.Value) core.Result
 	}
 	return core.ERROR(`cannot get "` + name + `": no such variable`)
 }
+
+var resolveValueOpCodes = []core.OpCode{
+	core.OpCode_PUSH_CONSTANT,
+	core.OpCode_RESOLVE_VALUE,
+}
+
 func (scope *Scope) ResolveValue(value core.Value) core.Result {
-	program := &core.Program{}
-	program.PushOpCode(core.OpCode_PUSH_CONSTANT, nil)
-	program.PushOpCode(core.OpCode_RESOLVE_VALUE, nil)
-	program.PushConstant(value)
+	program := core.LoadProgram(
+		resolveValueOpCodes,
+		[]core.Value{value},
+	)
 	return scope.Execute(program, nil)
 }
 

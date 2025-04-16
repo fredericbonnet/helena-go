@@ -387,7 +387,7 @@ func (ArgspecValue) setArgument(
 	setArgument func(name string, value core.Value) core.Result,
 ) core.Result {
 	if arg.Guard != nil {
-		program := scope.CompileArgs(arg.Guard, value)
+		program := scope.CompilePair(arg.Guard, value)
 		process := scope.PrepareProcess(program)
 		result := process.Run()
 		// TODO handle YIELD?

@@ -102,7 +102,7 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 					return core.ERROR("invalid source")
 				}
 				sources[iSource] = func(i int, data any, callback ContinuationCallback) core.Result {
-					program := subscope.CompileArgs(source, core.INT(int64(i)))
+					program := subscope.CompilePair(source, core.INT(int64(i)))
 					return CreateContinuationValueWithCallback(subscope, program, data, callback)
 				}
 			}

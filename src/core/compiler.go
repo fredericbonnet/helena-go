@@ -47,10 +47,10 @@ func NewProgram(capturePositions bool, source *Source) *Program {
 	}
 	return &Program{}
 }
-func ReserveProgram(nbOpCodes int, nbConstants int) *Program {
+func LoadProgram(opCodes []OpCode, constants []Value) *Program {
 	return &Program{
-		OpCodes:   make([]OpCode, 0, nbOpCodes),
-		Constants: make([]Value, 0, nbConstants),
+		OpCodes:   opCodes,
+		Constants: constants,
 	}
 }
 

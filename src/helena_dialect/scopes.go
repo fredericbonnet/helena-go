@@ -71,7 +71,7 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 		if !scope.scope.HasLocalCommand(command) {
 			return core.ERROR(`unknown command "` + command + `"`)
 		}
-		program := scope.scope.CompileArgs(args[2:]...)
+		program := scope.scope.CompileArgs(args[2:])
 		return CreateContinuationValue(scope.scope, program)
 
 	default:

@@ -72,7 +72,7 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 		cmdline := make([]core.Value, 1, len(args)-2)
 		cmdline[0] = core.NewCommandValue(command)
 		cmdline = append(cmdline, args[3:]...)
-		program := scope.CompileArgs(cmdline...)
+		program := scope.CompileArgs(cmdline)
 		return CreateContinuationValue(scope, program)
 
 	case "argspec":
@@ -152,21 +152,21 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 				" ?subcommand? ?arg ...?",
 		)
 	}
-	ensembleArgs := make([]core.Value, 0, minArgs-1)
-	getargs := func(_ string, value core.Value) core.Result {
-		ensembleArgs = append(ensembleArgs, value)
-		return core.OK(value)
-	}
-	result := ensemble.argspec.ApplyArguments(
-		scope,
-		args[1:minArgs],
-		0,
-		getargs,
-	)
-	if result.Code != core.ResultCode_OK {
-		return result
-	}
 	if uint(len(args)) == minArgs {
+		ensembleArgs := make([]core.Value, 0, minArgs-1)
+		getargs := func(_ string, value core.Value) core.Result {
+			ensembleArgs = append(ensembleArgs, value)
+			return core.OK(value)
+		}
+		result := ensemble.argspec.ApplyArguments(
+			scope,
+			args[1:minArgs],
+			0,
+			getargs,
+		)
+		if result.Code != core.ResultCode_OK {
+			return result
+		}
 		return core.OK(core.TUPLE(ensembleArgs))
 	}
 	result2, subcommand := core.ValueToString(args[minArgs])
@@ -193,9 +193,21 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 	command := ensemble.scope.ResolveNamedCommand(subcommand)
 	cmdline := make([]core.Value, 1, len(args)-1)
 	cmdline[0] = core.NewCommandValue(command)
-	cmdline = append(cmdline, ensembleArgs...)
+	getargs := func(_ string, value core.Value) core.Result {
+		cmdline = append(cmdline, value)
+		return core.OK(value)
+	}
+	result := ensemble.argspec.ApplyArguments(
+		scope,
+		args[1:minArgs],
+		0,
+		getargs,
+	)
+	if result.Code != core.ResultCode_OK {
+		return result
+	}
 	cmdline = append(cmdline, args[minArgs+1:]...)
-	program := scope.CompileArgs(cmdline...)
+	program := scope.CompileArgs(cmdline)
 	return CreateContinuationValue(scope, program)
 }
 func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {

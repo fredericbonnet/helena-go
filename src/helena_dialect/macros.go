@@ -112,7 +112,7 @@ func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 			if result.Code != core.ResultCode_OK {
 				return result
 			}
-			program := scope.CompileArgs(macro.guard, result.Value)
+			program := scope.CompilePair(macro.guard, result.Value)
 			return CreateContinuationValue(scope, program)
 		})
 	} else {
