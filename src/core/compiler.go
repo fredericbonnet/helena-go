@@ -803,7 +803,7 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 		case OpCode_RESOLVE_VALUE:
 			{
 				source := state.Pop()
-				result := executor.resolveValue(source)
+				result := executor.ResolveValue(source)
 				if result.Code != ResultCode_OK {
 					return result
 				}
@@ -933,7 +933,7 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 // - If source value is a tuple, resolve each of its elements recursively
 // - If source value is a qualified word, resolve source and apply selectors
 // - Else, resolve variable from the source string value
-func (executor *Executor) resolveValue(source Value) Result {
+func (executor *Executor) ResolveValue(source Value) Result {
 	switch source.Type() {
 	case ValueType_TUPLE:
 		return executor.resolveTuple(source.(TupleValue))
@@ -951,7 +951,7 @@ func (executor *Executor) resolveValue(source Value) Result {
 }
 
 func (executor *Executor) resolveQualified(qualified QualifiedValue) Result {
-	result := executor.resolveValue(qualified.Source)
+	result := executor.ResolveValue(qualified.Source)
 	if result.Code != ResultCode_OK {
 		return result
 	}
@@ -973,7 +973,7 @@ func (executor *Executor) resolveTuple(tuple TupleValue) Result {
 		case ValueType_TUPLE:
 			result = executor.resolveTuple(value.(TupleValue))
 		default:
-			result = executor.resolveValue(value)
+			result = executor.ResolveValue(value)
 		}
 		if result.Code != ResultCode_OK {
 			return result

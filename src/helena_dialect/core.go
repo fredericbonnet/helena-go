@@ -511,18 +511,8 @@ func (scope *Scope) GetVariable(variable core.Value, def core.Value) core.Result
 	}
 	return core.ERROR(`cannot get "` + name + `": no such variable`)
 }
-
-var resolveValueOpCodes = []core.OpCode{
-	core.OpCode_PUSH_CONSTANT,
-	core.OpCode_RESOLVE_VALUE,
-}
-
 func (scope *Scope) ResolveValue(value core.Value) core.Result {
-	program := core.LoadProgram(
-		resolveValueOpCodes,
-		[]core.Value{value},
-	)
-	return scope.Execute(program, nil)
+	return scope.executor.ResolveValue(value)
 }
 
 func (scope *Scope) RegisterCommand(name core.Value, command core.Command) core.Result {
