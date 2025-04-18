@@ -80,10 +80,10 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid command name")
 		}
-		if !metacommand.namespace.scope.HasLocalCommand(subcommand) {
+		command := metacommand.namespace.scope.ResolveLocalCommand(subcommand)
+		if command == nil {
 			return core.ERROR(`unknown command "` + subcommand + `"`)
 		}
-		command := metacommand.namespace.scope.ResolveNamedCommand(subcommand)
 		cmdline := make([]core.Value, 1, len(args)-2)
 		cmdline[0] = core.NewCommandValue(command)
 		cmdline = append(cmdline, args[3:]...)
@@ -184,7 +184,7 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 		if len(args) != 2 {
 			return ARITY_ERROR(NAMESPACE_COMMAND_PREFIX(args[0]) + " subcommands")
 		}
-		localCommands := namespace.scope.GetLocalCommands()
+		localCommands := namespace.scope.GetLocalCommandNames()
 		list := make([]core.Value, len(localCommands)+1)
 		list[0] = args[1]
 		for i, name := range localCommands {
@@ -192,10 +192,10 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 		}
 		return core.OK(core.LIST(list))
 	}
-	if !namespace.scope.HasLocalCommand(subcommand) {
+	command := namespace.scope.ResolveLocalCommand(subcommand)
+	if command == nil {
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
-	command := namespace.scope.ResolveNamedCommand(subcommand)
 	cmdline := make([]core.Value, 1, len(args)-1)
 	cmdline[0] = core.NewCommandValue(command)
 	cmdline = append(cmdline, args[2:]...)
@@ -217,10 +217,10 @@ func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandH
 		}
 		return core.OK(core.STR(signature + " subcommands"))
 	}
-	if !namespace.scope.HasLocalCommand(subcommand) {
+	command := namespace.scope.ResolveLocalCommand(subcommand)
+	if command == nil {
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
-	command := namespace.scope.ResolveNamedCommand(subcommand)
 	if c, ok := command.(core.CommandWithHelp); ok {
 		return c.Help(args[1:], core.CommandHelpOptions{
 			Prefix: signature + " " + subcommand,

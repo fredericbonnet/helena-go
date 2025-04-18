@@ -65,10 +65,10 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid command name")
 		}
-		if !metacommand.ensemble.scope.HasLocalCommand(subcommand) {
+		command := metacommand.ensemble.scope.ResolveLocalCommand(subcommand)
+		if command == nil {
 			return core.ERROR(`unknown command "` + subcommand + `"`)
 		}
-		command := metacommand.ensemble.scope.ResolveNamedCommand(subcommand)
 		cmdline := make([]core.Value, 1, len(args)-2)
 		cmdline[0] = core.NewCommandValue(command)
 		cmdline = append(cmdline, args[3:]...)
@@ -179,7 +179,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 				ENSEMBLE_COMMAND_PREFIX(args[0], ensemble.argspec) + " subcommands",
 			)
 		}
-		localCommands := ensemble.scope.GetLocalCommands()
+		localCommands := ensemble.scope.GetLocalCommandNames()
 		list := make([]core.Value, len(localCommands)+1)
 		list[0] = args[minArgs]
 		for i, name := range localCommands {
@@ -187,10 +187,10 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		}
 		return core.OK(core.LIST(list))
 	}
-	if !ensemble.scope.HasLocalCommand(subcommand) {
+	command := ensemble.scope.ResolveLocalCommand(subcommand)
+	if command == nil {
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
-	command := ensemble.scope.ResolveNamedCommand(subcommand)
 	cmdline := make([]core.Value, 1, len(args)-1)
 	cmdline[0] = core.NewCommandValue(command)
 	getargs := func(_ string, value core.Value) core.Result {
@@ -226,10 +226,10 @@ func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHel
 		}
 		return core.OK(core.STR(signature + " subcommands"))
 	}
-	if !ensemble.scope.HasLocalCommand(subcommand) {
+	command := ensemble.scope.ResolveLocalCommand(subcommand)
+	if command == nil {
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
-	command := ensemble.scope.ResolveNamedCommand(subcommand)
 	if c, ok := command.(core.CommandWithHelp); ok {
 		return c.Help(
 			append(append([]core.Value{args[minArgs]}, args[1:minArgs]...), args[minArgs+1:]...),

@@ -526,10 +526,10 @@ func (scope *Scope) RegisterCommand(name core.Value, command core.Command) core.
 func (scope *Scope) RegisterNamedCommand(name string, command core.Command) {
 	scope.Context.Commands[name] = command
 }
-func (scope *Scope) HasLocalCommand(name string) bool {
-	return scope.Context.Commands[name] != nil
+func (scope *Scope) ResolveLocalCommand(name string) core.Command {
+	return scope.Context.Commands[name]
 }
-func (scope *Scope) GetLocalCommands() []string {
+func (scope *Scope) GetLocalCommandNames() []string {
 	names := make([]string, 0, len(scope.Context.Commands))
 	for name := range scope.Context.Commands {
 		names = append(names, name)

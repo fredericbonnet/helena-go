@@ -68,7 +68,7 @@ func (scope *scopeCommand) Execute(args []core.Value, _ any) core.Result {
 		if result.Code != core.ResultCode_OK {
 			return core.ERROR("invalid command name")
 		}
-		if !scope.scope.HasLocalCommand(command) {
+		if scope.scope.ResolveLocalCommand(command) == nil {
 			return core.ERROR(`unknown command "` + command + `"`)
 		}
 		program := scope.scope.CompileArgs(args[2:])
