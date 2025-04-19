@@ -88,6 +88,12 @@ var _ = Describe("Helena ensembles", func() {
 				Expect(execute("ensemble {*a} {}")).To(Equal(
 					ERROR("ensemble arguments cannot be variadic"),
 				))
+				Expect(execute("ensemble {-a a} {}")).To(Equal(
+					ERROR("ensemble arguments cannot have options"),
+				))
+				Expect(execute("ensemble {-?a ?a} {}")).To(Equal(
+					ERROR("ensemble arguments cannot have options"),
+				))
 			})
 			Specify("invalid `name`", func() {
 				Expect(execute("ensemble [] {} {}")).To(Equal(

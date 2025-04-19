@@ -269,6 +269,9 @@ func (ensembleCmd) Execute(args []core.Value, context any) core.Result {
 	if argspec.Argspec.IsVariadic() {
 		return core.ERROR("ensemble arguments cannot be variadic")
 	}
+	if argspec.Argspec.HasOptions() {
+		return core.ERROR("ensemble arguments cannot have options")
+	}
 
 	subscope := scope.NewChildScope()
 	program := subscope.CompileScriptValue(body.(core.ScriptValue))
