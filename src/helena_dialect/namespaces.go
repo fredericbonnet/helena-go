@@ -85,7 +85,7 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 			return core.ERROR(`unknown command "` + subcommand + `"`)
 		}
 		cmdline := make([]core.Value, 1, len(args)-2)
-		cmdline[0] = core.NewCommandValue(command)
+		cmdline[0] = command
 		cmdline = append(cmdline, args[3:]...)
 		program := metacommand.namespace.scope.CompileArgs(cmdline)
 		return CreateContinuationValue(metacommand.namespace.scope, program)
@@ -197,7 +197,7 @@ func (namespace *namespaceCommand) Execute(args []core.Value, _ any) core.Result
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 	cmdline := make([]core.Value, 1, len(args)-1)
-	cmdline[0] = core.NewCommandValue(command)
+	cmdline[0] = command
 	cmdline = append(cmdline, args[2:]...)
 	program := namespace.scope.CompileArgs(cmdline)
 	return CreateContinuationValue(namespace.scope, program)
@@ -221,7 +221,7 @@ func (namespace *namespaceCommand) Help(args []core.Value, options core.CommandH
 	if command == nil {
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
-	if c, ok := command.(core.CommandWithHelp); ok {
+	if c, ok := command.Command().(core.CommandWithHelp); ok {
 		return c.Help(args[1:], core.CommandHelpOptions{
 			Prefix: signature + " " + subcommand,
 			Skip:   1,

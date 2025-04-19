@@ -70,7 +70,7 @@ func (metacommand *ensembleMetacommand) Execute(args []core.Value, context any) 
 			return core.ERROR(`unknown command "` + subcommand + `"`)
 		}
 		cmdline := make([]core.Value, 1, len(args)-2)
-		cmdline[0] = core.NewCommandValue(command)
+		cmdline[0] = command
 		cmdline = append(cmdline, args[3:]...)
 		program := scope.CompileArgs(cmdline)
 		return CreateContinuationValue(scope, program)
@@ -192,7 +192,7 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 	cmdline := make([]core.Value, 1, len(args)-1)
-	cmdline[0] = core.NewCommandValue(command)
+	cmdline[0] = command
 	getargs := func(_ string, value core.Value) core.Result {
 		cmdline = append(cmdline, value)
 		return core.OK(value)
@@ -230,7 +230,7 @@ func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHel
 	if command == nil {
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
-	if c, ok := command.(core.CommandWithHelp); ok {
+	if c, ok := command.Command().(core.CommandWithHelp); ok {
 		return c.Help(
 			append(append([]core.Value{args[minArgs]}, args[1:minArgs]...), args[minArgs+1:]...),
 			core.CommandHelpOptions{

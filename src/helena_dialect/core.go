@@ -222,7 +222,7 @@ type scopeContext struct {
 	parent    *scopeContext
 	Constants map[string]core.Value
 	Variables map[string]core.Value
-	Commands  map[string]core.Command
+	Commands  map[string]core.CommandValue
 }
 
 func newScopeContext(parent *scopeContext) *scopeContext {
@@ -230,7 +230,7 @@ func newScopeContext(parent *scopeContext) *scopeContext {
 		parent:    parent,
 		Constants: map[string]core.Value{},
 		Variables: map[string]core.Value{},
-		Commands:  map[string]core.Command{},
+		Commands:  map[string]core.CommandValue{},
 	}
 }
 
@@ -394,11 +394,21 @@ func (scope *Scope) ResolveNamedCommand(name string) core.Command {
 	for context != nil {
 		command := context.Commands[name]
 		if command != nil {
-			return command
+			return command.Command()
 		}
 		context = context.parent
 	}
 	return nil
+}
+func (scope *Scope) ResolveLocalCommand(name string) core.CommandValue {
+	return scope.Context.Commands[name]
+}
+func (scope *Scope) GetLocalCommandNames() []string {
+	names := make([]string, 0, len(scope.Context.Commands))
+	for name := range scope.Context.Commands {
+		names = append(names, name)
+	}
+	return names
 }
 
 func (scope *Scope) ClearLocals() {
@@ -524,17 +534,7 @@ func (scope *Scope) RegisterCommand(name core.Value, command core.Command) core.
 	return core.OK(core.NIL)
 }
 func (scope *Scope) RegisterNamedCommand(name string, command core.Command) {
-	scope.Context.Commands[name] = command
-}
-func (scope *Scope) ResolveLocalCommand(name string) core.Command {
-	return scope.Context.Commands[name]
-}
-func (scope *Scope) GetLocalCommandNames() []string {
-	names := make([]string, 0, len(scope.Context.Commands))
-	for name := range scope.Context.Commands {
-		names = append(names, name)
-	}
-	return names
+	scope.Context.Commands[name] = core.NewCommandValue(command)
 }
 
 type ExpandPrefixState struct {
