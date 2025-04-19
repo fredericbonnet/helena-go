@@ -558,6 +558,11 @@ var _ = Describe("Helena namespaces", func() {
 								ERROR(`cannot resolve imported command "a"`),
 							))
 						})
+						Specify("unresolved command", func() {
+							Expect(execute("[namespace {}] import idem")).To(Equal(
+								ERROR(`cannot resolve imported command "idem"`),
+							))
+						})
 						Specify("invalid import name", func() {
 							Expect(execute("[namespace {}] import []")).To(Equal(
 								ERROR("invalid import name"),

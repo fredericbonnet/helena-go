@@ -108,11 +108,11 @@ func (metacommand *namespaceMetacommand) Execute(args []core.Value, context any)
 		} else {
 			alias = name
 		}
-		command := metacommand.namespace.scope.ResolveNamedCommand(name)
+		command := metacommand.namespace.scope.ResolveLocalCommand(name)
 		if command == nil {
 			return core.ERROR(`cannot resolve imported command "` + name + `"`)
 		}
-		scope.RegisterNamedCommand(alias, command)
+		scope.RegisterNamedCommand(alias, command.Command())
 		return core.OK(core.NIL)
 
 	default:
