@@ -93,6 +93,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(0)),
 						HaveField("NbOptional", uint(0)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", false),
 					))
 					Expect(value.Argspec.Args).To(BeEmpty())
 				})
@@ -113,6 +114,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(1)),
 						HaveField("NbOptional", uint(0)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", false),
 					))
 					Expect(value.Argspec.Args).To(Equal([]Argument{{Name: "a", Type: ArgumentType_REQUIRED}}))
 				})
@@ -135,6 +137,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(2)),
 						HaveField("NbOptional", uint(0)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", false),
 					))
 					Expect(value.Argspec.Args).To(Equal([]Argument{
 						{Name: "a", Type: ArgumentType_REQUIRED},
@@ -160,6 +163,7 @@ var _ = Describe("Helena argument handling", func() {
 							HaveField("NbRequired", uint(0)),
 							HaveField("NbOptional", uint(0)),
 							HaveField("HasRemainder", true),
+							HaveField("HasGuards", false),
 						))
 						Expect(value.Argspec.Args).To(Equal([]Argument{
 							{Name: "*", Type: ArgumentType_REMAINDER},
@@ -194,6 +198,7 @@ var _ = Describe("Helena argument handling", func() {
 							HaveField("NbRequired", uint(0)),
 							HaveField("NbOptional", uint(0)),
 							HaveField("HasRemainder", true),
+							HaveField("HasGuards", false),
 						))
 						Expect(value.Argspec.Args).To(Equal([]Argument{
 							{Name: "args", Type: ArgumentType_REMAINDER},
@@ -301,6 +306,7 @@ var _ = Describe("Helena argument handling", func() {
 							HaveField("NbRequired", uint(0)),
 							HaveField("NbOptional", uint(1)),
 							HaveField("HasRemainder", false),
+							HaveField("HasGuards", false),
 						))
 						Expect(value.Argspec.Args).To(Equal([]Argument{
 							{Name: "a", Type: ArgumentType_OPTIONAL},
@@ -330,6 +336,7 @@ var _ = Describe("Helena argument handling", func() {
 							HaveField("NbRequired", uint(0)),
 							HaveField("NbOptional", uint(2)),
 							HaveField("HasRemainder", false),
+							HaveField("HasGuards", false),
 						))
 						Expect(value.Argspec.Args).To(Equal([]Argument{
 							{Name: "a", Type: ArgumentType_OPTIONAL},
@@ -420,6 +427,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(0)),
 						HaveField("NbOptional", uint(1)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", false),
 					))
 					Expect(value.Argspec.Args).To(Equal([]Argument{
 						{Name: "a", Type: ArgumentType_OPTIONAL, Default: STR("val")},
@@ -476,6 +484,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(1)),
 						HaveField("NbOptional", uint(0)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", true),
 					))
 					Expect(value.Argspec.Args).To(Equal([]Argument{
 						{Name: "a", Type: ArgumentType_REQUIRED, Guard: STR("list")},
@@ -487,6 +496,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(0)),
 						HaveField("NbOptional", uint(1)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", true),
 					))
 					Expect(value.Argspec.Args).To(Equal([]Argument{
 						{Name: "a", Type: ArgumentType_OPTIONAL, Guard: STR("list")},
@@ -498,6 +508,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(0)),
 						HaveField("NbOptional", uint(1)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", true),
 					))
 					Expect(value.Argspec.Args).To(Equal([]Argument{
 						{
@@ -676,6 +687,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(2)),
 						HaveField("NbOptional", uint(0)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", false),
 					))
 					Expect(value.Argspec.Args).To(Equal([]Argument{
 						{
@@ -767,6 +779,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(0)),
 						HaveField("NbOptional", uint(0)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", false),
 					))
 					Expect(value.Argspec.Args).To(Equal([]Argument{
 						{
@@ -815,6 +828,7 @@ var _ = Describe("Helena argument handling", func() {
 						HaveField("NbRequired", uint(0)),
 						HaveField("NbOptional", uint(0)),
 						HaveField("HasRemainder", false),
+						HaveField("HasGuards", false),
 					))
 					Expect(value.Argspec.Args).To(Equal([]Argument{
 						{

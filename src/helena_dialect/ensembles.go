@@ -193,18 +193,23 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 	}
 	cmdline := make([]core.Value, 1, len(args)-1)
 	cmdline[0] = command
-	getargs := func(_ string, value core.Value) core.Result {
-		cmdline = append(cmdline, value)
-		return core.OK(value)
-	}
-	result := ensemble.argspec.ApplyArguments(
-		scope,
-		args[1:minArgs],
-		0,
-		getargs,
-	)
-	if result.Code != core.ResultCode_OK {
-		return result
+	if !ensemble.argspec.Argspec.HasGuards {
+		// If we have no guards to apply then can just copy the args over
+		cmdline = append(cmdline, args[1:minArgs]...)
+	} else {
+		getargs := func(_ string, value core.Value) core.Result {
+			cmdline = append(cmdline, value)
+			return core.OK(value)
+		}
+		result := ensemble.argspec.ApplyArguments(
+			scope,
+			args[1:minArgs],
+			0,
+			getargs,
+		)
+		if result.Code != core.ResultCode_OK {
+			return result
+		}
 	}
 	cmdline = append(cmdline, args[minArgs+1:]...)
 	program := scope.CompileArgs(cmdline)

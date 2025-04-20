@@ -25,12 +25,14 @@ type Argspec struct {
 	NbOptional   uint
 	HasRemainder bool
 	OptionSlots  map[string]uint
+	HasGuards    bool
 }
 
 func NewArgspec(args []Argument) Argspec {
 	nbRequired := uint(0)
 	nbOptional := uint(0)
 	hasRemainder := false
+	hasGuard := false
 	var optionSlots map[string]uint
 	for i, arg := range args {
 		if arg.Option != nil {
@@ -53,8 +55,11 @@ func NewArgspec(args []Argument) Argspec {
 				hasRemainder = true
 			}
 		}
+		if arg.Guard != nil {
+			hasGuard = true
+		}
 	}
-	return Argspec{args, nbRequired, nbOptional, hasRemainder, optionSlots}
+	return Argspec{args, nbRequired, nbOptional, hasRemainder, optionSlots, hasGuard}
 }
 func (argspec Argspec) IsVariadic() bool {
 	return (argspec.NbOptional > 0) || argspec.HasRemainder
