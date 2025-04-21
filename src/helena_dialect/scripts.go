@@ -43,14 +43,17 @@ func newScriptCommand(scope *Scope) *scriptCommand {
 	list.ensemble = NewEnsembleCommand(list.scope, argspec)
 	return list
 }
-func (script *scriptCommand) Execute(args []core.Value, context any) core.Result {
+func (cmd *scriptCommand) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 2 {
 		return valueToScript(args[1])
 	}
-	return script.ensemble.Execute(args, context)
+	return cmd.ensemble.Execute(args, context)
 }
-func (script *scriptCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
-	return script.ensemble.Help(args, options, context)
+func (cmd *scriptCommand) Resume(result core.Result, context any) core.Result {
+	return cmd.ensemble.Resume(result, context)
+}
+func (cmd *scriptCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
+	return cmd.ensemble.Help(args, options, context)
 }
 
 const SCRIPT_LENGTH_SIGNATURE = "script value length"

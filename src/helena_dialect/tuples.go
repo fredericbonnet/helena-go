@@ -14,14 +14,17 @@ func newTupleCommand(scope *Scope) *tupleCommand {
 	tuple.ensemble = NewEnsembleCommand(tuple.scope, argspec)
 	return tuple
 }
-func (tuple *tupleCommand) Execute(args []core.Value, context any) core.Result {
+func (cmd *tupleCommand) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 2 {
 		return ValueToTuple(args[1])
 	}
-	return tuple.ensemble.Execute(args, context)
+	return cmd.ensemble.Execute(args, context)
 }
-func (tuple *tupleCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
-	return tuple.ensemble.Help(args, options, context)
+func (cmd *tupleCommand) Resume(result core.Result, context any) core.Result {
+	return cmd.ensemble.Resume(result, context)
+}
+func (cmd *tupleCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
+	return cmd.ensemble.Help(args, options, context)
 }
 
 const TUPLE_LENGTH_SIGNATURE = "tuple value length"

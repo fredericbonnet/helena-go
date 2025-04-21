@@ -14,14 +14,17 @@ func newDictCommand(scope *Scope) *dictCommand {
 	dict.ensemble = NewEnsembleCommand(dict.scope, argspec)
 	return dict
 }
-func (dict *dictCommand) Execute(args []core.Value, context any) core.Result {
+func (cmd *dictCommand) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 2 {
 		return valueToDictionaryValue(args[1])
 	}
-	return dict.ensemble.Execute(args, context)
+	return cmd.ensemble.Execute(args, context)
 }
-func (dict *dictCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
-	return dict.ensemble.Help(args, options, context)
+func (cmd *dictCommand) Resume(result core.Result, context any) core.Result {
+	return cmd.ensemble.Resume(result, context)
+}
+func (cmd *dictCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
+	return cmd.ensemble.Help(args, options, context)
 }
 
 const DICT_SIZE_SIGNATURE = "dict value size"

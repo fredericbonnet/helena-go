@@ -132,6 +132,10 @@ type EnsembleCommand struct {
 	scope       *Scope
 	argspec     ArgspecValue
 }
+type ensembleSubcommandState struct {
+	subcommand core.Command
+	result     core.Result
+}
 
 func NewEnsembleCommand(scope *Scope, argspec ArgspecValue) *EnsembleCommand {
 	ensemble := &EnsembleCommand{}
@@ -191,17 +195,25 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 	if command == nil {
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
-	cmdline := make([]core.Value, 1, len(args)-1)
-	cmdline[0] = command
+	var result core.Result
 	if !ensemble.argspec.Argspec.HasGuards {
-		// If we have no guards to apply then can just copy the args over
-		cmdline = append(cmdline, args[1:minArgs]...)
+		// If we have no guards to apply then we can just modify the args array
+		// in place and avoid the overhead of copying it to a new array. This
+		// provides a huge speedup for most subcommand dispatches.
+		old := args[minArgs]
+		copy(args[2:minArgs+1], args[1:minArgs])
+		args[1] = command
+		result = command.Command().Execute(args[1:], scope)
+		copy(args[1:minArgs], args[2:minArgs+1])
+		args[minArgs] = old
 	} else {
+		cmdline := make([]core.Value, 1, len(args)-1)
+		cmdline[0] = command
 		getargs := func(_ string, value core.Value) core.Result {
 			cmdline = append(cmdline, value)
 			return core.OK(value)
 		}
-		result := ensemble.argspec.ApplyArguments(
+		result = ensemble.argspec.ApplyArguments(
 			scope,
 			args[1:minArgs],
 			0,
@@ -210,10 +222,36 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		if result.Code != core.ResultCode_OK {
 			return result
 		}
+		cmdline = append(cmdline, args[minArgs+1:]...)
+		result = command.Command().Execute(cmdline, scope)
 	}
-	cmdline = append(cmdline, args[minArgs+1:]...)
-	program := scope.CompileArgs(cmdline)
-	return CreateContinuationValue(scope, program)
+	if result.Code == core.ResultCode_YIELD {
+		state := ensembleSubcommandState{command.Command(), result}
+		return core.YIELD_STATE(result.Value, state)
+	}
+	return result
+}
+func (ensemble *EnsembleCommand) Resume(result core.Result, context any) core.Result {
+	scope := context.(*Scope)
+	state := result.Data.(ensembleSubcommandState)
+	subcommand := state.subcommand
+	commandResult := state.result
+	resumable, ok := subcommand.(core.ResumableCommand)
+	if !ok {
+		return core.OK(result.Value)
+	}
+	result2 := resumable.Resume(
+		core.Result{
+			Code:  commandResult.Code,
+			Value: result.Value,
+			Data:  commandResult.Data,
+		},
+		scope,
+	)
+	if result2.Code == core.ResultCode_YIELD {
+		return core.YIELD_STATE(result2.Value, ensembleSubcommandState{subcommand, result2})
+	}
+	return result2
 }
 func (ensemble *EnsembleCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	signature := ENSEMBLE_HELP_PREFIX(args[0], ensemble.argspec, options)

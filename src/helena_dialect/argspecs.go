@@ -423,6 +423,9 @@ func (argspec argspecCommand) Execute(args []core.Value, context any) core.Resul
 	}
 	return argspec.ensemble.Execute(args, scope)
 }
+func (argspec argspecCommand) Resume(result core.Result, context any) core.Result {
+	return argspec.ensemble.Resume(result, context)
+}
 func (argspec argspecCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	return argspec.ensemble.Help(args, options, context)
 }

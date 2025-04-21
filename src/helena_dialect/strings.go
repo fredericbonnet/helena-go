@@ -21,6 +21,9 @@ func (cmd *stringCommand) Execute(args []core.Value, context any) core.Result {
 	}
 	return cmd.ensemble.Execute(args, context)
 }
+func (cmd *stringCommand) Resume(result core.Result, context any) core.Result {
+	return cmd.ensemble.Resume(result, context)
+}
 func (cmd *stringCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	return cmd.ensemble.Help(args, options, context)
 }

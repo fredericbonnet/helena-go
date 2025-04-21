@@ -17,15 +17,18 @@ func newListCommand(scope *Scope) *listCommand {
 	list.ensemble = NewEnsembleCommand(list.scope, argspec)
 	return list
 }
-func (list *listCommand) Execute(args []core.Value, context any) core.Result {
+func (cmd *listCommand) Execute(args []core.Value, context any) core.Result {
 	if len(args) == 2 {
 		result, _ := ValueToList(args[1])
 		return result
 	}
-	return list.ensemble.Execute(args, context)
+	return cmd.ensemble.Execute(args, context)
 }
-func (list *listCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
-	return list.ensemble.Help(args, options, context)
+func (cmd *listCommand) Resume(result core.Result, context any) core.Result {
+	return cmd.ensemble.Resume(result, context)
+}
+func (cmd *listCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
+	return cmd.ensemble.Help(args, options, context)
 }
 
 const LIST_LENGTH_SIGNATURE = "list value length"

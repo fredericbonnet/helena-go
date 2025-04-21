@@ -179,6 +179,9 @@ func (cmd *intCommand) Execute(args []core.Value, context any) core.Result {
 	}
 	return cmd.ensemble.Execute(args, context)
 }
+func (cmd *intCommand) Resume(result core.Result, context any) core.Result {
+	return cmd.ensemble.Resume(result, context)
+}
 func (cmd *intCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	return cmd.ensemble.Help(args, options, context)
 }
@@ -201,6 +204,9 @@ func (cmd *realCommand) Execute(args []core.Value, context any) core.Result {
 		return result
 	}
 	return cmd.ensemble.Execute(args, context)
+}
+func (cmd *realCommand) Resume(result core.Result, context any) core.Result {
+	return cmd.ensemble.Resume(result, context)
 }
 func (cmd *realCommand) Help(args []core.Value, options core.CommandHelpOptions, context any) core.Result {
 	return cmd.ensemble.Help(args, options, context)

@@ -537,7 +537,7 @@ func (scope *Scope) RegisterNamedCommand(name string, command core.Command) {
 	scope.Context.Commands[name] = core.NewCommandValue(command)
 }
 
-type ExpandPrefixState struct {
+type expandPrefixState struct {
 	command core.Command
 	result  core.Result
 }
@@ -561,14 +561,14 @@ func (ExpandPrefixCommand) Execute(args []core.Value, context any) core.Result {
 	result := command.Execute(args2, scope)
 	if result.Code == core.ResultCode_YIELD {
 
-		state := ExpandPrefixState{command, result}
-		return core.YIELD_STATE(state.result.Value, state)
+		state := expandPrefixState{command, result}
+		return core.YIELD_STATE(result.Value, state)
 	}
 	return result
 }
 func (ExpandPrefixCommand) Resume(result core.Result, context any) core.Result {
 	scope := context.(*Scope)
-	state := result.Data.(ExpandPrefixState)
+	state := result.Data.(expandPrefixState)
 	command := state.command
 	commandResult := state.result
 	resumable, ok := command.(core.ResumableCommand)
@@ -584,7 +584,7 @@ func (ExpandPrefixCommand) Resume(result core.Result, context any) core.Result {
 		scope,
 	)
 	if result2.Code == core.ResultCode_YIELD {
-		return core.YIELD_STATE(result2.Value, ExpandPrefixState{command, result2})
+		return core.YIELD_STATE(result2.Value, expandPrefixState{command, result2})
 	}
 	return result2
 }
