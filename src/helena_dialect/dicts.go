@@ -1,6 +1,10 @@
 package helena_dialect
 
-import "helena/core"
+import (
+	"helena/core"
+
+	"golang.org/x/exp/maps"
+)
 
 type dictCommand struct {
 	scope    *Scope
@@ -145,10 +149,7 @@ func (dictAddCmd) Execute(args []core.Value, _ any) core.Result {
 	if result2.Code != core.ResultCode_OK {
 		return core.ERROR("invalid key")
 	}
-	clone := map[string]core.Value{}
-	for k, v := range map_ {
-		clone[k] = v
-	}
+	clone := maps.Clone(map_)
 	clone[key] = args[3]
 	return core.OK(core.DICT(clone))
 }
@@ -171,10 +172,7 @@ func (dictRemoveCmd) Execute(args []core.Value, _ any) core.Result {
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
-	clone := map[string]core.Value{}
-	for k, v := range map_ {
-		clone[k] = v
-	}
+	clone := maps.Clone(map_)
 	for i := 2; i < len(args); i++ {
 		result, key := core.ValueToString(args[i])
 		if result.Code != core.ResultCode_OK {
@@ -200,18 +198,13 @@ func (dictMergeCmd) Execute(args []core.Value, _ any) core.Result {
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
-	clone := map[string]core.Value{}
-	for k, v := range map_ {
-		clone[k] = v
-	}
+	clone := maps.Clone(map_)
 	for i := 2; i < len(args); i++ {
 		result2, map2 := valueToMap(args[i])
 		if result2.Code != core.ResultCode_OK {
 			return result2
 		}
-		for key, value := range map2 {
-			clone[key] = value
-		}
+		maps.Copy(clone, map2)
 	}
 	return core.OK(core.DICT(clone))
 }
