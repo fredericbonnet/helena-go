@@ -82,6 +82,22 @@ func (picolCmd) Execute(args []core.Value, _ any) core.Result {
 	return scope.Evaluator.EvaluateScript(script)
 }
 
+type loadCmd struct{}
+
+func (loadCmd) Execute(args []core.Value, _ any) core.Result {
+	if len(args) != 3 {
+		return helena_dialect.ARITY_ERROR("load path name")
+	}
+	_, path := core.ValueToString(args[1])
+	_, name := core.ValueToString(args[2])
+	err := loadNativeModule(path, name)
+	if err == nil {
+		return core.OK(core.NIL)
+	} else {
+		return core.ERROR(fmt.Sprint(err))
+	}
+}
+
 func initScope() *helena_dialect.Scope {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -100,11 +116,29 @@ func initScope() *helena_dialect.Scope {
 	// Embedded picol dialect
 	rootScope.RegisterNamedCommand("picol", picolCmd{})
 
+	// Static native module loading
+	rootScope.RegisterNamedCommand("load", loadCmd{})
+
 	// Native modules
 	registerNativeModule("go:slog", "slog", native.SlogCmd{})
 	registerNativeModule("go:os", "os", native.OsCmd{})
 
 	return rootScope
+}
+
+var staticNativeModules = map[string]func() *helena_dialect.Module{}
+
+func StaticLoad(path string, initModule func() *helena_dialect.Module) {
+	staticNativeModules[path] = initModule
+}
+
+func loadNativeModule(path string, moduleName string) error {
+	initModule := staticNativeModules[path]
+	if initModule == nil {
+		return fmt.Errorf("native module %s not found", path)
+	}
+	moduleRegistry.Register(moduleName, initModule())
+	return nil
 }
 
 func source(path string) {
@@ -120,17 +154,17 @@ func source(path string) {
 	}
 }
 
-// function registerNativeModule(
-//   moduleName: string,
-//   exportName: string,
-//   command: Command
-// ) {
-//   const scope = new Scope();
-//   const exports = new Map();
-//   scope.registerNamedCommand(exportName, command);
-//   exports.set(exportName, STR(exportName));
-//   moduleRegistry.register(moduleName, new Module(scope, exports));
-// }
+func registerNativeModule(
+	moduleName string,
+	exportName string,
+	command core.Command,
+) {
+	scope := helena_dialect.NewRootScope(nil)
+	exports := &helena_dialect.Exports{}
+	scope.RegisterNamedCommand(exportName, command)
+	(*exports)[exportName] = core.STR(exportName)
+	moduleRegistry.Register(moduleName, helena_dialect.NewModule(scope, exports))
+}
 
 func prompt() {
 	rl, err := readline.NewEx(&readline.Config{
@@ -302,19 +336,6 @@ func resultWriter(output any) string {
 	} else {
 		return color.GreenString(value)
 	}
-}
-
-func registerNativeModule(
-	moduleName string,
-	exportName string,
-	command core.Command,
-) {
-	scope := helena_dialect.NewRootScope(nil)
-	exports := &helena_dialect.Exports{}
-	scope.RegisterNamedCommand(exportName, command)
-	(*exports)[exportName] = core.STR(exportName)
-	moduleRegistry.Register(moduleName, helena_dialect.NewModule(scope, exports))
-
 }
 
 func Cli() {

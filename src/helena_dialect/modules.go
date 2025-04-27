@@ -46,15 +46,15 @@ func MODULE_HELP_PREFIX(name core.Value, options core.CommandHelpOptions) string
 
 type Module struct {
 	value   core.Value
-	scope   *Scope
-	exports *Exports
+	Scope   *Scope
+	Exports *Exports
 }
 
 func NewModule(scope *Scope, exports *Exports) *Module {
 	module := &Module{}
 	module.value = core.NewCommandValue(module)
-	module.scope = scope
-	module.exports = exports
+	module.Scope = scope
+	module.Exports = exports
 	return module
 }
 
@@ -84,9 +84,9 @@ func (module *Module) Execute(args []core.Value, context any) core.Result {
 		if len(args) != 2 {
 			return ARITY_ERROR(MODULE_COMMAND_PREFIX(args[0]) + " exports")
 		}
-		values := make([]core.Value, len(*module.exports))
+		values := make([]core.Value, len(*module.Exports))
 		i := 0
-		for _, value := range *module.exports {
+		for _, value := range *module.Exports {
 			values[i] = value
 			i++
 		}
@@ -105,8 +105,8 @@ func (module *Module) Execute(args []core.Value, context any) core.Result {
 		return importCommand(
 			args[2],
 			aliasName,
-			module.exports,
-			module.scope,
+			module.Exports,
+			module.Scope,
 			scope,
 		)
 
@@ -411,8 +411,8 @@ func (cmd *importCmd) Execute(args []core.Value, context any) core.Result {
 						result := importCommand(
 							values[0],
 							values[1],
-							module.exports,
-							module.scope,
+							module.Exports,
+							module.Scope,
 							scope,
 						)
 						if result.Code != core.ResultCode_OK {
@@ -422,8 +422,8 @@ func (cmd *importCmd) Execute(args []core.Value, context any) core.Result {
 						result := importCommand(
 							name,
 							name,
-							module.exports,
-							module.scope,
+							module.Exports,
+							module.Scope,
 							scope,
 						)
 						if result.Code != core.ResultCode_OK {
