@@ -250,12 +250,18 @@ func (listReplaceCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) 
 	return core.OK(core.STR(LIST_REPLACE_SIGNATURE))
 }
 
-const LIST_SORT_SIGNATURE = "list value sort"
+const LIST_SORT_SIGNATURE = "list value sort ?comparator?"
 
 type listSortCmd struct{}
 
-func (listSortCmd) Execute(args []core.Value, _ any) core.Result {
-	if len(args) != 2 {
+func (listSortCmd) Execute(args []core.Value, context any) core.Result {
+	scope := context.(*Scope)
+	var comparator core.Value
+	switch len(args) {
+	case 2:
+	case 3:
+		comparator = args[2]
+	default:
 		return ARITY_ERROR(LIST_SORT_SIGNATURE)
 	}
 	result, values := ValueToArray(args[1])
@@ -264,32 +270,58 @@ func (listSortCmd) Execute(args []core.Value, _ any) core.Result {
 	}
 	values2 := append([]core.Value{}, values...)
 	result = core.OK(core.NIL)
-	slices.SortFunc(values2, func(a, b core.Value) int {
-		resulta, sa := core.ValueToString(a)
-		if resulta.Code != core.ResultCode_OK {
-			result = resulta
-			return 0
-		}
-		resultb, sb := core.ValueToString(b)
-		if resultb.Code != core.ResultCode_OK {
-			result = resultb
-			return 0
-		}
-		if sa < sb {
-			return -1
-		} else if sa > sb {
-			return 1
-		} else {
-			return 0
-		}
-	})
+	if comparator != nil {
+		// Sort by comparator result
+		slices.SortFunc(values2, func(a, b core.Value) int {
+			program := scope.CompileArgs([]core.Value{comparator, a, b})
+			process := scope.PrepareProcess(program)
+			resultc := process.Run()
+			if resultc.Code != core.ResultCode_OK {
+				result = resultc
+				return 0
+			}
+			resulti, i := core.ValueToInteger(resultc.Value)
+			if resulti.Code != core.ResultCode_OK {
+				result = resulti
+				return 0
+			}
+			if i < 0 {
+				return -1
+			} else if i > 0 {
+				return 1
+			} else {
+				return 0
+			}
+		})
+	} else {
+		// Default sort by string value
+		slices.SortFunc(values2, func(a, b core.Value) int {
+			resulta, sa := core.ValueToString(a)
+			if resulta.Code != core.ResultCode_OK {
+				result = resulta
+				return 0
+			}
+			resultb, sb := core.ValueToString(b)
+			if resultb.Code != core.ResultCode_OK {
+				result = resultb
+				return 0
+			}
+			if sa < sb {
+				return -1
+			} else if sa > sb {
+				return 1
+			} else {
+				return 0
+			}
+		})
+	}
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
 	return core.OK(core.LIST(values2))
 }
 func (listSortCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
-	if len(args) > 2 {
+	if len(args) > 3 {
 		return ARITY_ERROR(LIST_SORT_SIGNATURE)
 	}
 	return core.OK(core.STR(LIST_SORT_SIGNATURE))

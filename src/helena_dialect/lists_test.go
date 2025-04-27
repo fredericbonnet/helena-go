@@ -496,23 +496,40 @@ var _ = Describe("Helena lists", func() {
 				Describe("`sort`", func() {
 					Specify("usage", func() {
 						Expect(evaluate("help list () sort")).To(Equal(
-							STR("list value sort"),
+							STR("list value sort ?comparator?"),
 						))
 					})
 
-					It("should sort elements as strings in lexical order", func() {
-						Expect(evaluate("list (c a d b) sort")).To(Equal(
-							evaluate("list (a b c d)"),
-						))
+					Describe("no comparator", func() {
+						It("should sort elements as strings in lexical order", func() {
+							Expect(evaluate("list (c a d b) sort")).To(Equal(
+								evaluate("list (a b c d)"),
+							))
+						})
+						Specify("values with no string representation", func() {
+							Expect(execute("list ([] ()) sort")).To(Equal(
+								ERROR("value has no string representation"),
+							))
+						})
+					})
+					Describe("comparator", func() {
+						It("should sort elements according to the comparator result", func() {
+							Expect(evaluate("list (3 1 2 4) sort -")).To(Equal(
+								evaluate("list (1 2 3 4)"),
+							))
+							Expect(
+								evaluate("list (3 1 2 4) sort [[macro {a b} {$b - $a}]]"),
+							).To(Equal(evaluate("list (4 3 2 1)")))
+						})
 					})
 
 					Describe("Exceptions", func() {
 						Specify("wrong arity", func() {
-							Expect(execute("list (a b c) sort a")).To(Equal(
-								ERROR(`wrong # args: should be "list value sort"`),
+							Expect(execute("list (a b c) sort a b")).To(Equal(
+								ERROR(`wrong # args: should be "list value sort ?comparator?"`),
 							))
-							Expect(execute("help list (a b c) sort a")).To(Equal(
-								ERROR(`wrong # args: should be "list value sort"`),
+							Expect(execute("help list (a b c) sort a b")).To(Equal(
+								ERROR(`wrong # args: should be "list value sort ?comparator?"`),
 							))
 						})
 						Specify("values with no string representation", func() {
