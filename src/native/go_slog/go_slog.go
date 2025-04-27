@@ -1,11 +1,9 @@
-package native
+package go_slog
 
 import (
 	"helena/core"
 	"log/slog"
 )
-
-type SlogCmd struct{}
 
 func asString(value core.Value) (s string, ok bool) {
 	result, s := core.ValueToString(value)
@@ -14,6 +12,8 @@ func asString(value core.Value) (s string, ok bool) {
 	}
 	return "", false
 }
+
+type SlogCmd struct{}
 
 func (SlogCmd) Execute(args []core.Value, _ any) core.Result {
 	if len(args) < 2 {

@@ -1,9 +1,17 @@
-package native
+package go_os
 
 import (
 	"helena/core"
 	"os"
 )
+
+func asString(value core.Value) (s string, ok bool) {
+	result, s := core.ValueToString(value)
+	if result.Code == core.ResultCode_OK {
+		return s, true
+	}
+	return "", false
+}
 
 type OsCmd struct{}
 

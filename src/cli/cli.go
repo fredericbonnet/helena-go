@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"helena/core"
 	"helena/helena_dialect"
-	"helena/native"
+	"helena/native/go_os"
+	"helena/native/go_slog"
 	"helena/picol_dialect"
 	"os"
 
@@ -119,9 +120,11 @@ func initScope() *helena_dialect.Scope {
 	// Static native module loading
 	rootScope.RegisterNamedCommand("load", loadCmd{})
 
-	// Native modules
-	registerNativeModule("go:slog", "slog", native.SlogCmd{})
-	registerNativeModule("go:os", "os", native.OsCmd{})
+	// Built-in native modules
+	StaticLoad("native/go_slog", go_slog.Initmodule)
+	StaticLoad("native/go_os", go_os.Initmodule)
+	loadNativeModule("native/go_slog", "go:slog")
+	loadNativeModule("native/go_os", "go:os")
 
 	return rootScope
 }
@@ -152,18 +155,6 @@ func source(path string) {
 		os.Stderr.WriteString(resultWriter(err) + "\n")
 		os.Exit(-1)
 	}
-}
-
-func registerNativeModule(
-	moduleName string,
-	exportName string,
-	command core.Command,
-) {
-	scope := helena_dialect.NewRootScope(nil)
-	exports := &helena_dialect.Exports{}
-	scope.RegisterNamedCommand(exportName, command)
-	(*exports)[exportName] = core.STR(exportName)
-	moduleRegistry.Register(moduleName, helena_dialect.NewModule(scope, exports))
 }
 
 func prompt() {
