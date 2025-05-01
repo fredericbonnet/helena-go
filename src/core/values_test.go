@@ -154,6 +154,17 @@ var _ = Describe("values", func() {
 				Expect(IntegerValueFromValue(NewStringValue("1.2"))).To(Equal(
 					ERROR(`invalid integer "1.2"`)),
 				)
+				Expect(IntegerValueFromValue(NewStringValue(""))).To(Equal(
+					ERROR(`invalid integer ""`)),
+				)
+				Expect(IntegerValueFromValue(NewStringValue(" "))).To(Equal(
+					ERROR(`invalid integer " "`)),
+				)
+			})
+			It("should reject integer strings with spaces", func() {
+				Expect(IntegerValueFromValue(NewStringValue(" 1 "))).To(Equal(
+					ERROR(`invalid integer " 1 "`),
+				))
 			})
 		})
 		It("should not be index-selectable", func() {
@@ -210,6 +221,17 @@ var _ = Describe("values", func() {
 				))
 				Expect(RealValueFromValue(NewStringValue("a"))).To(Equal(
 					ERROR(`invalid number "a"`),
+				))
+				Expect(RealValueFromValue(NewStringValue(""))).To(Equal(
+					ERROR(`invalid number ""`),
+				))
+				Expect(RealValueFromValue(NewStringValue(" "))).To(Equal(
+					ERROR(`invalid number " "`),
+				))
+			})
+			It("should reject number strings with spaces", func() {
+				Expect(RealValueFromValue(NewStringValue(" 12.34 "))).To(Equal(
+					ERROR(`invalid number " 12.34 "`),
 				))
 			})
 		})
