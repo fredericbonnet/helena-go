@@ -5,6 +5,7 @@ import (
 	"helena/core"
 	"helena/helena_dialect"
 	"helena/native/go_os"
+	"helena/native/go_regexp"
 	"helena/native/go_slog"
 	"helena/picol_dialect"
 	"os"
@@ -123,8 +124,10 @@ func initScope() *helena_dialect.Scope {
 	// Built-in native modules
 	StaticLoad("native/go_slog", go_slog.Initmodule)
 	StaticLoad("native/go_os", go_os.Initmodule)
+	StaticLoad("native/go_regexp", go_regexp.Initmodule)
 	loadNativeModule("native/go_slog", "go:slog")
 	loadNativeModule("native/go_os", "go:os")
+	loadNativeModule("native/go_regexp", "go:regexp")
 
 	return rootScope
 }
