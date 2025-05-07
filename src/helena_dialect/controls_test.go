@@ -1874,7 +1874,6 @@ var _ = Describe("Helena control flow commands", func() {
 				))
 				Expect(evaluate("exists res")).To(Equal(FALSE))
 			})
-
 			Describe("Control flow", func() {
 				Describe("`return`", func() {
 					It("should interrupt handler with `RETURN` code", func() {
@@ -2423,7 +2422,6 @@ var _ = Describe("Helena control flow commands", func() {
 					CONTINUE(NIL),
 				))
 			})
-
 			Describe("Control flow", func() {
 				Describe("`return`", func() {
 					It("should interrupt handler with `RETURN` code", func() {
