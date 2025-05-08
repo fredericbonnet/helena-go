@@ -112,7 +112,7 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 	}
 	subscope := proc.scope.NewChildScope()
 	result2 := subscope.SetNamedVariables(
-		proc.argspec.Argspec.Names,
+		proc.argspec.Argspec.Slots,
 		values,
 	)
 	if result2.Code != core.ResultCode_OK {

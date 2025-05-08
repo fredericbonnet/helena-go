@@ -239,11 +239,12 @@ type ScopeOptions struct {
 	CaptureErrorStack bool
 }
 type Scope struct {
-	options  ScopeOptions
-	Context  *scopeContext
-	locals   map[string]core.Value
-	compiler core.Compiler
-	executor core.Executor
+	options     ScopeOptions
+	Context     *scopeContext
+	localSlots  map[string]uint
+	localValues []core.Value
+	compiler    core.Compiler
+	executor    core.Executor
 }
 
 type variableResolver struct{ scope *Scope }
@@ -272,7 +273,6 @@ func newScope(
 		scope.options = *options
 	}
 	scope.Context = context
-	scope.locals = map[string]core.Value{}
 	scope.compiler = core.NewCompiler(&core.CompilerOptions{
 		CapturePositions: scope.options.CapturePositions,
 	})
@@ -352,16 +352,15 @@ func (scope *Scope) PrepareProcess(program *core.Program) *Process {
 }
 
 func (scope *Scope) ResolveVariable(name string) core.Value {
-	v := scope.locals[name]
-	if v != nil {
+	if scope.localSlots != nil {
+		if slot, ok := scope.localSlots[name]; ok {
+			return scope.localValues[slot]
+		}
+	}
+	if v, ok := scope.Context.Constants[name]; ok {
 		return v
 	}
-	v = scope.Context.Constants[name]
-	if v != nil {
-		return v
-	}
-	v = scope.Context.Variables[name]
-	if v != nil {
+	if v, ok := scope.Context.Variables[name]; ok {
 		return v
 	}
 	return nil
@@ -412,18 +411,30 @@ func (scope *Scope) GetLocalCommandNames() []string {
 }
 
 func (scope *Scope) ClearLocals() {
-	clear(scope.locals)
+	if scope.localValues != nil {
+		for i := range scope.localValues {
+			scope.localValues[i] = nil
+		}
+	}
 }
 func (scope *Scope) SetNamedLocal(name string, value core.Value) {
-	scope.locals[name] = value
-}
-func (scope *Scope) SetNamedLocals(names []string, values []core.Value) {
-	for i, name := range names {
-		if values[i] == nil {
-			continue
+	if slot, ok := scope.localSlots[name]; ok {
+		scope.localValues[slot] = value
+	} else {
+		if scope.localSlots == nil {
+			scope.localSlots = map[string]uint{}
 		}
-		scope.locals[name] = values[i]
+		if scope.localValues == nil {
+			scope.localValues = make([]core.Value, len(scope.localSlots), 1)
+		}
+		slot := len(scope.localValues)
+		scope.localSlots[name] = uint(slot)
+		scope.localValues = append(scope.localValues, value)
 	}
+}
+func (scope *Scope) SetNamedLocals(slots map[string]uint, values []core.Value) {
+	scope.localSlots = slots
+	scope.localValues = values
 }
 func (scope *Scope) DestructureLocal(constant core.Value, value core.Value, check bool) core.Result {
 	result, name := core.ValueToString(constant)
@@ -456,8 +467,10 @@ func (scope *Scope) DestructureConstant(constant core.Value, value core.Value, c
 	return core.OK(core.NIL)
 }
 func (scope *Scope) checkNamedConstant(name string) core.Result {
-	if scope.locals[name] != nil {
-		return core.ERROR(`cannot define constant "` + name + `": local already exists`)
+	if scope.localSlots != nil {
+		if _, ok := scope.localSlots[name]; ok {
+			return core.ERROR(`cannot define constant "` + name + `": local already exists`)
+		}
 	}
 	if scope.Context.Constants[name] != nil {
 		return core.ERROR(`cannot redefine constant "` + name + `"`)
@@ -475,12 +488,12 @@ func (scope *Scope) SetNamedVariable(name string, value core.Value) core.Result 
 	scope.Context.Variables[name] = value
 	return core.OK(value)
 }
-func (scope *Scope) SetNamedVariables(names []string, values []core.Value) core.Result {
-	for i, name := range names {
-		if values[i] == nil {
+func (scope *Scope) SetNamedVariables(slots map[string]uint, values []core.Value) core.Result {
+	for name, slot := range slots {
+		if values[slot] == nil {
 			continue
 		}
-		result := scope.SetNamedVariable(name, values[i])
+		result := scope.SetNamedVariable(name, values[slot])
 		if result.Code != core.ResultCode_OK {
 			return result
 		}
@@ -499,8 +512,10 @@ func (scope *Scope) DestructureVariable(variable core.Value, value core.Value, c
 	return core.OK(core.NIL)
 }
 func (scope *Scope) checkNamedVariable(name string) core.Result {
-	if scope.locals[name] != nil {
-		return core.ERROR(`cannot redefine local "` + name + `"`)
+	if scope.localSlots != nil {
+		if _, ok := scope.localSlots[name]; ok {
+			return core.ERROR(`cannot redefine local "` + name + `"`)
+		}
 	}
 	if scope.Context.Constants[name] != nil {
 		return core.ERROR(`cannot redefine constant "` + name + `"`)
@@ -512,8 +527,10 @@ func (scope *Scope) UnsetVariable(variable core.Value, check bool) core.Result {
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid variable name")
 	}
-	if scope.locals[name] != nil {
-		return core.ERROR(`cannot unset local "` + name + `"`)
+	if scope.localSlots != nil {
+		if _, ok := scope.localSlots[name]; ok {
+			return core.ERROR(`cannot unset local "` + name + `"`)
+		}
 	}
 	if scope.Context.Constants[name] != nil {
 		return core.ERROR(`cannot unset constant "` + name + `"`)

@@ -21,7 +21,7 @@ func USAGE_ARGSPEC(name core.Value, def string, argspec ArgspecValue, options co
 
 type Argspec struct {
 	Args         []Argument
-	Names        []string
+	Slots        map[string]uint
 	NbRequired   uint
 	NbOptional   uint
 	HasRemainder bool
@@ -31,15 +31,15 @@ type Argspec struct {
 }
 
 func NewArgspec(args []Argument) Argspec {
+	slots := map[string]uint{}
 	nbRequired := uint(0)
 	nbOptional := uint(0)
 	hasRemainder := false
 	hasOptions := false
 	hasGuard := false
-	var names []string = make([]string, len(args))
 	var optionSlots map[string]uint
-	for i, arg := range args {
-		names[i] = arg.Name
+	for slot, arg := range args {
+		slots[arg.Name] = uint(slot)
 		if arg.Option != nil {
 			hasOptions = true
 			if arg.Type == ArgumentType_REQUIRED {
@@ -49,7 +49,7 @@ func NewArgspec(args []Argument) Argspec {
 				optionSlots = map[string]uint{}
 			}
 			for _, name := range arg.Option.Names {
-				optionSlots[name] = uint(i)
+				optionSlots[name] = uint(slot)
 			}
 		} else {
 			switch arg.Type {
@@ -65,7 +65,7 @@ func NewArgspec(args []Argument) Argspec {
 			hasGuard = true
 		}
 	}
-	return Argspec{args, names, nbRequired, nbOptional, hasRemainder, hasOptions, optionSlots, hasGuard}
+	return Argspec{args, slots, nbRequired, nbOptional, hasRemainder, hasOptions, optionSlots, hasGuard}
 }
 func (argspec Argspec) IsVariadic() bool {
 	return (argspec.NbOptional > 0) || argspec.HasRemainder
@@ -488,7 +488,7 @@ func (argspecSetCmd) Execute(args []core.Value, context any) core.Result {
 	if result3.Code != core.ResultCode_OK {
 		return result3
 	}
-	return scope.SetNamedVariables(argspec.Argspec.Names, values2)
+	return scope.SetNamedVariables(argspec.Argspec.Slots, values2)
 }
 func (argspecSetCmd) Help(args []core.Value, _ core.CommandHelpOptions, _ any) core.Result {
 	if len(args) > 3 {

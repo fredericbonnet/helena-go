@@ -102,7 +102,7 @@ func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 		return result
 	}
 	subscope := scope.NewLocalScope()
-	subscope.SetNamedLocals(macro.argspec.Argspec.Names, values)
+	subscope.SetNamedLocals(macro.argspec.Argspec.Slots, values)
 	program := subscope.CompileScriptValue(macro.body)
 	if macro.guard != nil {
 		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {

@@ -108,7 +108,7 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 		return result
 	}
 	subscope := closure.scope.NewLocalScope()
-	subscope.SetNamedLocals(closure.argspec.Argspec.Names, values)
+	subscope.SetNamedLocals(closure.argspec.Argspec.Slots, values)
 	program := subscope.CompileScriptValue(closure.body)
 	if closure.guard != nil {
 		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
