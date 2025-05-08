@@ -417,6 +417,14 @@ func (scope *Scope) ClearLocals() {
 func (scope *Scope) SetNamedLocal(name string, value core.Value) {
 	scope.locals[name] = value
 }
+func (scope *Scope) SetNamedLocals(names []string, values []core.Value) {
+	for i, name := range names {
+		if values[i] == nil {
+			continue
+		}
+		scope.locals[name] = values[i]
+	}
+}
 func (scope *Scope) DestructureLocal(constant core.Value, value core.Value, check bool) core.Result {
 	result, name := core.ValueToString(constant)
 	if result.Code != core.ResultCode_OK {
@@ -466,6 +474,18 @@ func (scope *Scope) SetNamedVariable(name string, value core.Value) core.Result 
 	}
 	scope.Context.Variables[name] = value
 	return core.OK(value)
+}
+func (scope *Scope) SetNamedVariables(names []string, values []core.Value) core.Result {
+	for i, name := range names {
+		if values[i] == nil {
+			continue
+		}
+		result := scope.SetNamedVariable(name, values[i])
+		if result.Code != core.ResultCode_OK {
+			return result
+		}
+	}
+	return core.OK(core.NIL)
 }
 func (scope *Scope) DestructureVariable(variable core.Value, value core.Value, check bool) core.Result {
 	result, name := core.ValueToString(variable)

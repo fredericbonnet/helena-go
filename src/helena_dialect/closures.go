@@ -103,15 +103,12 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 	if !closure.argspec.CheckArity(args, 1) {
 		return ARITY_ERROR(CLOSURE_COMMAND_SIGNATURE(args[0], closure.argspec))
 	}
-	subscope := closure.scope.NewLocalScope()
-	setarg := func(name string, value core.Value) core.Result {
-		subscope.SetNamedLocal(name, value)
-		return core.OK(value)
-	}
-	result := closure.argspec.ApplyArguments(closure.scope, args, 1, setarg)
+	result, values := closure.argspec.CollectArguments(closure.scope, args, 1)
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
+	subscope := closure.scope.NewLocalScope()
+	subscope.SetNamedLocals(closure.argspec.Argspec.Names, values)
 	program := subscope.CompileScriptValue(closure.body)
 	if closure.guard != nil {
 		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {

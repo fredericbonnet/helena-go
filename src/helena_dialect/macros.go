@@ -97,15 +97,12 @@ func (macro *macroCommand) Execute(args []core.Value, context any) core.Result {
 	if !macro.argspec.CheckArity(args, 1) {
 		return ARITY_ERROR(MACRO_COMMAND_SIGNATURE(args[0], macro.argspec))
 	}
-	subscope := scope.NewLocalScope()
-	setarg := func(name string, value core.Value) core.Result {
-		subscope.SetNamedLocal(name, value)
-		return core.OK(value)
-	}
-	result := macro.argspec.ApplyArguments(scope, args, 1, setarg)
+	result, values := macro.argspec.CollectArguments(scope, args, 1)
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
+	subscope := scope.NewLocalScope()
+	subscope.SetNamedLocals(macro.argspec.Argspec.Names, values)
 	program := subscope.CompileScriptValue(macro.body)
 	if macro.guard != nil {
 		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {

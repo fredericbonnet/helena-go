@@ -157,16 +157,10 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		)
 	}
 	if uint(len(args)) == minArgs {
-		ensembleArgs := make([]core.Value, 0, minArgs-1)
-		getargs := func(_ string, value core.Value) core.Result {
-			ensembleArgs = append(ensembleArgs, value)
-			return core.OK(value)
-		}
-		result := ensemble.argspec.ApplyArguments(
+		result, ensembleArgs := ensemble.argspec.CollectArguments(
 			scope,
-			args[1:minArgs],
-			0,
-			getargs,
+			args,
+			1,
 		)
 		if result.Code != core.ResultCode_OK {
 			return result
@@ -209,19 +203,12 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 	} else {
 		cmdline := make([]core.Value, 1, len(args)-1)
 		cmdline[0] = command
-		getargs := func(_ string, value core.Value) core.Result {
-			cmdline = append(cmdline, value)
-			return core.OK(value)
+		// Note: this will only collect the required args and ignore the remainder so we can just pass the whole array
+		result2, values := ensemble.argspec.CollectArguments(scope, args[1:minArgs], 0)
+		if result2.Code != core.ResultCode_OK {
+			return result2
 		}
-		result = ensemble.argspec.ApplyArguments(
-			scope,
-			args[1:minArgs],
-			0,
-			getargs,
-		)
-		if result.Code != core.ResultCode_OK {
-			return result
-		}
+		cmdline = append(cmdline, values...)
 		cmdline = append(cmdline, args[minArgs+1:]...)
 		result = command.Command().Execute(cmdline, scope)
 	}
@@ -312,7 +299,7 @@ func (ensembleCmd) Execute(args []core.Value, context any) core.Result {
 	if argspec.Argspec.IsVariadic() {
 		return core.ERROR("ensemble arguments cannot be variadic")
 	}
-	if argspec.Argspec.HasOptions() {
+	if argspec.Argspec.HasOptions {
 		return core.ERROR("ensemble arguments cannot have options")
 	}
 

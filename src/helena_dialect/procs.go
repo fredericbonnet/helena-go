@@ -106,13 +106,17 @@ func (proc *procCommand) Execute(args []core.Value, _ any) core.Result {
 	if !proc.argspec.CheckArity(args, 1) {
 		return ARITY_ERROR(PROC_COMMAND_SIGNATURE(args[0], proc.argspec))
 	}
-	subscope := proc.scope.NewChildScope()
-	setarg := func(name string, value core.Value) core.Result {
-		return subscope.SetNamedVariable(name, value)
-	}
-	result := proc.argspec.ApplyArguments(proc.scope, args, 1, setarg)
+	result, values := proc.argspec.CollectArguments(proc.scope, args, 1)
 	if result.Code != core.ResultCode_OK {
 		return result
+	}
+	subscope := proc.scope.NewChildScope()
+	result2 := subscope.SetNamedVariables(
+		proc.argspec.Argspec.Names,
+		values,
+	)
+	if result2.Code != core.ResultCode_OK {
+		return result2
 	}
 	if proc.guard != nil {
 		return CreateContinuationValueWithCallback(subscope, proc.program, nil, func(result core.Result, data any) core.Result {
