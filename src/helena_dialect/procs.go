@@ -193,7 +193,7 @@ func (procCmd) Execute(args []core.Value, context any) core.Result {
 	}
 	program := scope.CompileScriptValue(body.(core.ScriptValue))
 	proc := newProcCommand(
-		scope.NewLocalScope(),
+		scope.NewLocalScope(nil, nil),
 		argspec,
 		body.(core.ScriptValue),
 		guard,

@@ -322,7 +322,15 @@ func (dictForeachCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script")
 	}
 	program := scope.CompileScriptValue(body.(core.ScriptValue))
-	subscope := scope.NewLocalScope()
+	slots := map[string]uint{}
+	if hasIndex {
+		slots[index] = 0
+	}
+	result2 := DestructureLocalSlots(varname, slots)
+	if result2.Code != core.ResultCode_OK {
+		return result2
+	}
+	subscope := scope.NewLocalScope(slots, nil)
 	entries := make([][2]core.Value, len(map_))
 	i := 0
 	for key, value := range map_ {

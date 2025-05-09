@@ -78,26 +78,6 @@ var _ = Describe("Helena control flow commands", func() {
 				It("should be local to the `body` scope", func() {
 					Expect(evaluate("loop v [list (a b c)] {}; exists v")).To(Equal(FALSE))
 				})
-				It("should be defined left-to-right", func() {
-					Expect(
-						evaluate("loop v [list (val1)] v [list (val2)] {get v}"),
-					).To(Equal(STR("val2")))
-					Expect(
-						evaluate(`
-							set l [list ()]
-							loop index v {
-								if {$index != 0} {continue}
-								idem val1
-							} v {
-								if {$index != 1} {continue}
-								idem val2
-							} {
-								if {$index == 2} {break}
-								set l [list $l append ($v)]
-							}
-						`),
-					).To(Equal(evaluate("list (val1 val2)")))
-				})
 			})
 		})
 
@@ -114,6 +94,19 @@ var _ = Describe("Helena control flow commands", func() {
 			})
 			Specify("invalid `index` name", func() {
 				Expect(execute("loop [] {}")).To(Equal(ERROR("invalid index name")))
+			})
+			Specify("invalid `value` name", func() {
+				Expect(execute("loop [] [list {}] {}")).To(Equal(
+					ERROR("invalid local name"),
+				))
+			})
+			Specify("duplicate variable names", func() {
+				Expect(execute("loop v v [list ()] {}")).To(Equal(
+					ERROR(`duplicate local name "v"`),
+				))
+				Expect(execute("loop (a (b c)) [list ()] c [list ()] {}")).To(Equal(
+					ERROR(`duplicate local name "c"`),
+				))
 			})
 			Specify("invalid sources", func() {
 				Expect(execute("loop v [] {}")).To(Equal(ERROR("invalid source")))

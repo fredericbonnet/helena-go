@@ -290,8 +290,17 @@ func NewRootScope(options *ScopeOptions) *Scope {
 func (scope *Scope) NewChildScope() *Scope {
 	return newScope(newScopeContext(scope.Context), &scope.options)
 }
-func (scope *Scope) NewLocalScope() *Scope {
-	return newScope(scope.Context, &scope.options)
+func (scope *Scope) NewLocalScope(slots map[string]uint, values []core.Value) *Scope {
+	child := newScope(scope.Context, &scope.options)
+	if slots != nil {
+		child.localSlots = slots
+		if values != nil {
+			child.localValues = values
+		} else {
+			child.localValues = make([]core.Value, len(slots))
+		}
+	}
+	return child
 }
 
 func (scope *Scope) Compile(script core.Script) *core.Program {
@@ -417,35 +426,32 @@ func (scope *Scope) ClearLocals() {
 		}
 	}
 }
-func (scope *Scope) SetNamedLocal(name string, value core.Value) {
-	if slot, ok := scope.localSlots[name]; ok {
-		scope.localValues[slot] = value
-	} else {
-		if scope.localSlots == nil {
-			scope.localSlots = map[string]uint{}
-		}
-		if scope.localValues == nil {
-			scope.localValues = make([]core.Value, len(scope.localSlots), 1)
-		}
-		slot := len(scope.localValues)
-		scope.localSlots[name] = uint(slot)
-		scope.localValues = append(scope.localValues, value)
+func (scope *Scope) SetNamedLocal(name string, value core.Value) core.Result {
+	result := scope.checkNamedLocal(name)
+	if result.Code != core.ResultCode_OK {
+		return result
 	}
+	scope.localValues[scope.localSlots[name]] = value
+	return core.OK(value)
 }
-func (scope *Scope) SetNamedLocals(slots map[string]uint, values []core.Value) {
-	scope.localSlots = slots
-	scope.localValues = values
-}
-func (scope *Scope) DestructureLocal(constant core.Value, value core.Value, check bool) core.Result {
-	result, name := core.ValueToString(constant)
+func (scope *Scope) DestructureLocal(local core.Value, value core.Value, check bool) core.Result {
+	result, name := core.ValueToString(local)
 	if result.Code != core.ResultCode_OK {
 		return core.ERROR("invalid local name")
 	}
 	if check {
-		core.OK(core.NIL)
+		return scope.checkNamedLocal(name)
 	}
-	scope.SetNamedLocal(name, value)
+	scope.localValues[scope.localSlots[name]] = value
 	return core.OK(core.NIL)
+}
+func (scope *Scope) checkNamedLocal(name string) core.Result {
+	if scope.localSlots != nil {
+		if _, ok := scope.localSlots[name]; ok {
+			return core.OK(core.NIL)
+		}
+	}
+	return core.ERROR(`unknown local "` + name + `"`)
 }
 func (scope *Scope) SetNamedConstant(name string, value core.Value) core.Result {
 	result := scope.checkNamedConstant(name)
@@ -639,6 +645,35 @@ func resolveLeadingTuple(args []core.Value, scope *Scope) (core.Command, []core.
 	}
 	tuple := lead.(core.TupleValue)
 	return resolveLeadingTuple(append(append([]core.Value{}, tuple.Values...), rest...), scope)
+}
+
+func DestructureLocalSlots(
+	shape core.Value,
+	slots map[string]uint,
+) core.Result {
+	if shape.Type() != core.ValueType_TUPLE {
+		return addLocalSlot(shape, slots)
+	}
+	locals := shape.(core.TupleValue).Values
+	for i := 0; i < len(locals); i++ {
+		result := DestructureLocalSlots(locals[i], slots)
+		if result.Code != core.ResultCode_OK {
+			return result
+		}
+	}
+	return core.OK(core.NIL)
+}
+func addLocalSlot(local core.Value, slots map[string]uint) core.Result {
+	result, name := core.ValueToString(local)
+	if result.Code != core.ResultCode_OK {
+		return core.ERROR("invalid local name")
+	}
+	if _, ok := slots[name]; ok {
+		return core.ERROR(`duplicate local name "` + name + `"`)
+	}
+	slot := len(slots)
+	slots[name] = uint(slot)
+	return core.OK(core.NIL)
 }
 
 func DestructureValue(

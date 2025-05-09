@@ -362,7 +362,15 @@ func (listForeachCmd) Execute(args []core.Value, context any) core.Result {
 		return core.ERROR("body must be a script")
 	}
 	program := scope.CompileScriptValue(body.(core.ScriptValue))
-	subscope := scope.NewLocalScope()
+	slots := map[string]uint{}
+	if hasIndex {
+		slots[index] = 0
+	}
+	result2 := DestructureLocalSlots(varname, slots)
+	if result2.Code != core.ResultCode_OK {
+		return result2
+	}
+	subscope := scope.NewLocalScope(slots, nil)
 	i := 0
 	lastResult := core.OK(core.NIL)
 	var next func() core.Result

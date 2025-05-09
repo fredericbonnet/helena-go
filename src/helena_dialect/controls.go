@@ -46,19 +46,29 @@ func (loopCmd) Execute(args []core.Value, context any) core.Result {
 	if body.Type() != core.ValueType_SCRIPT {
 		return core.ERROR("body must be a script")
 	}
-	subscope := scope.NewLocalScope()
 	nbSources := (len(args) - 2) / 2
-	varnames := make([]core.Value, nbSources)
-	sources := make([]LoopSourceFn, nbSources)
 	var firstSource int
 	if hasIndex {
 		firstSource = 2
 	} else {
 		firstSource = 1
 	}
+	slots := map[string]uint{}
+	if hasIndex {
+		slots[index] = 0
+	}
+	varnames := make([]core.Value, nbSources)
 	for i, iSource := firstSource, 0; i < len(args)-1; i, iSource = i+2, iSource+1 {
 		varname := args[i]
 		varnames[iSource] = varname
+		result := DestructureLocalSlots(varname, slots)
+		if result.Code != core.ResultCode_OK {
+			return result
+		}
+	}
+	subscope := scope.NewLocalScope(slots, nil)
+	sources := make([]LoopSourceFn, nbSources)
+	for i, iSource := firstSource, 0; i < len(args)-1; i, iSource = i+2, iSource+1 {
 		source := args[i+1]
 		switch source.Type() {
 		case core.ValueType_LIST:
@@ -659,8 +669,10 @@ func (cmd catchCmd) run(state *catchState, scope *Scope) core.Result {
 					{
 						_, varname := core.ValueToString(state.args[i+1])
 						handler := state.args[i+2]
-						subscope := scope.NewLocalScope()
-						subscope.SetNamedLocal(varname, state.bodyResult.Value)
+						subscope := scope.NewLocalScope(
+							map[string]uint{varname: 0},
+							[]core.Value{state.bodyResult.Value},
+						)
 						program := subscope.CompileScriptValue(
 							handler.(core.ScriptValue),
 						) // TODO check type

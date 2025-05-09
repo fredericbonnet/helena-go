@@ -107,8 +107,10 @@ func (closure *closureCommand) Execute(args []core.Value, _ any) core.Result {
 	if result.Code != core.ResultCode_OK {
 		return result
 	}
-	subscope := closure.scope.NewLocalScope()
-	subscope.SetNamedLocals(closure.argspec.Argspec.Slots, values)
+	subscope := closure.scope.NewLocalScope(
+		closure.argspec.Argspec.Slots,
+		values,
+	)
 	program := subscope.CompileScriptValue(closure.body)
 	if closure.guard != nil {
 		return CreateContinuationValueWithCallback(subscope, program, nil, func(result core.Result, data any) core.Result {
@@ -167,7 +169,7 @@ func (closureCmd) Execute(args []core.Value, context any) core.Result {
 		return result
 	}
 	closure := newClosureCommand(
-		scope.NewLocalScope(),
+		scope.NewLocalScope(nil, nil),
 		argspec,
 		body.(core.ScriptValue),
 		guard,
