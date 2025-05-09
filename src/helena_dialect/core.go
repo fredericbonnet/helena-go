@@ -421,9 +421,7 @@ func (scope *Scope) GetLocalCommandNames() []string {
 
 func (scope *Scope) ClearLocals() {
 	if scope.localValues != nil {
-		for i := range scope.localValues {
-			scope.localValues[i] = nil
-		}
+		clear(scope.localValues)
 	}
 }
 func (scope *Scope) SetNamedLocal(name string, value core.Value) core.Result {
