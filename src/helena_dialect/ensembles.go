@@ -190,10 +190,10 @@ func (ensemble *EnsembleCommand) Execute(args []core.Value, context any) core.Re
 		return UNKNOWN_SUBCOMMAND_ERROR(subcommand)
 	}
 	var result core.Result
-	if !ensemble.argspec.Argspec.HasGuards {
-		// If we have no guards to apply then we can just modify the args array
-		// in place and avoid the overhead of copying it to a new array. This
-		// provides a huge speedup for most subcommand dispatches.
+	if ensemble.argspec.Argspec.IsFast() {
+		// Here we can just modify the args array in place and avoid the
+		// overhead of copying it to a new array. This provides a huge speedup
+		// for most subcommand dispatches.
 		old := args[minArgs]
 		copy(args[2:minArgs+1], args[1:minArgs])
 		args[1] = command

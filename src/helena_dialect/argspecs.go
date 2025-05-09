@@ -70,6 +70,12 @@ func NewArgspec(args []Argument) Argspec {
 func (argspec Argspec) IsVariadic() bool {
 	return (argspec.NbOptional > 0) || argspec.HasRemainder
 }
+func (argspec Argspec) IsFast() bool {
+	return (argspec.NbOptional == 0 &&
+		!argspec.HasRemainder &&
+		!argspec.HasOptions &&
+		!argspec.HasGuards)
+}
 
 type ArgspecValue struct {
 	Argspec Argspec
@@ -114,6 +120,10 @@ func (argspec ArgspecValue) CollectArguments(
 	skip uint,
 ) (core.Result, []core.Value) {
 	slotValues := make([]core.Value, len(argspec.Argspec.Args))
+	if argspec.Argspec.IsFast() {
+		copy(slotValues, args[skip:len(argspec.Argspec.Args)+int(skip)])
+		return core.OK(core.NIL), slotValues
+	}
 	return argspec.setSlotValues(scope, args, skip, slotValues), slotValues
 }
 func (argspec ArgspecValue) setSlotValues(
