@@ -259,7 +259,7 @@ func ValueToInteger(value Value) (Result, int64) {
 }
 
 func (value IntegerValue) Display(_ DisplayFunction) string {
-	return fmt.Sprint(value.Value)
+	return strconv.FormatInt(value.Value, 10)
 }
 
 //
@@ -326,7 +326,7 @@ func ValueToFloat(value Value) (Result, float64) {
 }
 
 func (value RealValue) Display(_ DisplayFunction) string {
-	return fmt.Sprint(value.Value)
+	return strconv.FormatFloat(value.Value, 'g', -1, 64)
 }
 
 //
@@ -381,9 +381,9 @@ func valueToString(value Value, def *string) (Result, string) {
 			return OK(NIL), "false"
 		}
 	case ValueType_INTEGER:
-		return OK(NIL), fmt.Sprint(value.(IntegerValue).Value)
+		return OK(NIL), strconv.FormatInt(value.(IntegerValue).Value, 10)
 	case ValueType_REAL:
-		return OK(NIL), fmt.Sprint(value.(RealValue).Value)
+		return OK(NIL), strconv.FormatFloat(value.(RealValue).Value, 'g', -1, 64)
 	case ValueType_SCRIPT:
 		{
 			source := value.(ScriptValue).Source
