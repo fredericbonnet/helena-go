@@ -4,6 +4,8 @@
 
 package core
 
+import "strings"
+
 // Supported compiler opcodes
 type OpCode int8
 
@@ -904,15 +906,15 @@ func (executor *Executor) ExecuteUntil(program *Program, state *ProgramState, st
 		case OpCode_JOIN_STRINGS:
 			{
 				values := state.LastFrame
-				s := ""
+				var b strings.Builder
 				for _, value := range values {
 					result, s2 := ValueToString(value)
 					if result.Code != ResultCode_OK {
 						return result
 					}
-					s += s2
+					b.WriteString(s2)
 				}
-				state.Push(NewStringValue(s))
+				state.Push(NewStringValue(b.String()))
 			}
 
 		case OpCode_MAKE_TUPLE:
