@@ -88,29 +88,6 @@ type RulesSelectable interface {
 	SelectRules(rules []Value) Result
 }
 
-// Apply a selector to a value
-func ApplySelector(value Value, selector Selector) Result {
-	switch v := value.(type) {
-	case Selectable:
-		return v.Select(selector)
-	default:
-		return selector.Apply(value)
-	}
-}
-
-// Select value with selector using either Value.Select or Value.SelectRules in
-// this order of precedence.
-func SelectGeneric(value Value, selector GenericSelector) Result {
-	switch v := value.(type) {
-	default:
-		return ERROR("value is not selectable")
-	case Selectable:
-		return v.Select(Selector(selector))
-	case RulesSelectable:
-		return v.SelectRules(selector.Rules)
-	}
-}
-
 //
 // Nil value
 //
