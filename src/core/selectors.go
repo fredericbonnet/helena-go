@@ -4,53 +4,6 @@
 
 package core
 
-// import { ERROR, OK, Result, ResultCode } from "./results";
-// import { NIL, TupleValue, Value, ValueType, selectGeneric } from "./values";
-// import { defaultDisplayFunction, Displayable, displayList } from "./display";
-
-// /**
-//  * Generic selector creation error
-//  */
-// export class SelectorCreationError extends Error {
-//   /**
-//    *
-//    * @param message - Error message
-//    */
-//   constructor(message) {
-//     super(message);
-//     this.name = "SelectorCreationError";
-//   }
-// }
-
-// /**
-//  * Thrown when creating an indexed selector with an invalid index
-//  */
-// export class InvalidIndexError extends SelectorCreationError {
-//   /**
-//    *
-//    * @param message - Error message
-//    */
-//   constructor(message) {
-//     super(message);
-//     this.name = "InvalidIndexError";
-//   }
-// }
-
-// /**
-//  * Thrown when creating a keyed selector with no keys, or a generic selector
-//  * with no rules.
-//  */
-// export class EmptySelectorError extends SelectorCreationError {
-//   /**
-//    *
-//    * @param message - Error message
-//    */
-//   constructor(message) {
-//     super(message);
-//     this.name = "EmptySelectorError";
-//   }
-// }
-
 //
 // Helena selector
 //
@@ -83,11 +36,11 @@ func NewIndexedSelector(index Value) IndexedSelector {
 }
 
 // Factory function, returns a result instead of panicking like the constructor.
-func CreateIndexedSelector(index Value) (Result, Selector) {
+func CreateIndexedSelector(index Value) (Result, IndexedSelector) {
 	if index == NIL {
-		return ERROR("invalid index"), nil
+		return ERROR("invalid index"), IndexedSelector{}
 	}
-	return OK(NIL), Selector(NewIndexedSelector(index))
+	return OK(NIL), NewIndexedSelector(index)
 }
 
 func (selector IndexedSelector) Apply(value Value) Result {
@@ -127,11 +80,11 @@ func NewKeyedSelector(keys []Value) KeyedSelector {
 }
 
 // Factory function, returns a result instead of panicking like the constructor.
-func CreateKeyedSelector(keys []Value) (Result, Selector) {
+func CreateKeyedSelector(keys []Value) (Result, KeyedSelector) {
 	if len(keys) == 0 {
-		return ERROR("empty selector"), nil
+		return ERROR("empty selector"), KeyedSelector{}
 	}
-	return OK(NIL), Selector(NewKeyedSelector(keys))
+	return OK(NIL), NewKeyedSelector(keys)
 }
 
 func (selector KeyedSelector) Apply(value Value) Result {
@@ -177,11 +130,11 @@ func NewGenericSelector(rules []Value) GenericSelector {
 }
 
 // Factory function, returns a result instead of panicking like the constructor.
-func CreateGenericSelector(rules []Value) (Result, Selector) {
+func CreateGenericSelector(rules []Value) (Result, GenericSelector) {
 	if len(rules) == 0 {
-		return ERROR("empty selector"), nil
+		return ERROR("empty selector"), GenericSelector{}
 	}
-	return OK(NIL), Selector(NewGenericSelector(rules))
+	return OK(NIL), NewGenericSelector(rules)
 }
 
 func (selector GenericSelector) Apply(value Value) Result {
