@@ -7,6 +7,8 @@ import (
 	. "helena/core"
 )
 
+func created[T any](result Result, created T) T { return created }
+
 type mockValue struct {
 	store *mockValueStore
 }
@@ -55,7 +57,7 @@ var _ = Describe("selectors", func() {
 	Describe("IndexedSelector", func() {
 		Specify("literal index", func() {
 			index := STR("index")
-			selector := NewIndexedSelector(index)
+			_, selector := CreateIndexedSelector(index)
 			value := newMockValue()
 			Expect(selector.Apply(value)).To(Equal(OK(value)))
 			Expect(*value.store.selectedIndex).To(Equal(index))
@@ -63,12 +65,12 @@ var _ = Describe("selectors", func() {
 		Describe("display", func() {
 			Specify("simple index", func() {
 				index := STR("index")
-				selector := NewIndexedSelector(index)
+				_, selector := CreateIndexedSelector(index)
 				Expect(selector.Display(nil)).To(Equal("[index]"))
 			})
 			Specify("index with special characters", func() {
 				index := STR(`index with spaces and \"$[${$( $special characters`)
-				selector := NewIndexedSelector(index)
+				_, selector := CreateIndexedSelector(index)
 				Expect(selector.Display(nil)).To(Equal(
 					`["index with spaces and \\\"\$\[\$\{\$\( \$special characters"]`,
 				))
@@ -76,11 +78,10 @@ var _ = Describe("selectors", func() {
 		})
 		Describe("exceptions", func() {
 			Specify("invalid index", func() {
-				Expect(func() { _ = NewIndexedSelector(NIL) }).To(PanicWith("invalid index"))
 				Expect(CreateIndexedSelector(NIL)).To(Equal(ERROR("invalid index")))
 			})
 			Specify("non-selectable value", func() {
-				selector := NewIndexedSelector(INT(1))
+				_, selector := CreateIndexedSelector(INT(1))
 				value := unselectableValue{}
 				Expect(selector.Apply(value)).To(Equal(
 					ERROR("value is not index-selectable"),
@@ -92,14 +93,14 @@ var _ = Describe("selectors", func() {
 	Describe("KeyedSelector", func() {
 		Specify("one key", func() {
 			keys := []Value{STR("key")}
-			selector := NewKeyedSelector(keys)
+			_, selector := CreateKeyedSelector(keys)
 			value := newMockValue()
 			Expect(selector.Apply(value)).To(Equal(OK(value)))
 			Expect(value.store.selectedKeys).To(Equal(keys))
 		})
 		Specify("multiple keys", func() {
 			keys := []Value{STR("key1"), STR("key2")}
-			selector := NewKeyedSelector(keys)
+			_, selector := CreateKeyedSelector(keys)
 			value := newMockValue()
 			Expect(selector.Apply(value)).To(Equal(OK(value)))
 			Expect(value.store.selectedKeys).To(Equal(keys))
@@ -107,17 +108,17 @@ var _ = Describe("selectors", func() {
 		Describe("display", func() {
 			Specify("simple key", func() {
 				keys := []Value{STR("key")}
-				selector := NewKeyedSelector(keys)
+				_, selector := CreateKeyedSelector(keys)
 				Expect(selector.Display(nil)).To(Equal("(key)"))
 			})
 			Specify("multiple keys", func() {
 				keys := []Value{STR("key1"), STR("key2")}
-				selector := NewKeyedSelector(keys)
+				_, selector := CreateKeyedSelector(keys)
 				Expect(selector.Display(nil)).To(Equal("(key1 key2)"))
 			})
 			Specify("key with special characters", func() {
 				keys := []Value{STR(`key with spaces and \"$[${$( $special characters`)}
-				selector := NewKeyedSelector(keys)
+				_, selector := CreateKeyedSelector(keys)
 				Expect(selector.Display(nil)).To(Equal(
 					`("key with spaces and \\\"\$\[\$\{\$\( \$special characters")`,
 				))
@@ -125,11 +126,10 @@ var _ = Describe("selectors", func() {
 		})
 		Describe("exceptions", func() {
 			Specify("empty key list", func() {
-				Expect(func() { _ = NewKeyedSelector([]Value{}) }).To(PanicWith("empty selector"))
 				Expect(CreateKeyedSelector([]Value{})).To(Equal(ERROR("empty selector")))
 			})
 			Specify("non-selectable value", func() {
-				selector := NewKeyedSelector([]Value{INT(1)})
+				_, selector := CreateKeyedSelector([]Value{INT(1)})
 				value := unselectableValue{}
 				Expect(selector.Apply(value)).To(Equal(
 					ERROR("value is not key-selectable"),
@@ -141,21 +141,21 @@ var _ = Describe("selectors", func() {
 	Describe("GenericSelector", func() {
 		Specify("string rule", func() {
 			rules := []Value{STR("rule")}
-			selector := NewGenericSelector(rules)
+			_, selector := CreateGenericSelector(rules)
 			value := newMockValue()
 			Expect(selector.Apply(value)).To(Equal(OK(value)))
 			Expect(value.store.selectedRules).To(Equal(rules))
 		})
 		Specify("tuple rule", func() {
 			rules := []Value{TUPLE([]Value{STR("rule"), INT(1)})}
-			selector := NewGenericSelector(rules)
+			_, selector := CreateGenericSelector(rules)
 			value := newMockValue()
 			Expect(selector.Apply(value)).To(Equal(OK(value)))
 			Expect(value.store.selectedRules).To(Equal(rules))
 		})
 		Specify("multiple rules", func() {
 			rules := []Value{STR("rule1"), TUPLE([]Value{STR("rule2")})}
-			selector := NewGenericSelector(rules)
+			_, selector := CreateGenericSelector(rules)
 			value := newMockValue()
 			Expect(selector.Apply(value)).To(Equal(OK(value)))
 			Expect(value.store.selectedRules).To(Equal(rules))
@@ -163,12 +163,12 @@ var _ = Describe("selectors", func() {
 		Describe("display", func() {
 			Specify("string rule", func() {
 				rules := []Value{STR("rule")}
-				selector := NewGenericSelector(rules)
+				_, selector := CreateGenericSelector(rules)
 				Expect(selector.Display(nil)).To(Equal("{rule}"))
 			})
 			Specify("tuple rule", func() {
 				rules := []Value{TUPLE([]Value{STR("rule"), INT(1)})}
-				selector := NewGenericSelector(rules)
+				_, selector := CreateGenericSelector(rules)
 				Expect(selector.Display(nil)).To(Equal("{rule 1}"))
 			})
 			Specify("multiple keys", func() {
@@ -180,7 +180,7 @@ var _ = Describe("selectors", func() {
 					STR("rule2 with spaces"),
 					TUPLE([]Value{STR("rule3")}),
 				}
-				selector := NewGenericSelector(rules)
+				_, selector := CreateGenericSelector(rules)
 				Expect(selector.Display(nil)).To(Equal(
 					`{rule1 "arg1 with spaces and \\\"\$\[\$\{\$\( \$special ; characters"; "rule2 with spaces"; rule3}`,
 				))
@@ -188,11 +188,10 @@ var _ = Describe("selectors", func() {
 		})
 		Describe("exceptions", func() {
 			Specify("empty rules", func() {
-				Expect(func() { _ = NewGenericSelector([]Value{}) }).To(PanicWith("empty selector"))
 				Expect(CreateGenericSelector([]Value{})).To(Equal(ERROR("empty selector")))
 			})
 			Specify("non-selectable value", func() {
-				selector := NewGenericSelector([]Value{STR("rule")})
+				_, selector := CreateGenericSelector([]Value{STR("rule")})
 				value := unselectableValue{}
 				Expect(selector.Apply(value)).To(Equal(ERROR("value is not selectable")))
 			})

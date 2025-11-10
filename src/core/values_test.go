@@ -22,20 +22,20 @@ var _ = Describe("values", func() {
 		})
 		It("should not be index-selectable", func() {
 			Expect(func() { _ = Value(NIL).(IndexSelectable) }).To(Panic())
-			Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(NIL)).To(Equal(
+			Expect(created(CreateIndexedSelector(NewIntegerValue(1))).Apply(NIL)).To(Equal(
 				ERROR("value is not index-selectable"),
 			))
 		})
 		It("should not be key-selectable", func() {
 			Expect(func() { _ = Value(NIL).(KeySelectable) }).To(Panic())
-			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(NIL)).To(Equal(
+			Expect(created(CreateKeyedSelector([]Value{NewStringValue("key")})).Apply(NIL)).To(Equal(
 				ERROR("value is not key-selectable"),
 			))
 		})
 		It("should not be selectable", func() {
 			Expect(func() { _ = Value(NIL).(Selectable) }).To(Panic())
 			Expect(func() { _ = Value(NIL).(RulesSelectable) }).To(Panic())
-			Expect(NewGenericSelector([]Value{NewStringValue("rule")}).Apply(NIL)).To(Equal(
+			Expect(created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(NIL)).To(Equal(
 				ERROR("value is not selectable"),
 			))
 		})
@@ -83,20 +83,20 @@ var _ = Describe("values", func() {
 		It("should not be index-selectable", func() {
 			Expect(func() { _ = Value(TRUE).(IndexSelectable) }).To(Panic())
 			Expect(func() { _ = Value(FALSE).(IndexSelectable) }).To(Panic())
-			Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(TRUE)).To(Equal(
+			Expect(created(CreateIndexedSelector(NewIntegerValue(1))).Apply(TRUE)).To(Equal(
 				ERROR("value is not index-selectable"),
 			))
-			Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(FALSE)).To(Equal(
+			Expect(created(CreateIndexedSelector(NewIntegerValue(1))).Apply(FALSE)).To(Equal(
 				ERROR("value is not index-selectable"),
 			))
 		})
 		It("should not be key-selectable", func() {
 			Expect(func() { _ = Value(TRUE).(KeySelectable) }).To(Panic())
 			Expect(func() { _ = Value(FALSE).(KeySelectable) }).To(Panic())
-			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(TRUE)).To(Equal(
+			Expect(created(CreateKeyedSelector([]Value{NewStringValue("key")})).Apply(TRUE)).To(Equal(
 				ERROR("value is not key-selectable"),
 			))
-			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(FALSE)).To(Equal(
+			Expect(created(CreateKeyedSelector([]Value{NewStringValue("key")})).Apply(FALSE)).To(Equal(
 				ERROR("value is not key-selectable"),
 			))
 		})
@@ -105,11 +105,11 @@ var _ = Describe("values", func() {
 			Expect(func() { _ = Value(TRUE).(RulesSelectable) }).To(Panic())
 			Expect(func() { _ = Value(FALSE).(Selectable) }).To(Panic())
 			Expect(func() { _ = Value(FALSE).(RulesSelectable) }).To(Panic())
-			Expect(NewGenericSelector([]Value{NewStringValue("rule")}).Apply(TRUE)).To(Equal(
+			Expect(created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(TRUE)).To(Equal(
 				ERROR("value is not selectable"),
 			))
 			Expect(
-				NewGenericSelector([]Value{NewStringValue("rule")}).Apply(FALSE)).To(Equal(
+				created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(FALSE)).To(Equal(
 				ERROR("value is not selectable"),
 			))
 		})
@@ -170,14 +170,14 @@ var _ = Describe("values", func() {
 		It("should not be index-selectable", func() {
 			value := NewIntegerValue(0)
 			Expect(func() { _ = Value(value).(IndexSelectable) }).To(Panic())
-			Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(value)).To(Equal(
+			Expect(created(CreateIndexedSelector(NewIntegerValue(1))).Apply(value)).To(Equal(
 				ERROR("value is not index-selectable"),
 			))
 		})
 		It("should not be key-selectable", func() {
 			value := NewIntegerValue(0)
 			Expect(func() { _ = Value(value).(KeySelectable) }).To(Panic())
-			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(value)).To(Equal(
+			Expect(created(CreateKeyedSelector([]Value{NewStringValue("key")})).Apply(value)).To(Equal(
 				ERROR("value is not key-selectable"),
 			))
 		})
@@ -186,7 +186,7 @@ var _ = Describe("values", func() {
 			Expect(func() { _ = Value(value).(Selectable) }).To(Panic())
 			Expect(func() { _ = Value(value).(RulesSelectable) }).To(Panic())
 			Expect(
-				NewGenericSelector([]Value{NewStringValue("rule")}).Apply(value)).To(Equal(
+				created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(value)).To(Equal(
 				ERROR("value is not selectable"),
 			))
 		})
@@ -238,14 +238,14 @@ var _ = Describe("values", func() {
 		It("should not be index-selectable", func() {
 			value := NewRealValue(0)
 			Expect(func() { _ = Value(value).(IndexSelectable) }).To(Panic())
-			Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(value)).To(Equal(
+			Expect(created(CreateIndexedSelector(NewIntegerValue(1))).Apply(value)).To(Equal(
 				ERROR("value is not index-selectable"),
 			))
 		})
 		It("should not be key-selectable", func() {
 			value := NewRealValue(0)
 			Expect(func() { _ = Value(value).(KeySelectable) }).To(Panic())
-			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(value)).To(Equal(
+			Expect(created(CreateKeyedSelector([]Value{NewStringValue("key")})).Apply(value)).To(Equal(
 				ERROR("value is not key-selectable"),
 			))
 		})
@@ -254,7 +254,7 @@ var _ = Describe("values", func() {
 			Expect(func() { _ = Value(value).(Selectable) }).To(Panic())
 			Expect(func() { _ = Value(value).(RulesSelectable) }).To(Panic())
 			Expect(
-				NewGenericSelector([]Value{NewStringValue("rule")}).Apply(value)).To(Equal(
+				created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(value)).To(Equal(
 				ERROR("value is not selectable"),
 			))
 		})
@@ -374,7 +374,7 @@ var _ = Describe("values", func() {
 		It("should not be key-selectable", func() {
 			value := NewStringValue("some string")
 			Expect(func() { _ = Value(value).(KeySelectable) }).To(Panic())
-			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(value)).To(Equal(
+			Expect(created(CreateKeyedSelector([]Value{NewStringValue("key")})).Apply(value)).To(Equal(
 				ERROR("value is not key-selectable"),
 			))
 		})
@@ -383,7 +383,7 @@ var _ = Describe("values", func() {
 			Expect(func() { _ = Value(value).(Selectable) }).To(Panic())
 			Expect(func() { _ = Value(value).(RulesSelectable) }).To(Panic())
 			Expect(
-				NewGenericSelector([]Value{NewStringValue("rule")}).Apply(value)).To(Equal(
+				created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(value)).To(Equal(
 				ERROR("value is not selectable"),
 			))
 		})
@@ -472,7 +472,7 @@ var _ = Describe("values", func() {
 		It("should not be key-selectable", func() {
 			value := NewListValue([]Value{})
 			Expect(func() { _ = Value(value).(KeySelectable) }).To(Panic())
-			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(value)).To(Equal(
+			Expect(created(CreateKeyedSelector([]Value{NewStringValue("key")})).Apply(value)).To(Equal(
 				ERROR("value is not key-selectable"),
 			))
 		})
@@ -481,7 +481,7 @@ var _ = Describe("values", func() {
 			Expect(func() { _ = Value(value).(Selectable) }).To(Panic())
 			Expect(func() { _ = Value(value).(RulesSelectable) }).To(Panic())
 			Expect(
-				NewGenericSelector([]Value{NewStringValue("rule")}).Apply(value)).To(Equal(
+				created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(value)).To(Equal(
 				ERROR("value is not selectable"),
 			))
 		})
@@ -495,7 +495,7 @@ var _ = Describe("values", func() {
 		It("should not be index-selectable", func() {
 			value := NewDictionaryValue(map[string]Value{})
 			Expect(func() { _ = Value(value).(IndexSelectable) }).To(Panic())
-			Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(value)).To(Equal(
+			Expect(created(CreateIndexedSelector(NewIntegerValue(1))).Apply(value)).To(Equal(
 				ERROR("value is not index-selectable"),
 			))
 		})
@@ -526,7 +526,7 @@ var _ = Describe("values", func() {
 			Expect(func() { _ = Value(value).(Selectable) }).To(Panic())
 			Expect(func() { _ = Value(value).(RulesSelectable) }).To(Panic())
 			Expect(
-				NewGenericSelector([]Value{NewStringValue("rule")}).Apply(value)).To(Equal(
+				created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(value)).To(Equal(
 				ERROR("value is not selectable"),
 			))
 		})
@@ -693,7 +693,7 @@ var _ = Describe("values", func() {
 				}
 				value := NewTupleValue(values)
 				index := NewIntegerValue(1)
-				Expect(value.Select(NewIndexedSelector(index))).To(Equal(
+				Expect(value.Select(created(CreateIndexedSelector(index)))).To(Equal(
 					OK(NewTupleValue([]Value{NewStringValue("value2"), NewStringValue("2")})),
 				))
 			})
@@ -716,7 +716,7 @@ var _ = Describe("values", func() {
 				}
 				value := NewTupleValue(values)
 				key := NewStringValue("key2")
-				Expect(value.Select(NewKeyedSelector([]Value{key}))).To(Equal(
+				Expect(value.Select(created(CreateKeyedSelector([]Value{key})))).To(Equal(
 					OK(
 						NewTupleValue([]Value{
 							NewStringValue("value2"),
@@ -733,11 +733,11 @@ var _ = Describe("values", func() {
 					values := []Value{NewIntegerValue(0)}
 					value := NewTupleValue(values)
 					index := NewIntegerValue(1)
-					Expect(value.Select(NewIndexedSelector(index))).To(Equal(
+					Expect(value.Select(created(CreateIndexedSelector(index)))).To(Equal(
 						ERROR("value is not index-selectable"),
 					))
 					key := NewStringValue("key2")
-					Expect(value.Select(NewKeyedSelector([]Value{key}))).To(Equal(
+					Expect(value.Select(created(CreateKeyedSelector([]Value{key})))).To(Equal(
 						ERROR("value is not key-selectable"),
 					))
 				})
@@ -772,14 +772,14 @@ var _ = Describe("values", func() {
 		It("should not be index-selectable", func() {
 			value := NewScriptValue(Script{}, "")
 			Expect(func() { _ = Value(value).(IndexSelectable) }).To(Panic())
-			Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(value)).To(Equal(
+			Expect(created(CreateIndexedSelector(NewIntegerValue(1))).Apply(value)).To(Equal(
 				ERROR("value is not index-selectable"),
 			))
 		})
 		It("should not be key-selectable", func() {
 			value := NewScriptValue(Script{}, "")
 			Expect(func() { _ = Value(value).(KeySelectable) }).To(Panic())
-			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(value)).To(Equal(
+			Expect(created(CreateKeyedSelector([]Value{NewStringValue("key")})).Apply(value)).To(Equal(
 				ERROR("value is not key-selectable"),
 			))
 		})
@@ -788,7 +788,7 @@ var _ = Describe("values", func() {
 			Expect(func() { _ = Value(value).(Selectable) }).To(Panic())
 			Expect(func() { _ = Value(value).(RulesSelectable) }).To(Panic())
 			Expect(
-				NewGenericSelector([]Value{NewStringValue("rule")}).Apply(value)).To(Equal(
+				created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(value)).To(Equal(
 				ERROR("value is not selectable"),
 			))
 		})
@@ -806,7 +806,7 @@ var _ = Describe("values", func() {
 				return OK(NIL)
 			}})
 			Expect(func() { _ = Value(TRUE).(IndexSelectable) }).To(Panic())
-			Expect(NewIndexedSelector(NewIntegerValue(1)).Apply(value)).To(Equal(
+			Expect(created(CreateIndexedSelector(NewIntegerValue(1))).Apply(value)).To(Equal(
 				ERROR("value is not index-selectable"),
 			))
 		})
@@ -815,7 +815,7 @@ var _ = Describe("values", func() {
 				return OK(NIL)
 			}})
 			Expect(func() { _ = Value(TRUE).(KeySelectable) }).To(Panic())
-			Expect(NewKeyedSelector([]Value{NewStringValue("key")}).Apply(value)).To(Equal(
+			Expect(created(CreateKeyedSelector([]Value{NewStringValue("key")})).Apply(value)).To(Equal(
 				ERROR("value is not key-selectable"),
 			))
 		})
@@ -826,7 +826,7 @@ var _ = Describe("values", func() {
 			Expect(func() { _ = Value(NIL).(Selectable) }).To(Panic())
 			Expect(func() { _ = Value(TRUE).(RulesSelectable) }).To(Panic())
 			Expect(
-				NewGenericSelector([]Value{NewStringValue("rule")}).Apply(value),
+				created(CreateGenericSelector([]Value{NewStringValue("rule")})).Apply(value),
 			).To(Equal(ERROR("value is not selectable")))
 		})
 	})
@@ -839,24 +839,24 @@ var _ = Describe("values", func() {
 		Describe("should be displayed as a Helena qualified word", func() {
 			Specify("indexed selectors", func() {
 				value := NewQualifiedValue(NewStringValue("name"), []Selector{
-					NewIndexedSelector(NewStringValue("index")),
+					created(CreateIndexedSelector(NewStringValue("index"))),
 				})
 
 				Expect(value.Display(nil)).To(Equal("name[index]"))
 			})
 			Specify("keyed selectors", func() {
 				value := NewQualifiedValue(NewStringValue("name"), []Selector{
-					NewKeyedSelector([]Value{NewStringValue("key1"), NewStringValue("key2")}),
+					created(CreateKeyedSelector([]Value{NewStringValue("key1"), NewStringValue("key2")})),
 				})
 
 				Expect(value.Display(nil)).To(Equal(`name(key1 key2)`))
 			})
 			Specify("generic selector", func() {
 				value := NewQualifiedValue(NewStringValue("name"), []Selector{
-					NewGenericSelector([]Value{
+					created(CreateGenericSelector([]Value{
 						NewStringValue("rule1"),
 						NewTupleValue([]Value{NewStringValue("rule2"), NewIntegerValue(123)}),
-					}),
+					})),
 				})
 
 				Expect(value.Display(nil)).To(Equal(`name{rule1; rule2 123}`))
@@ -878,10 +878,10 @@ var _ = Describe("values", func() {
 				value := NewQualifiedValue(
 					NewStringValue(`some # \"$[${$( $string`),
 					[]Selector{
-						NewKeyedSelector([]Value{
+						created(CreateKeyedSelector([]Value{
 							NewStringValue("key1"),
 							NewStringValue("key2"),
-						}),
+						})),
 					},
 				)
 
@@ -896,7 +896,7 @@ var _ = Describe("values", func() {
 				Expect(value.SelectIndex(NewStringValue("index"))).To(Equal(
 					OK(
 						NewQualifiedValue(NewStringValue("name"), []Selector{
-							NewIndexedSelector(NewStringValue("index")),
+							created(CreateIndexedSelector(NewStringValue("index"))),
 						}),
 					),
 				))
@@ -908,30 +908,30 @@ var _ = Describe("values", func() {
 				Expect(value.SelectKey(NewStringValue("key"))).To(Equal(
 					OK(
 						NewQualifiedValue(NewStringValue("name"), []Selector{
-							NewKeyedSelector([]Value{NewStringValue("key")}),
+							created(CreateKeyedSelector([]Value{NewStringValue("key")})),
 						}),
 					),
 				))
 			})
 			It("should aggregate keys", func() {
 				value := NewQualifiedValue(NewStringValue("name"), []Selector{
-					NewKeyedSelector([]Value{NewStringValue("key1"), NewStringValue("key2")}),
-					NewIndexedSelector(NewStringValue("index")),
-					NewKeyedSelector([]Value{NewStringValue("key3"), NewStringValue("key4")}),
+					created(CreateKeyedSelector([]Value{NewStringValue("key1"), NewStringValue("key2")})),
+					created(CreateIndexedSelector(NewStringValue("index"))),
+					created(CreateKeyedSelector([]Value{NewStringValue("key3"), NewStringValue("key4")})),
 				})
 				Expect(value.SelectKey(NewStringValue("key5"))).To(Equal(
 					OK(
 						NewQualifiedValue(NewStringValue("name"), []Selector{
-							NewKeyedSelector([]Value{
+							created(CreateKeyedSelector([]Value{
 								NewStringValue("key1"),
 								NewStringValue("key2"),
-							}),
-							NewIndexedSelector(NewStringValue("index")),
-							NewKeyedSelector([]Value{
+							})),
+							created(CreateIndexedSelector(NewStringValue("index"))),
+							created(CreateKeyedSelector([]Value{
 								NewStringValue("key3"),
 								NewStringValue("key4"),
 								NewStringValue("key5"),
-							}),
+							})),
 						}),
 					),
 				))
@@ -943,7 +943,7 @@ var _ = Describe("values", func() {
 				Expect(value.SelectRules([]Value{NewStringValue("rule")})).To(Equal(
 					OK(
 						NewQualifiedValue(NewStringValue("name"), []Selector{
-							NewGenericSelector([]Value{NewStringValue("rule")}),
+							created(CreateGenericSelector([]Value{NewStringValue("rule")})),
 						}),
 					),
 				))

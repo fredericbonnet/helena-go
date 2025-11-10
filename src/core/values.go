@@ -710,7 +710,11 @@ func (value QualifiedValue) Display(fn DisplayFunction) string {
 }
 
 func (value QualifiedValue) SelectIndex(index Value) Result {
-	return value.Select(NewIndexedSelector(index))
+	result, selector := CreateIndexedSelector(index)
+	if result.Code != ResultCode_OK {
+		return result
+	}
+	return value.Select(selector)
 }
 func (value QualifiedValue) SelectKey(key Value) Result {
 	if len(value.Selectors) > 0 {
@@ -721,11 +725,19 @@ func (value QualifiedValue) SelectKey(key Value) Result {
 			keys[len(last.Keys)] = key
 			selectors := make([]Selector, len(value.Selectors))
 			copy(selectors, value.Selectors)
-			selectors[len(selectors)-1] = NewKeyedSelector(keys)
+			result, selector := CreateKeyedSelector(keys)
+			if result.Code != ResultCode_OK {
+				return result
+			}
+			selectors[len(selectors)-1] = selector
 			return OK(NewQualifiedValue(value.Source, selectors))
 		}
 	}
-	return value.Select(NewKeyedSelector([]Value{key}))
+	result, selector := CreateKeyedSelector([]Value{key})
+	if result.Code != ResultCode_OK {
+		return result
+	}
+	return value.Select(selector)
 }
 func (value QualifiedValue) SelectRules(rules []Value) Result {
 	return value.Select(GenericSelector{rules})

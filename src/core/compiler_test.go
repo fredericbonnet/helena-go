@@ -2192,7 +2192,7 @@ var _ = Describe("Compilation and execution", func() {
 						)
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("varname"), []Selector{
-								NewIndexedSelector(STR("index")),
+								created(CreateIndexedSelector(STR("index"))),
 							}),
 						))
 					})
@@ -2216,7 +2216,7 @@ var _ = Describe("Compilation and execution", func() {
 
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("varname"), []Selector{
-								NewKeyedSelector([]Value{STR("key1"), STR("key2")}),
+								created(CreateKeyedSelector([]Value{STR("key1"), STR("key2")})),
 							}),
 						))
 					})
@@ -2253,10 +2253,10 @@ var _ = Describe("Compilation and execution", func() {
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("varname"), []Selector{
-								NewGenericSelector([]Value{
+								created(CreateGenericSelector([]Value{
 									TUPLE([]Value{STR("rule1"), STR("arg1")}),
 									TUPLE([]Value{STR("rule2"), STR("arg2")}),
-								}),
+								})),
 							}),
 						))
 					})
@@ -2341,13 +2341,13 @@ var _ = Describe("Compilation and execution", func() {
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("varname"), []Selector{
-								NewKeyedSelector([]Value{STR("key1"), STR("key2")}),
-								NewGenericSelector([]Value{
+								created(CreateKeyedSelector([]Value{STR("key1"), STR("key2")})),
+								created(CreateGenericSelector([]Value{
 									TUPLE([]Value{STR("rule1")}),
 									TUPLE([]Value{STR("rule2")}),
-								}),
-								NewIndexedSelector(STR("index1")),
-								NewKeyedSelector([]Value{STR("key3"), STR("key4")}),
+								})),
+								created(CreateIndexedSelector(STR("index1"))),
+								created(CreateKeyedSelector([]Value{STR("key3"), STR("key4")})),
 							}),
 						))
 					})
@@ -2383,7 +2383,7 @@ var _ = Describe("Compilation and execution", func() {
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(
 								TUPLE([]Value{STR("varname1"), STR("varname2")}),
-								[]Selector{NewIndexedSelector(STR("index"))},
+								[]Selector{created(CreateIndexedSelector(STR("index")))},
 							),
 						))
 					})
@@ -2413,7 +2413,7 @@ var _ = Describe("Compilation and execution", func() {
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(
 								TUPLE([]Value{STR("varname1"), STR("varname2")}),
-								[]Selector{NewKeyedSelector([]Value{STR("key1"), STR("key2")})},
+								[]Selector{created(CreateKeyedSelector([]Value{STR("key1"), STR("key2")}))},
 							),
 						))
 					})
@@ -2459,10 +2459,10 @@ var _ = Describe("Compilation and execution", func() {
 							NewQualifiedValue(
 								TUPLE([]Value{STR("varname1"), STR("varname2")}),
 								[]Selector{
-									NewGenericSelector([]Value{
+									created(CreateGenericSelector([]Value{
 										TUPLE([]Value{STR("rule1"), STR("arg1")}),
 										TUPLE([]Value{STR("rule2"), STR("arg2")}),
-									}),
+									})),
 								},
 							),
 						))
@@ -2563,17 +2563,17 @@ var _ = Describe("Compilation and execution", func() {
 							NewQualifiedValue(
 								TUPLE([]Value{STR("varname1"), STR("varname2")}),
 								[]Selector{
-									NewIndexedSelector(STR("index1")),
-									NewKeyedSelector([]Value{
+									created(CreateIndexedSelector(STR("index1"))),
+									created(CreateKeyedSelector([]Value{
 										STR("key1"),
 										STR("key2"),
 										STR("key3"),
-									}),
-									NewGenericSelector([]Value{
+									})),
+									created(CreateGenericSelector([]Value{
 										TUPLE([]Value{STR("rule1")}),
 										TUPLE([]Value{STR("rule2")}),
-									}),
-									NewIndexedSelector(STR("index2")),
+									})),
+									created(CreateIndexedSelector(STR("index2"))),
 								},
 							),
 						))
@@ -2604,7 +2604,7 @@ var _ = Describe("Compilation and execution", func() {
 						)
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("source name"), []Selector{
-								NewIndexedSelector(STR("index")),
+								created(CreateIndexedSelector(STR("index"))),
 							}),
 						))
 					})
@@ -2628,7 +2628,7 @@ var _ = Describe("Compilation and execution", func() {
 
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("source name"), []Selector{
-								NewKeyedSelector([]Value{STR("key1"), STR("key2")}),
+								created(CreateKeyedSelector([]Value{STR("key1"), STR("key2")})),
 							}),
 						))
 					})
@@ -2665,10 +2665,10 @@ var _ = Describe("Compilation and execution", func() {
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("source name"), []Selector{
-								NewGenericSelector([]Value{
+								created(CreateGenericSelector([]Value{
 									TUPLE([]Value{STR("rule1"), STR("arg1")}),
 									TUPLE([]Value{STR("rule2"), STR("arg2")}),
-								}),
+								})),
 							}),
 						))
 					})
@@ -2753,13 +2753,13 @@ var _ = Describe("Compilation and execution", func() {
 						})
 						Expect(evaluate(program)).To(Equal(
 							NewQualifiedValue(STR("source name"), []Selector{
-								NewKeyedSelector([]Value{STR("key1"), STR("key2")}),
-								NewGenericSelector([]Value{
+								created(CreateKeyedSelector([]Value{STR("key1"), STR("key2")})),
+								created(CreateGenericSelector([]Value{
 									TUPLE([]Value{STR("rule1")}),
 									TUPLE([]Value{STR("rule2")}),
-								}),
-								NewIndexedSelector(STR("index1")),
-								NewKeyedSelector([]Value{STR("key3"), STR("key4")}),
+								})),
+								created(CreateIndexedSelector(STR("index1"))),
+								created(CreateKeyedSelector([]Value{STR("key3"), STR("key4")})),
 							}),
 						))
 					})

@@ -28,7 +28,7 @@ type IndexedSelector struct {
 }
 
 // Constructor with index to select
-func NewIndexedSelector(index Value) IndexedSelector {
+func newIndexedSelector(index Value) IndexedSelector {
 	if index == NIL {
 		panic("invalid index")
 	}
@@ -40,7 +40,7 @@ func CreateIndexedSelector(index Value) (Result, IndexedSelector) {
 	if index == NIL {
 		return ERROR("invalid index"), IndexedSelector{}
 	}
-	return OK(NIL), NewIndexedSelector(index)
+	return OK(NIL), newIndexedSelector(index)
 }
 
 func (selector IndexedSelector) Apply(value Value) Result {
@@ -72,7 +72,7 @@ type KeyedSelector struct {
 }
 
 // Constructor with keys to select
-func NewKeyedSelector(keys []Value) KeyedSelector {
+func newKeyedSelector(keys []Value) KeyedSelector {
 	if len(keys) == 0 {
 		panic("empty selector")
 	}
@@ -84,7 +84,7 @@ func CreateKeyedSelector(keys []Value) (Result, KeyedSelector) {
 	if len(keys) == 0 {
 		return ERROR("empty selector"), KeyedSelector{}
 	}
-	return OK(NIL), NewKeyedSelector(keys)
+	return OK(NIL), newKeyedSelector(keys)
 }
 
 func (selector KeyedSelector) Apply(value Value) Result {
@@ -122,7 +122,7 @@ type GenericSelector struct {
 }
 
 // Constructor with rules to apply
-func NewGenericSelector(rules []Value) GenericSelector {
+func newGenericSelector(rules []Value) GenericSelector {
 	if len(rules) == 0 {
 		panic("empty selector")
 	}
@@ -134,7 +134,7 @@ func CreateGenericSelector(rules []Value) (Result, GenericSelector) {
 	if len(rules) == 0 {
 		return ERROR("empty selector"), GenericSelector{}
 	}
-	return OK(NIL), NewGenericSelector(rules)
+	return OK(NIL), newGenericSelector(rules)
 }
 
 func (selector GenericSelector) Apply(value Value) Result {
